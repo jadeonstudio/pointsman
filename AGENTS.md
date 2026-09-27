@@ -1,6 +1,6 @@
 # Installation and development instructions for coding agents
 
-This is a local optional TypeSafe/Jev decision layer for BOTH Codex and Claude Code. v0.2 adds classifier-inspired routing/filtering without using classifier.dev's service. Read README.md, SECURITY.md, src/installer.mjs and package.json before installation or updates.
+This is a local optional TypeSafe/Jev decision layer for BOTH Codex and Claude Code. v0.2 adds classifier-inspired routing/filtering without using classifier.dev's service. v0.3 phase 1 adds an OFF-by-default Claude Code mod (`mods/pointsman-effort/`) that may recommend the main loop's or a subagent's own reasoning effort; see "Owned Claude Code mod" below. Read README.md, SECURITY.md, src/installer.mjs and package.json before installation or updates.
 
 ## Install from the URL
 
@@ -39,4 +39,15 @@ Hooks are installed only by `install --hooks` after the user reviews its dry-run
 ## Resident Laya server
 
 A hook must never spawn or wait for a Laya worker; it passes through at once when no worker is ready, exactly like the OFF/no-provider case. To keep a warm worker available anyway, the toolkit may run one user-scope resident server: a macOS `launchd` LaunchAgent, installed only via `install --laya-agent` after a reviewed dry-run like every other owned host artifact, that runs `pointsman laya serve`. It listens only on a private local Unix socket under `POINTSMAN_HOME/run/` (never a network port or HTTP), holds exactly one Laya worker, serves only this toolkit's own processes with `status`/`prepare`/`infer`, and unloads the worker after an idle window while the server keeps listening. MCP and CLI calls may wait for a cold server within their own timeout; hooks never wait. `uninstall --laya-agent` removes only the plist. Defaults, error codes and flags live in `src/laya-server.mjs`.
+
+## Owned Claude Code mod
+
+`mods/pointsman-effort/` (phase 1, shadow) is a separate, opt-in Claude Code mod, not part of `install`/`install --hooks` in this phase: the user adds it themselves (`claude plugin marketplace add <repo>/mods` then `claude plugin install pointsman-effort@pointsman-mods`, or `--plugin-dir mods/pointsman-effort`) and sets `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` themselves. It attaches pointsman's EXISTING route judgment (the same laya `route` checkpoint/questions `router` uses; no new training, no new heads) to Claude Code's reasoning effort, gated by `pointsman effort off|shadow|on`, independent of `router`.
+
+- **OFF** (default): the mod calls `pointsman hook --host claude --event turn-effort|turn-outcome`, which returns no output and logs nothing while `effort` mode is off, exactly like the router hooks do while `router` is off.
+- **SHADOW**: records a recommendation (direction, level, rounded probabilities, and whether the main loop's turn would have been cache-cold) and a per-turn outcome (steps, duration, token usage, tool-use count); never changes anything.
+- **ON**: may change a subagent loop's reasoning effort from its own first step (a subagent starts with a fresh context, so this has no cache cost), and the main loop's only when its prompt cache is already cold (`effort.mainLoop: 'cold-only'`, gated by `effort.coldAfterSeconds`) -- a change on a warm main-loop turn would rewrite the cached MESSAGES block for a cost that measured far above a turn's own thinking-token savings (see the plan doc's 2026-09-27 measurement note). Both gates default OFF (`effort.mainLoop: 'off'`, `effort.subagents: 'off'`); enabling either is a separate, explicit policy choice from turning `effort` itself on.
+- It never changes the model, never changes a subagent's role/definition, and never touches the prompt text. `mods/pointsman-effort/hooks/pointsman-effort.ts` only ever reads `e.prompt`/`e.description`/`e.text` to ask the question and reapplies the SAME decided level from a loop's own first step onward; the router's own `PreToolUse` hook is the only thing that ever rewrites a subagent's role/model.
+- Fail-open: any missing binary, bad JSON, non-zero exit or timeout (`timeoutMs` userConfig, default 1500 ms) makes no decision and changes nothing, the same discipline as `src/hooks.mjs`'s existing four host-hook events.
+- Content-free logs only, `kind: 'effort'` and `kind: 'hook'` events under `POINTSMAN_HOME/logs/`, the same private, size-capped, best-effort JSONL as every other pointsman event; never the prompt, the conversation tail, or any answer text.
 

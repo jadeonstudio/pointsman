@@ -34,6 +34,25 @@ export const FEATURE_DEFAULTS = Object.freeze({
     profiles: { codex: {}, claude: {} } },
   bulk: { mode: 'off', expectedModel: 'jev-1.13.0', maxItems: 128, batchSize: 8,
     maxRequests: 16, maxTotalMs: 10000, minRejectConfidence: 0.97, minRejectProbability: 0.99 },
+  // Phase 1 (shadow): attaches pointsman's existing route judgment to the Claude Code main loop so a
+  // turn's reasoning effort can follow task difficulty. No new heads, no training; reuses the same
+  // laya 'route' checkpoint/questions as `router`. See docs/plan/2026-09-27-pointsman-effort-mod.md.
+  effort: { mode: 'off', input: 'prompt', contextChars: 600, lowerTo: 'medium', raiseTo: 'high',
+    minLowerProbability: 0.7, maxHighRiskForLower: 0.2, minRaiseProbability: 0.5, raiseRiskProbability: 0.7,
+    // Fraction (0..0.5) of otherwise-applied ON-mode changes randomly held back as an unmodified
+    // 'control' arm instead of applying the recommended effort (see `pointsman effort ab`).
+    abControlShare: 0,
+    // Measured 2026-09-27: an effort change rewrites the whole MESSAGES part of the prompt cache
+    // (Claude Code 2.1.280), and the owner's real main-loop requests run large enough (p50 ~443k
+    // tokens, 1h cache TTL) that one avoidable rewrite costs far more than a turn's thinking-token
+    // savings. 'cold-only' only ever applies a main-loop change when the previous main-loop request
+    // of the session was more than coldAfterSeconds ago (or there was none); 'off' never applies to
+    // the main loop. SHADOW always records the main-loop recommendation regardless of this setting.
+    mainLoop: 'off', coldAfterSeconds: 3600,
+    // A subagent starts with a fresh context, so fixing its effort from its own first step has no
+    // cache penalty; 'on' allows applying it (only meaningful once `mode` is 'on' -- SHADOW always
+    // records regardless of this setting; never changes a subagent's model or role).
+    subagents: 'off' },
 });
 function fields(value, allowed) {
   if (!isObject(value) || ![Object.prototype, null].includes(Object.getPrototypeOf(value)) ||
@@ -98,16 +117,20 @@ function migrateProfileV1(value, host) {
   return migrated;
 }
 export function validateFeaturePolicy(raw) {
-  fields(raw, ['version', 'router', 'bulk']);
+  fields(raw, ['version', 'router', 'bulk', 'effort']);
   if (Object.hasOwn(raw, 'version') && raw.version !== 1 && raw.version !== 2) fail('INVALID_FEATURE_POLICY');
   const version = raw.version ?? 1;
   fields(Object.hasOwn(raw, 'router') ? raw.router : {}, Object.keys(FEATURE_DEFAULTS.router));
   fields(Object.hasOwn(raw, 'bulk') ? raw.bulk : {}, Object.keys(FEATURE_DEFAULTS.bulk));
+  // An existing features.json written before `effort` existed has no `effort` key at all; it must
+  // keep loading with the OFF defaults below rather than failing INVALID_FEATURE_POLICY.
+  fields(Object.hasOwn(raw, 'effort') ? raw.effort : {}, Object.keys(FEATURE_DEFAULTS.effort));
   // The in-memory result is always current-schema v2, even when `raw` was v1; the file itself is
   // rewritten as v2 only the next time a write path (setFeatureMode, presetHostRoles, ...) saves it.
   const policy = { version: 2,
     router: { ...structuredClone(FEATURE_DEFAULTS.router), ...raw.router },
-    bulk: { ...FEATURE_DEFAULTS.bulk, ...raw.bulk } };
+    bulk: { ...FEATURE_DEFAULTS.bulk, ...raw.bulk },
+    effort: { ...FEATURE_DEFAULTS.effort, ...raw.effort } };
   for (const feature of [policy.router, policy.bulk]) {
     if (!MODES.includes(feature.mode) || !/^jev-\d+\.\d+\.\d+$/.test(feature.expectedModel)) fail('INVALID_FEATURE_POLICY');
   }
@@ -126,6 +149,17 @@ export function validateFeaturePolicy(raw) {
     if (!Number.isInteger(b[key]) || b[key] < min || b[key] > max) fail('INVALID_FEATURE_POLICY');
   }
   for (const key of ['minRejectConfidence', 'minRejectProbability']) { probability(b[key]); if (b[key] < 0.9) fail('INVALID_FEATURE_POLICY'); }
+  const ef = policy.effort;
+  if (!MODES.includes(ef.mode)) fail('INVALID_FEATURE_POLICY');
+  if (!['prompt', 'prompt+context'].includes(ef.input)) fail('INVALID_FEATURE_POLICY');
+  if (!Number.isInteger(ef.contextChars) || ef.contextChars < 0 || ef.contextChars > 2000) fail('INVALID_FEATURE_POLICY');
+  if (!['low', 'medium'].includes(ef.lowerTo)) fail('INVALID_FEATURE_POLICY');
+  if (!['high', 'xhigh', 'max'].includes(ef.raiseTo)) fail('INVALID_FEATURE_POLICY');
+  for (const key of ['minLowerProbability', 'maxHighRiskForLower', 'minRaiseProbability', 'raiseRiskProbability']) probability(ef[key]);
+  if (!Number.isFinite(ef.abControlShare) || ef.abControlShare < 0 || ef.abControlShare > 0.5) fail('INVALID_FEATURE_POLICY');
+  if (!['off', 'cold-only'].includes(ef.mainLoop)) fail('INVALID_FEATURE_POLICY');
+  if (!Number.isInteger(ef.coldAfterSeconds) || ef.coldAfterSeconds < 300 || ef.coldAfterSeconds > 86400) fail('INVALID_FEATURE_POLICY');
+  if (!['off', 'on'].includes(ef.subagents)) fail('INVALID_FEATURE_POLICY');
   if (containsSensitiveData(policy)) fail('SENSITIVE_FEATURE_POLICY');
   return structuredClone(policy);
 }
@@ -136,7 +170,7 @@ export function loadFeaturePolicy(home) {
 }
 export function policyFingerprint(policy) { return createHash('sha256').update(JSON.stringify(policy)).digest('hex'); }
 export function setFeatureMode(home, feature, mode) {
-  if (!['router', 'bulk'].includes(feature) || !MODES.includes(mode)) fail('INVALID_FEATURE_MODE');
+  if (!['router', 'bulk', 'effort'].includes(feature) || !MODES.includes(mode)) fail('INVALID_FEATURE_MODE');
   ensureDir(home, true);
   const file = path.join(home, 'features.json');
   const previous = readText(file, { optional: true, privateFile: true });
@@ -147,15 +181,17 @@ export function setFeatureMode(home, feature, mode) {
   atomicWrite(file, JSON.stringify(policy, null, 2) + '\n', { expected: previous });
   return policy;
 }
-/** `pointsman router ab <share>|off`: writes only router.abControlShare; every other field is preserved. */
-export function setAbControlShare(home, value) {
+/** `pointsman router ab <share>|off` / `pointsman effort ab <share>|off`: writes only that feature's
+ * abControlShare; every other field (including the other feature's) is preserved. */
+export function setAbControlShare(home, value, feature = 'router') {
+  if (!['router', 'effort'].includes(feature)) fail('INVALID_FEATURE_MODE');
   const share = value === 'off' ? 0 : Number(value);
   if (!Number.isFinite(share) || share < 0 || share > 0.5) fail('INVALID_AB_CONTROL_SHARE');
   ensureDir(home, true);
   const file = path.join(home, 'features.json');
   const previous = readText(file, { optional: true, privateFile: true });
   const policy = loadFeaturePolicy(home);
-  policy.router.abControlShare = share;
+  policy[feature].abControlShare = share;
   const validated = validateFeaturePolicy(policy);
   atomicWrite(file, JSON.stringify(validated, null, 2) + '\n', { expected: previous });
   return validated;

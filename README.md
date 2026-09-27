@@ -119,6 +119,33 @@ The report groups content-free outcome events (duration, tool-use count, per-mod
 
 A price table (`--prices FILE`, JSON) maps a model id to USD-per-million-token rates: `{"<model id>": {"input": ..., "output": ..., "cache_write": ..., "cache_read": ...}}`. See [`examples/prices.example.json`](examples/prices.example.json) for the shape — fill it in yourself from the model provider's own current pricing page; nothing here hard-codes a price. Without `--prices`, `costUsd` is always `null`.
 
+## Reasoning-effort mod (phase 1, shadow)
+
+`mods/pointsman-effort/` is a separate, opt-in Claude Code mod (not installed by `pointsman install`) that attaches pointsman's existing route judgment to Claude Code's reasoning effort — no new training, no new checkpoint, the same laya `route` questions `router` already uses. It ships OFF and needs `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1`, which you set yourself:
+
+```sh
+claude plugin marketplace add jadeonstudio/pointsman/mods   # or a local path: /path/to/pointsman/mods
+claude plugin install pointsman-effort@pointsman-mods
+export CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1                  # add to your shell profile to keep it on
+pointsman effort shadow    # record recommendations + per-turn outcomes; never applies
+pointsman effort on        # may apply — see the two gates below
+pointsman effort off       # back to doing nothing
+```
+
+Two independent, OFF-by-default gates decide what ON is allowed to touch, because changing effort mid-conversation rewrites the model's cached context and that rewrite can cost more than the thinking-token savings it buys:
+
+- `mainLoop: 'cold-only'` — the main loop's effort may change only when the previous main-loop request of the session was already more than `coldAfterSeconds` (default 3600) ago, or there was none yet. A change on an already-warm turn is refused (`CACHE_WARM`) even in ON mode.
+- `subagents: 'on'` — a subagent's effort may be fixed once, from its own first step; a subagent always starts with a fresh context, so this never pays a cache-rewrite cost.
+
+SHADOW always records both the main-loop recommendation (and whether that turn's cache would have been cold) and the subagent recommendation, regardless of these two settings, so you can review before turning anything on:
+
+```sh
+pointsman effort ab 0.2   # once ON: hold back 20% of otherwise-applied changes as an unmodified control arm
+pointsman effort ab off   # back to always applying
+```
+
+It never changes the model, never changes a subagent's role, and never rewrites the prompt. See [AGENTS.md](AGENTS.md) ("Owned Claude Code mod") for the full contract.
+
 ## Training your own checkpoint
 
 Training code lives in a separate kit, not in this repository: see [training/laya-kit/README.md](training/laya-kit/README.md). The lifecycle commands are `laya register` → `laya holdout freeze` → `laya qualify` (includes decision-gate flags) → `laya compare` → `laya promote`, and `laya package` builds a folder (weights plus a `pointsman.json` manifest) ready to upload with `hf upload`. All are explicit operator calls — nothing here starts training or promotes a checkpoint automatically.

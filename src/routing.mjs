@@ -160,6 +160,22 @@ export function chooseRouteByDecision(answers, input, policy, gate) {
   if (!d.applied) return { reason: d.reason, features };
   return resolveTarget(d.tier, intent.value, d.reason, features, input, policy);
 }
+// Phase 1 effort mod (docs/plan/2026-09-27-pointsman-effort-mod.md): reuses the same `route`
+// answers (intent/difficulty/risk) the router already gets, but never resolves a role/model -- only
+// a reasoning-effort direction for a main-loop turn or a subagent run. Pure function of the answers and the effort policy; no
+// engine/provider access here.
+export function effortRecommendation(answers, effortPolicy) {
+  const { difficulty, risk } = answers;
+  if (!difficulty || !risk) return { direction: null, level: null, pLow: null, pHigh: null, pRiskHigh: null, reason: 'MISSING_DIMENSIONS' };
+  const pLow = (difficulty.probabilities['0'] ?? 0) + (difficulty.probabilities['1'] ?? 0);
+  const pHigh = (difficulty.probabilities['3'] ?? 0) + (difficulty.probabilities['4'] ?? 0);
+  const pRiskHigh = risk.probabilities.high ?? 0;
+  const shouldRaise = pHigh >= effortPolicy.minRaiseProbability || pRiskHigh >= effortPolicy.raiseRiskProbability;
+  const shouldLower = pLow >= effortPolicy.minLowerProbability && pRiskHigh < effortPolicy.maxHighRiskForLower;
+  if (shouldRaise) return { direction: 'raise', level: effortPolicy.raiseTo, pLow, pHigh, pRiskHigh, reason: 'RAISE' };
+  if (shouldLower) return { direction: 'lower', level: effortPolicy.lowerTo, pLow, pHigh, pRiskHigh, reason: 'LOWER' };
+  return { direction: null, level: null, pLow, pHigh, pRiskHigh, reason: 'NO_CHANGE' };
+}
 export async function routeOrDelegate(layer, input, { use, delegate, signal } = {}) {
   if (typeof use !== 'function' || typeof delegate !== 'function') fail('HANDLERS_REQUIRED');
   const result = await layer.route(input, { signal });

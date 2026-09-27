@@ -1,12 +1,13 @@
-import { randomUUID } from 'node:crypto';
+import { randomUUID, randomInt } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import os from 'node:os';
-import { errorCode, fail, isObject } from './constants.mjs';
+import { errorCode, fail, isObject, RESERVED } from './constants.mjs';
 import { resolveHome, appendEvent } from './storage.mjs';
 import { containsSensitiveData } from './contracts.mjs';
 import { createDecisionEngine } from './engine.mjs';
 import { loadFeaturePolicy, policyFingerprint, effectiveMode, TIERS } from './feature-policy.mjs';
-import { validateRouteInput, routeGuard, routeRequest, chooseRoute, chooseRouteByDecision } from './routing.mjs';
+import { validateRouteInput, routeGuard, routeRequest, chooseRoute, chooseRouteByDecision, effortRecommendation, ROUTE_QUESTIONS } from './routing.mjs';
+import { FIXED_ROUTE_CONTEXT } from './training/laya-distill.mjs';
 import { loadProviderConfig } from './inference.mjs';
 import { validateFilterInput, filterRequest, filterChoices, packFilterBatches } from './filtering.mjs';
 import { discoverHostRoles } from './host-roles.mjs';
@@ -41,8 +42,10 @@ export function createControlLayer({ home = resolveHome(), env = process.env, en
       return { ...base, features: { router: { mode: effectiveMode(base.mode, p.router.mode), configuredMode: p.router.mode,
         expectedModel: expected(base, p.router), configuredTargets: Object.fromEntries(Object.entries(p.router.profiles).map(([host, targets]) => [host, Object.keys(targets)])),
         abControlShare: p.router.abControlShare, warnings: routerWarnings(p, env) },
-      bulk: { mode: effectiveMode(base.mode, p.bulk.mode), configuredMode: p.bulk.mode, expectedModel: expected(base, p.bulk) } }, featurePolicyError: null };
-    } catch (error) { return { ...base, features: { router: { mode: 'off', warnings: [] }, bulk: { mode: 'off' } }, featurePolicyError: errorCode(error) }; }
+      bulk: { mode: effectiveMode(base.mode, p.bulk.mode), configuredMode: p.bulk.mode, expectedModel: expected(base, p.bulk) },
+      effort: { mode: effectiveMode(base.mode, p.effort.mode), configuredMode: p.effort.mode, input: p.effort.input, abControlShare: p.effort.abControlShare } },
+      featurePolicyError: null };
+    } catch (error) { return { ...base, features: { router: { mode: 'off', warnings: [] }, bulk: { mode: 'off' }, effort: { mode: 'off' } }, featurePolicyError: errorCode(error) }; }
   }
   function current(policy, feature, mode, revision) {
     const base = engine.status();
@@ -113,6 +116,124 @@ export function createControlLayer({ home = resolveHome(), env = process.env, en
       result.elapsedMs = Math.round((performance.now() - start) * 1000) / 1000;
       log('route', result, policy, { candidateAvailable: Boolean(proposal?.route),
         ...(routeGate ? { gate: 'decision-v1', tierProbabilities: proposal?.features?.tierProbabilities ?? null } : {}) });
+    }
+    return result;
+  }
+  function effortKeys(value, allowed) {
+    if (!isObject(value) || Object.keys(value).some(k => !allowed.includes(k) || RESERVED.has(k))) fail('INVALID_EFFORT_REQUEST');
+  }
+  function validateEffortInput(input) {
+    effortKeys(input, ['text', 'context', 'loop', 'sinceLastMainMs']);
+    if (typeof input.text !== 'string' || !input.text.trim() || Buffer.byteLength(input.text) > 32768) fail('INVALID_EFFORT_REQUEST');
+    if (input.context !== undefined && input.context !== null &&
+        (typeof input.context !== 'string' || Buffer.byteLength(input.context) > 4096)) fail('INVALID_EFFORT_REQUEST');
+    if (input.loop !== undefined && !['main', 'subagent'].includes(input.loop)) fail('INVALID_EFFORT_REQUEST');
+    if (input.sinceLastMainMs !== undefined && input.sinceLastMainMs !== null &&
+        (!Number.isFinite(input.sinceLastMainMs) || input.sinceLastMainMs < 0)) fail('INVALID_EFFORT_REQUEST');
+    return { text: input.text, context: typeof input.context === 'string' && input.context ? input.context : null,
+      loop: input.loop ?? 'main', sinceLastMainMs: input.sinceLastMainMs ?? null };
+  }
+  // Measured 2026-09-27: an effort change rewrites the whole cached MESSAGES block, so the main loop
+  // may only take one when the previous main-loop request of the session is already this stale (or
+  // there was none yet); a fresh context (a subagent's first step) never pays that rewrite cost.
+  function effortCold(sinceLastMainMs, coldAfterSeconds) {
+    return sinceLastMainMs === null || sinceLastMainMs === undefined || sinceLastMainMs > coldAfterSeconds * 1000;
+  }
+  function effortTask(text, context, variant, contextChars) {
+    if (variant !== 'prompt+context' || !context) return text;
+    const tail = context.length > contextChars ? context.slice(context.length - contextChars) : context;
+    return `${text}\n\nPrevious assistant message (tail):\n${tail}`;
+  }
+  const round4 = v => v === null || v === undefined ? null : Math.round(v * 10000) / 10000;
+  /**
+   * Phase 1 (shadow) mod: attaches the existing route judgment (intent/difficulty/risk heads, same
+   * checkpoint/questions as `route()`) to a single main-loop turn or subagent run to recommend
+   * raising or lowering reasoning effort. Never resolves a role/model. A main-loop change may only
+   * apply on an already-cold turn (`effort.mainLoop`); a subagent change may only apply when opted
+   * in (`effort.subagents`), always from that subagent's own first step. Mirrors route()'s mode,
+   * validation, sensitive-input and provider-qualification guarantees; SHADOW never applies.
+   */
+  async function effort(input, { signal, trace } = {}) {
+    const start = performance.now();
+    const result = { version: 1, id: randomUUID(), mode: 'off', apply: false, reason: 'OFF', direction: null, level: null, loop: null, cacheCold: null,
+      pLow: null, pHigh: null, pRiskHigh: null, arm: 'none', networkCalls: 0, inferenceCalls: 0, authorizesExecution: false, changesHostModel: false };
+    let policy, revision, request, model, primary; const variants = [];
+    try {
+      policy = loadFeaturePolicy(home);
+      const initial = engine.status(); revision = initial.policyRevision;
+      result.mode = effectiveMode(initial.mode, policy.effort.mode);
+      if (result.mode === 'off') return result;
+      if (signal?.aborted) fail('CANCELLED');
+      request = validateEffortInput(input);
+      if (containsSensitiveData(request)) fail('SENSITIVE_INPUT');
+      result.loop = request.loop;
+      result.cacheCold = request.loop === 'main' ? effortCold(request.sinceLastMainMs, policy.effort.coldAfterSeconds) : null;
+      const providerConfig = loadProviderConfig(home);
+      if (!(providerConfig.provider === 'laya' && providerConfig.laya?.qualification?.purposes.includes('route'))) {
+        result.reason = 'UNQUALIFIED_PROVIDER'; return result;
+      }
+      model = initial.model;
+      const runVariant = async variant => {
+        let normalized;
+        const taskText = effortTask(request.text, request.context, variant, policy.effort.contextChars);
+        const d = await engine.decide({ purpose: 'route', risk: 'routine', state: { task: taskText, context: FIXED_ROUTE_CONTEXT },
+          questions: structuredClone(ROUTE_QUESTIONS) }, { signal, trace, modeLimit: policy.effort.mode, modelOverride: model, onEvaluated: n => { normalized = n; } });
+        result.networkCalls += d.networkCalls; result.inferenceCalls += d.inferenceCalls ?? d.networkCalls;
+        current(policy, 'effort', result.mode, revision);
+        if (signal?.aborted) fail('CANCELLED');
+        if (['MODEL_VERSION_MISMATCH', 'LAYA_IDENTITY_MISMATCH'].includes(d.reason)) fail('MODEL_VERSION_MISMATCH');
+        if (!normalized || !normalized.qualified) return { variant, reason: 'UNQUALIFIED_PROVIDER', rec: null };
+        if (normalized.model !== model) fail('MODEL_VERSION_MISMATCH');
+        if (normalized.provenance?.checkpoint !== providerConfig.laya.checkpoint) fail('PROVIDER_CHANGED');
+        if (!normalized.answers?.difficulty || !normalized.answers?.risk) return { variant, reason: 'MISSING_DIMENSIONS', rec: null };
+        // effortRecommendation reads the raw per-answer probabilities directly, not the legacy
+        // minConfidence/minChoiceProbability eligibility gate route() applies -- that gate is tuned
+        // for a routing DECISION, not for the softer raise/lower thresholds this mod uses.
+        return { variant, rec: effortRecommendation(normalized.answers, policy.effort) };
+      };
+      if (result.mode === 'shadow' && request.context) {
+        // SHADOW records BOTH input variants (when context is available) so phase 2 can compare
+        // 'prompt' vs 'prompt+context' offline; SHADOW itself never applies either way.
+        const both = await Promise.all([runVariant('prompt'), runVariant('prompt+context')]);
+        variants.push(...both);
+        primary = both.find(v => v.variant === policy.effort.input) ?? both[0];
+        result.reason = 'SHADOW';
+      } else {
+        primary = await runVariant(policy.effort.input);
+        variants.push(primary);
+        if (!primary.rec) { result.reason = primary.reason; return result; }
+        if (result.mode === 'shadow') { result.reason = 'SHADOW'; }
+        else {
+          result.reason = primary.rec.reason;
+          if (primary.rec.direction) {
+            // Cache-cost gate (measured 2026-09-27): a main-loop change may only apply on an
+            // already-cold turn; a subagent change may only apply once the operator opted in, since
+            // it is always applied from that subagent's own first step (no warm turn to protect).
+            const allowed = request.loop === 'subagent' ? policy.effort.subagents === 'on'
+              : policy.effort.mainLoop === 'cold-only' && result.cacheCold === true;
+            if (!allowed) {
+              result.reason = request.loop === 'subagent' ? 'SUBAGENTS_DISABLED'
+                : (policy.effort.mainLoop === 'off' ? 'MAIN_LOOP_DISABLED' : 'CACHE_WARM');
+            } else {
+              const share = Number.isFinite(policy.effort.abControlShare) ? policy.effort.abControlShare : 0;
+              result.arm = share > 0 && randomInt(1_000_000) < Math.round(share * 1_000_000) ? 'control' : 'treatment';
+              if (result.arm === 'treatment') { result.apply = true; result.level = primary.rec.level; }
+            }
+          }
+        }
+      }
+      if (primary?.rec) {
+        result.direction = primary.rec.direction;
+        result.pLow = round4(primary.rec.pLow); result.pHigh = round4(primary.rec.pHigh); result.pRiskHigh = round4(primary.rec.pRiskHigh);
+      }
+    } catch (error) { result.reason = errorCode(error); result.apply = false; result.level = null; }
+    finally {
+      result.elapsedMs = Math.round((performance.now() - start) * 1000) / 1000;
+      log('effort', result, policy, { loop: result.loop, cacheCold: result.cacheCold, direction: result.direction, level: result.level,
+        pLow: result.pLow, pHigh: result.pHigh, pRiskHigh: result.pRiskHigh,
+        arm: result.arm, variants: variants.map(v => ({ variant: v.variant, reason: v.rec?.reason ?? v.reason,
+          direction: v.rec?.direction ?? null, level: v.rec?.level ?? null,
+          pLow: round4(v.rec?.pLow), pHigh: round4(v.rec?.pHigh), pRiskHigh: round4(v.rec?.pRiskHigh) })) });
     }
     return result;
   }
@@ -199,7 +320,7 @@ export function createControlLayer({ home = resolveHome(), env = process.env, en
     if (base.mode !== 'off' && base.telemetry) appendEvent(home, { kind: 'observation', at: new Date().toISOString(), id: input.id, feature: item.kind, ...metrics });
     return metrics;
   }
-  return Object.freeze({ route, filter, observe, status });
+  return Object.freeze({ route, filter, effort, observe, status });
 }
 export const observeSchema = { type: 'object', additionalProperties: false, required: ['id'], properties: {
   id: { type: 'string' }, tier: { type: 'string', enum: TIERS }, relevantIds: { type: 'array', maxItems: 128, uniqueItems: true, items: { type: 'string' } },

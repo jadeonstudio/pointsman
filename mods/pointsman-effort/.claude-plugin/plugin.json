@@ -1,0 +1,11 @@
+{
+  "name": "pointsman-effort",
+  "version": "0.1.0",
+  "description": "Phase 1 (shadow): attaches pointsman's existing route judgment to Claude Code's reasoning effort. OFF by default; SHADOW only records; ON may change a subagent loop's effort from its own first step, and the main loop's only when its prompt cache is already cold. Never changes a model or a subagent's role.",
+  "userConfig": {
+    "pointsmanPath": { "type": "string", "title": "pointsman CLI path", "default": "", "description": "Absolute path to the pointsman CLI shim. Empty uses $HOME/.local/bin/pointsman." },
+    "pointsmanHome": { "type": "string", "title": "pointsman home", "default": "", "description": "POINTSMAN_HOME override passed as --home. Empty lets pointsman resolve its own default." },
+    "timeoutMs": { "type": "number", "title": "Timeout (ms)", "default": 1500, "description": "Timeout for each pointsman hook call; a timeout fails open (no decision, no rewrite)." },
+    "logDecisions": { "type": "boolean", "title": "Log decisions", "default": false, "description": "Print one content-free line per decision via $.ui.log for local debugging. Never includes prompt text." }
+  }
+}

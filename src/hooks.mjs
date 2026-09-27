@@ -18,11 +18,23 @@ import { createTrainingStore } from './training/store.mjs';
 // The only output this module ever produces is the ON-mode subagent-spawn rewrite documented in
 // AGENTS.md ("Owned host hooks"): {hookSpecificOutput:{hookEventName:'PreToolUse', permissionDecision:'allow', updatedInput}}.
 export const HOSTS = Object.freeze(['codex', 'claude']);
-export const HOOK_EVENTS = Object.freeze(['pre-spawn', 'post-spawn', 'subagent-start', 'subagent-stop']);
+// turn-effort/turn-outcome are Claude-only main-loop effort-mod events (docs/plan/2026-09-27-pointsman-effort-mod.md,
+// mods/pointsman-effort): gated by the EFFORT feature mode, not router, and never touch subagents.
+export const HOOK_EVENTS = Object.freeze(['pre-spawn', 'post-spawn', 'subagent-start', 'subagent-stop', 'turn-effort', 'turn-outcome']);
+const EFFORT_ONLY_EVENTS = new Set(['turn-effort', 'turn-outcome']);
+/** Which feature mode gates a given hook event: turn-effort/turn-outcome follow `effort`, everything else follows `router`. */
+function gateModeFor(status, event) { return EFFORT_ONLY_EVENTS.has(event) ? status.features.effort.mode : status.features.router.mode; }
 export const HOOK_TIMEOUT_MS = 4000;
 export const MAX_HOOK_STDIN_BYTES = 256 * 1024;
 const PENDING_RETENTION_MS = 60000;
 const MAX_PENDING = 256;
+// How long a turn-effort decision's {arm, level} stays available for the matching turn-outcome to
+// read back (a turn can run for several minutes, unlike the router's short pre-spawn->post-spawn gap).
+const EFFORT_PENDING_RETENTION_MS = 30 * 60 * 1000;
+const MAX_EFFORT_PENDING = 256;
+const BARE_COMMAND_RE = /^\/\S+$/;
+const EFFORT_LEVELS = new Set(['low', 'medium', 'high', 'xhigh', 'max']);
+const SAFE_TOKEN_RE = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,99}$/;
 // How long a subagent-stop's {agent_id -> transcript path} memo (written for the foreground case,
 // where SubagentStop fires before PostToolUse) stays available for the matching post-spawn to consume.
 const TRANSCRIPT_MEMO_RETENTION_MS = 5 * 60 * 1000;
@@ -156,6 +168,54 @@ function consumePendingCodex(home, { sessionId, agentType }, nowMs) {
     const [chosen] = alive;
     try { fs.unlinkSync(chosen.file); } catch { /* already gone */ }
     return chosen.entry.decision_id;
+  } catch { return null; }
+}
+
+// --- effort-mod pending decisions (turn-effort -> turn-outcome correlation) ---------------------
+// `pointsman hook` is a short-lived CLI process per invocation, so an in-memory map cannot bridge
+// turn-effort and the later turn-outcome call for the same turn; this content-free file (decision_id
+// -> {arm, level}, nothing else) plays the same role addPendingCodex/consumePendingCodex play above.
+function effortPendingDir(home) { return path.join(home, 'links', 'pending-effort'); }
+function readEffortPendingEntry(file) {
+  const raw = readText(file, { optional: true, privateFile: true, maxBytes: 512 });
+  if (raw === null) return null;
+  try {
+    const e = JSON.parse(raw);
+    if (!isObject(e) || typeof e.arm !== 'string' || typeof e.created_at !== 'string') return null;
+    return e;
+  } catch { return null; }
+}
+function pruneEffortPending(dir, nowMs) {
+  let names; try { names = fs.readdirSync(dir); } catch { return []; }
+  const alive = [];
+  for (const name of names) {
+    if (!name.endsWith('.json')) continue;
+    const file = path.join(dir, name);
+    const entry = readEffortPendingEntry(file);
+    const at = entry ? Date.parse(entry.created_at) : NaN;
+    if (!entry || !Number.isFinite(at) || nowMs - at > EFFORT_PENDING_RETENTION_MS) { try { fs.unlinkSync(file); } catch { /* already gone */ } continue; }
+    alive.push({ file, entry, at });
+  }
+  return alive;
+}
+function effortPendingFile(home, decisionId) { return path.join(effortPendingDir(home), `${decisionId}.json`); }
+function rememberEffortDecision(home, { decisionId, arm, level }, nowMs) {
+  try {
+    const dir = effortPendingDir(home);
+    ensureDir(home, true); ensureDir(path.join(home, 'links'), true); ensureDir(dir, true);
+    const alive = pruneEffortPending(dir, nowMs).sort((a, b) => a.at - b.at);
+    while (alive.length >= MAX_EFFORT_PENDING) { const oldest = alive.shift(); try { fs.unlinkSync(oldest.file); } catch { /* already gone */ } }
+    atomicWrite(effortPendingFile(home, decisionId), JSON.stringify({ arm, level: level ?? null, created_at: new Date(nowMs).toISOString() }) + '\n', { mode: 0o600, expected: null });
+  } catch { /* best-effort: a missed pending write only degrades turn-outcome's arm to 'none' */ }
+}
+function recallEffortDecision(home, decisionId, nowMs) {
+  try {
+    pruneEffortPending(effortPendingDir(home), nowMs); // drop expired siblings opportunistically
+    const file = effortPendingFile(home, decisionId);
+    const entry = readEffortPendingEntry(file);
+    if (!entry || nowMs - Date.parse(entry.created_at) > EFFORT_PENDING_RETENTION_MS) return null;
+    try { fs.unlinkSync(file); } catch { /* already gone */ }
+    return { arm: entry.arm, level: entry.level ?? null };
   } catch { return null; }
 }
 
@@ -381,12 +441,101 @@ function subagentStop(host, input, ctx) {
   }
   return { output: null, telemetry };
 }
-const HANDLERS = { 'pre-spawn': preSpawn, 'post-spawn': postSpawn, 'subagent-start': subagentStart, 'subagent-stop': subagentStop };
+// --- effort mod: turn-effort / turn-outcome (Claude-only, gated by `effort` not `router`) -------
+function safeToken(value) { return typeof value === 'string' && SAFE_TOKEN_RE.test(value) ? value : null; }
+function turnEffortInput(input) {
+  if (!isObject(input) || typeof input.text !== 'string') return null;
+  if (input.context !== undefined && typeof input.context !== 'string') return null;
+  if (input.current_effort !== undefined && typeof input.current_effort !== 'string' && typeof input.current_effort !== 'number') return null;
+  if (input.model !== undefined && typeof input.model !== 'string') return null;
+  if (input.session_id !== undefined && typeof input.session_id !== 'string') return null;
+  if (input.turn_id !== undefined && typeof input.turn_id !== 'string') return null;
+  // 'main' (default) is the top-level Claude Code loop; 'subagent' is a spawned agent's own loop
+  // (fresh context -- see effort()'s cache-cost gate). since_last_main_ms is the mod's own
+  // session-scoped measurement of how long it has been since the previous MAIN-loop request; null/absent
+  // means "no earlier main-loop request this session", which counts as cold.
+  if (input.loop !== undefined && !['main', 'subagent'].includes(input.loop)) return null;
+  if (input.since_last_main_ms !== undefined && input.since_last_main_ms !== null &&
+      (typeof input.since_last_main_ms !== 'number' || !Number.isFinite(input.since_last_main_ms) || input.since_last_main_ms < 0)) return null;
+  return input;
+}
+/**
+ * `pointsman hook --host claude --event turn-effort` (mods/pointsman-effort's prompt.submit for the
+ * main loop, agent.spawn for a subagent). Never changes the prompt; only returns a content-free
+ * recommendation for the mod's OWN pending-decision slot to apply on the next turn.step. A bare
+ * slash command (`^/\S+$`) is skipped before any inference -- it is not real task text -- exactly
+ * like preSpawn's other pre-inference guards above. Cache-cost gating (main-loop cold-only,
+ * subagent opt-in) lives in control-layer's effort(), not here.
+ */
+async function turnEffort(host, input, ctx) {
+  if (host !== 'claude') return { output: null, telemetry: { reason: 'NOOP' } };
+  const v = turnEffortInput(input);
+  if (!v) return { output: null, telemetry: { reason: 'INVALID_HOOK_INPUT' } };
+  let status; try { status = ctx.layer.status(); } catch { return { output: null, telemetry: { reason: 'INVALID_CONFIG' } }; }
+  const mode = status.features.effort.mode;
+  const text = truncateUtf8(v.text, 32 * 1024);
+  if (BARE_COMMAND_RE.test(text.trim())) {
+    return { output: { decision_id: null, mode, apply: false, level: null, arm: 'none', reason: 'BARE_COMMAND' }, telemetry: { reason: 'BARE_COMMAND' } };
+  }
+  const context = typeof v.context === 'string' && v.context ? truncateUtf8(v.context, 4 * 1024) : undefined;
+  const loop = v.loop === 'subagent' ? 'subagent' : 'main';
+  const trace = { task_id: randomUUID(), snapshot_id: resolveSnapshotId(process.cwd()) };
+  const result = await ctx.layer.effort({ text, ...(context !== undefined ? { context } : {}), loop,
+    ...(loop === 'main' ? { sinceLastMainMs: typeof v.since_last_main_ms === 'number' ? v.since_last_main_ms : null } : {}) }, { trace });
+  const telemetry = { reason: result.reason, decision_id: result.mode !== 'off' ? result.id : null, arm: result.arm };
+  if (result.mode === 'off') return { output: null, telemetry };
+  if (result.mode === 'on' && result.id) rememberEffortDecision(ctx.home, { decisionId: result.id, arm: result.arm, level: result.level }, ctx.now());
+  const output = { decision_id: result.id, mode: result.mode, apply: result.apply, level: result.apply ? result.level : null, arm: result.arm, reason: result.reason };
+  return { output, telemetry };
+}
+function turnOutcomeInput(input) {
+  if (!isObject(input) || typeof input.turn_id !== 'string' || !input.turn_id) return null;
+  if (input.decision_id !== undefined && typeof input.decision_id !== 'string') return null;
+  if (input.loop !== undefined && !['main', 'subagent'].includes(input.loop)) return null;
+  if (!Number.isInteger(input.steps) || input.steps < 0 || input.steps > 10000) return null;
+  if (!Number.isFinite(input.duration_ms) || input.duration_ms < 0 || input.duration_ms > 24 * 3600 * 1000) return null;
+  if (input.effort_used !== undefined && typeof input.effort_used !== 'string' && typeof input.effort_used !== 'number') return null;
+  if (input.model !== undefined && typeof input.model !== 'string') return null;
+  if (input.stop_reason !== undefined && typeof input.stop_reason !== 'string') return null;
+  if (!Number.isInteger(input.tool_uses) || input.tool_uses < 0 || input.tool_uses > 100000) return null;
+  const u = input.usage;
+  if (!isObject(u) || ['input', 'output', 'cache_creation', 'cache_read'].some(k => !Number.isFinite(u[k]) || u[k] < 0 || u[k] > 1e9)) return null;
+  return input;
+}
+/**
+ * `pointsman hook --host claude --event turn-outcome` (mods/pointsman-effort's turn.step, on the
+ * step that ends the turn). Logs a content-free outcome line for phase 2/3 offline comparison;
+ * never text. The arm/level are read back from turn-effort's own pending record (see
+ * rememberEffortDecision above), never re-derived from anything the mod sends here.
+ */
+function turnOutcome(host, input, ctx) {
+  if (host !== 'claude') return { output: null, telemetry: { reason: 'NOOP' } };
+  const v = turnOutcomeInput(input);
+  if (!v) return { output: null, telemetry: { reason: 'INVALID_HOOK_INPUT' } };
+  let status; try { status = ctx.layer.status(); } catch { return { output: null, telemetry: { reason: 'INVALID_CONFIG' } }; }
+  if (status.features.effort.mode === 'off') return { output: null, telemetry: { reason: 'OFF' } };
+  if (!status.telemetry) return { output: null, telemetry: { reason: 'TELEMETRY_DISABLED' } };
+  const decisionId = typeof v.decision_id === 'string' && v.decision_id ? v.decision_id : null;
+  const pending = decisionId ? recallEffortDecision(ctx.home, decisionId, ctx.now()) : null;
+  const arm = pending?.arm ?? 'none';
+  try {
+    appendEvent(ctx.home, { kind: 'hook', at: new Date().toISOString(), host, event: 'turn-outcome', reason: 'TURN_OUTCOME',
+      mode: status.features.effort.mode, decision_id: decisionId, arm, loop: v.loop === 'subagent' ? 'subagent' : 'main',
+      steps: v.steps, duration_ms: v.duration_ms, tool_uses: v.tool_uses,
+      ...(v.effort_used !== undefined ? { effort_used: EFFORT_LEVELS.has(v.effort_used) ? v.effort_used : (typeof v.effort_used === 'number' ? v.effort_used : null) } : {}),
+      ...(v.model !== undefined ? { model: safeToken(v.model) } : {}),
+      ...(v.stop_reason !== undefined ? { stop_reason: safeToken(v.stop_reason) } : {}),
+      usage: { input: v.usage.input, output: v.usage.output, cache_creation: v.usage.cache_creation, cache_read: v.usage.cache_read } });
+  } catch { /* observability cannot become an availability dependency */ }
+  return { output: null, telemetry: { reason: 'RECORDED', decision_id: decisionId } };
+}
+const HANDLERS = { 'pre-spawn': preSpawn, 'post-spawn': postSpawn, 'subagent-start': subagentStart, 'subagent-stop': subagentStop,
+  'turn-effort': turnEffort, 'turn-outcome': turnOutcome };
 
 function logHookEvent({ home, layer, host, event, telemetry, applied, elapsedMs }) {
   try {
     const status = layer.status();
-    const mode = status.features.router.mode;
+    const mode = gateModeFor(status, event);
     if (mode === 'off' || !status.telemetry) return;
     appendEvent(home, { kind: 'hook', at: new Date().toISOString(), host, event, reason: telemetry?.reason ?? null,
       mode, applied: Boolean(applied), original_role: telemetry?.original_role ?? null,
@@ -421,12 +570,13 @@ function logOutcomeEvent(ctx, { host, event, decisionId, agentId, arm, finalRole
 export async function processHookEvent({ host, event, input, home = resolveHome(), env = process.env, now = () => Date.now(),
   layer, links = createLinkIndex({ home, now }), store = createTrainingStore({ home }) } = {}) {
   const start = performance.now();
-  if (!HOSTS.includes(host) || !HOOK_EVENTS.includes(event) || typeof layer?.route !== 'function') return { output: null, telemetry: null };
-  // The whole owned hook (every event, not only pre-spawn) passes through immediately when global
-  // OFF, router OFF or POINTSMAN_DISABLE=1 apply: no route call, no link/pending write, no outcome record.
+  if (!HOSTS.includes(host) || !HOOK_EVENTS.includes(event) || typeof layer?.route !== 'function' || typeof layer?.effort !== 'function') return { output: null, telemetry: null };
+  // The whole owned hook passes through immediately when global OFF, POINTSMAN_DISABLE=1, or (for the
+  // event's own feature -- router for the original four, effort for turn-effort/turn-outcome) that
+  // feature's mode is OFF: no route/effort call, no link/pending write, no outcome record.
   let status;
   try { status = layer.status(); } catch { return { output: null, telemetry: null }; }
-  if (status.features.router.mode === 'off') return { output: null, telemetry: null };
+  if (gateModeFor(status, event) === 'off') return { output: null, telemetry: null };
   const ctx = { home, env, now, layer, links, store };
   let outcome;
   try { outcome = await HANDLERS[event](host, input, ctx); }

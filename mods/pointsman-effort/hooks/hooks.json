@@ -1,0 +1,4 @@
+{
+  "description": "Phase 1 (shadow) reasoning-effort mod: never changes a prompt or a model; only ever proposes the main loop's or a subagent's own reasoning effort, gated by `pointsman effort`.",
+  "modules": ["./pointsman-effort.ts"]
+}
