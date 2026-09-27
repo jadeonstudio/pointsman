@@ -1,0 +1,24 @@
+{
+  "query": "Evidence about database transactions",
+  "risk": "routine",
+  "coverage": "selective",
+  "items": [
+    {
+      "id": "keep_1",
+      "text": "Database transaction isolation evidence"
+    },
+    {
+      "id": "drop_1",
+      "text": "drop: an unrelated weather summary"
+    },
+    {
+      "id": "uncertain_1",
+      "text": "uncertain: partial context"
+    },
+    {
+      "id": "required_1",
+      "text": "drop: but explicitly required",
+      "required": true
+    }
+  ]
+}

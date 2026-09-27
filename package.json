@@ -1,0 +1,36 @@
+{
+  "name": "pointsman",
+  "version": "0.3.0",
+  "description": "A local, switchable TypeSafe decision layer with policy routing and selective filtering for Codex and Claude Code",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "pointsman": "bin/pointsman.mjs"
+  },
+  "exports": {
+    ".": "./src/engine.mjs",
+    "./control": "./src/control-layer.mjs",
+    "./routing": "./src/routing.mjs",
+    "./evaluation": "./src/evaluation.mjs",
+    "./training": "./src/training/store.mjs",
+    "./dataset": "./src/training/dataset.mjs",
+    "./training/evaluate": "./src/training/evaluate.mjs",
+    "./training/host": "./src/training/host.mjs"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check": "node scripts/check.mjs",
+    "test:live": "node bin/pointsman.mjs smoke --live",
+    "demo": "node examples/fast-path.mjs",
+    "demo:features": "node examples/classifier-design.mjs",
+    "demo:training": "node examples/training-pipeline.mjs"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jadeonstudio/pointsman.git"
+  }
+}

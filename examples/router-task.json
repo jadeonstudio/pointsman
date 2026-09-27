@@ -1,0 +1,15 @@
+{
+  "task": "Fix only the specified heading typo in the README. No executable code changes.",
+  "host": "codex",
+  "risk": "routine",
+  "context": {
+    "complete": true,
+    "scope": "local",
+    "previousFailures": 0,
+    "highImpact": false,
+    "modelLocked": false,
+    "exhaustive": false
+  },
+  "availableModels": [],
+  "availableSkills": []
+}

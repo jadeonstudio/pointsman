@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "router": {
+    "mode": "off",
+    "expectedModel": "jev-1.13.0",
+    "minConfidence": 0.9,
+    "minProbability": 0.85,
+    "maxRiskProbability": 0.01,
+    "maxUnknownProbability": 0.05,
+    "economyMaxDifficulty": 2,
+    "standardMaxDifficulty": 3.5,
+    "economyMaxHardProbability": 0.02,
+    "standardMaxDeepProbability": 0.05,
+    "profiles": {
+      "codex": {},
+      "claude": {}
+    }
+  },
+  "bulk": {
+    "mode": "off",
+    "expectedModel": "jev-1.13.0",
+    "maxItems": 128,
+    "batchSize": 8,
+    "maxRequests": 16,
+    "maxTotalMs": 10000,
+    "minRejectConfidence": 0.97,
+    "minRejectProbability": 0.99
+  }
+}

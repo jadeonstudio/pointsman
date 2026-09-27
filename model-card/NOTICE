@@ -1,0 +1,14 @@
+pointsman-router
+Copyright 2026 jadeonstudio
+
+This model is a fine-tuned derivative of the following works:
+
+- Laya multilingual checkpoint (convaiinnovations/laya-multilingual) and the Laya
+  runtime (https://github.com/NandhaKishorM/laya), licensed under the Apache License,
+  Version 2.0.
+- mmBERT-base encoder (jhu-clsp/mmBERT-base), licensed under the MIT License,
+  Copyright (c) the jhu-clsp authors.
+
+Changes: the Laya multilingual checkpoint was further trained (all encoder and head
+parameters) on coding-task routing labels described in README.md. The file layout of
+the upstream checkpoint is kept unchanged so the official Laya 0.3.4 runtime can load it.

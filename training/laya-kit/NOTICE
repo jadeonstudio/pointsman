@@ -1,0 +1,43 @@
+pointsman / training/laya-kit
+Copyright 2026 the pointsman project
+
+This directory adapts training/evaluation code from the `laya` project by
+Convai Innovations, specifically:
+
+  Repository: https://github.com/NandhaKishorM/laya
+  Commit:     42626c348753fbb17572a813127df2278a1ec527
+  File:       notebooks/laya_finetune_typed_decisions_2xT4_kaggle.ipynb
+  License:    Apache License, Version 2.0 (see the upstream repository's
+              LICENSE file at the commit above; the upstream repository does
+              not ship a separate NOTICE file at this commit -- confirmed by
+              reading its tree at the pinned commit, so none is reproduced
+              here beyond this attribution).
+
+Files in this directory derived from that notebook:
+
+  - train_from_export.py: the DDP training script (torch.distributed /
+    NCCL, RLCD+GRPO policy-gradient loss, AdamW parameter groups, cosine
+    schedule, post-training temperature calibration) and the benchmark
+    evaluation logic are copied from the notebook's cells with the minimal
+    changes documented inline (each marked `# pointsman-change:`), primarily:
+    reading a local pointsman dataset export (train/calibration/test.jsonl)
+    instead of downloading the public `LocalLLaMA/typed-decisions` dataset,
+    and using the export's own held-out calibration split instead of a
+    slice of the training data.
+
+This adaptation itself (the export-reading, manifest verification, and
+tokenizer-admission-reporting code that is not present in the upstream
+notebook) is part of pointsman and covered by this project's own
+license (see the repository root). Where pointsman code and
+Apache-2.0-licensed upstream code are combined in the same file, the
+Apache-2.0 terms continue to apply to the reproduced upstream portions as
+required by the License; see the SPDX-style header at the top of
+train_from_export.py.
+
+Data rights note (see docs/TRAINING_DATA.md section 5): the upstream
+runtime/model (`laya`, Apache-2.0) is licensed independently from any rights
+in collected pointsman training data or teacher-model outputs used to build a
+local export. Before running this kit against a real export, confirm you
+have the rights to use that collected data and any teacher-model outputs
+for fine-tuning, separately from the Apache-2.0 grant on the `laya` code
+itself.

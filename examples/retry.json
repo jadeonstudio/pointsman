@@ -1,0 +1,20 @@
+{
+  "purpose": "retry",
+  "risk": "routine",
+  "state": {
+    "errorClass": "transient upstream timeout",
+    "attempts": 1,
+    "maximumAttempts": 2,
+    "idempotent": true
+  },
+  "questions": {
+    "retry": {
+      "type": "noul",
+      "instructions": "Does the supplied evidence support considering one retry within the existing retry policy?"
+    },
+    "review": {
+      "type": "noul",
+      "instructions": "Does the supplied evidence indicate an implementation defect requiring code review?"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "mode": "off",
+  "model": "jev-latest",
+  "timeoutMs": 2000,
+  "maxInputBytes": 24000,
+  "maxQuestions": 8,
+  "minConfidence": 0.85,
+  "minChoiceProbability": 0.8,
+  "noulCertainty": 0.95,
+  "maxCallsPerMinute": 60,
+  "maxInFlight": 4,
+  "circuitFailureThreshold": 3,
+  "circuitCooldownMs": 30000,
+  "telemetry": true
+}

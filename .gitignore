@@ -1,0 +1,20 @@
+node_modules/
+.env
+.env.*
+!.env.example
+credentials.env
+*.pem
+*.key
+*.log
+*.jsonl
+coverage/
+.DS_Store
+.pointsman-local/
+
+# Optional Python runtime test caches
+__pycache__/
+*.pyc
+*.pyo
+
+# Private design notes and work logs (separate private repository)
+docs/

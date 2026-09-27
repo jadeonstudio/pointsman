@@ -1,0 +1,21 @@
+{
+  "purpose": "route",
+  "risk": "routine",
+  "state": {
+    "task": "Classify a documentation-only typo fix",
+    "changedKinds": [
+      "markdown"
+    ]
+  },
+  "questions": {
+    "worker": {
+      "type": "choice",
+      "instructions": "Which existing worker fits this task?",
+      "criteria": {
+        "documentation": "Documentation edits",
+        "implementation": "Executable code changes",
+        "host": "Needs host reasoning"
+      }
+    }
+  }
+}

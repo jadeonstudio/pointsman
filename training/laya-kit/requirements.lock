@@ -1,0 +1,41 @@
+# requirements.lock -- training/laya-kit
+#
+# Pinned against the official notebook at commit
+# NandhaKishorM/laya@42626c348753fbb17572a813127df2278a1ec527
+# (notebooks/laya_finetune_typed_decisions_2xT4_kaggle.ipynb, cell 4:
+#   !pip install -q -U "laya>=0.1.6" "transformers>=4.48.0" "datasets>=3.0.0" \
+#       safetensors huggingface_hub pyarrow pandas scipy accelerate tabulate
+# ) and the same commit's pyproject.toml, which declares laya's own version
+# as 0.3.4 with dependencies torch>=2.0.0, transformers>=4.45.0,
+# safetensors>=0.4.0, huggingface_hub>=0.20.0, numpy>=1.20.0.
+#
+# NOT executed, NOT pip-installed by this kit or by the assistant that wrote
+# it. Install this only on the actual Kaggle T4x2 training machine.
+#
+# laya==0.3.4 is fixed per project instruction: this is the exact version
+# published at the pinned notebook commit (pyproject.toml `version = "0.3.4"`),
+# not a guess.
+laya==0.3.4
+
+# The notebook itself pins only lower bounds (">=") for these packages and
+# does not record the exact resolved versions Kaggle's pip install produced
+# at notebook-authoring time. Kaggle's base image versions drift over time,
+# so an exact pin here would be a guess, not a verified fact. Marked
+# "cannot confirm" rather than invented:
+
+# transformers>=4.48.0        # cannot confirm: notebook only pins a lower bound
+# datasets>=3.0.0              # cannot confirm: notebook only pins a lower bound
+# torch>=2.0.0                 # cannot confirm: laya's own pyproject.toml lower bound; notebook relies on Kaggle's preinstalled torch/CUDA build, no version pinned
+# safetensors                  # cannot confirm: notebook installs unpinned; laya's pyproject.toml lower bound is safetensors>=0.4.0
+# huggingface_hub              # cannot confirm: notebook installs unpinned; laya's pyproject.toml lower bound is huggingface_hub>=0.20.0
+# numpy                        # cannot confirm: not explicitly installed by the notebook cell (comes transitively via torch/transformers/laya); laya's pyproject.toml lower bound is numpy>=1.20.0
+# pyarrow                      # cannot confirm: notebook installs unpinned, needed by `datasets` for Arrow-backed loading
+# pandas                       # cannot confirm: notebook installs unpinned, used only for the comparison-table DataFrame (cell 7)
+# scipy                        # cannot confirm: notebook installs unpinned; not directly imported in any notebook cell we could inspect -- transitive dependency of one of the above
+# accelerate                   # cannot confirm: notebook installs unpinned; not directly imported in any notebook cell we could inspect (may be pulled in implicitly by `transformers`/`datasets`)
+# tabulate                     # cannot confirm: notebook installs unpinned, used only for `df_comp.to_markdown()` (cell 7)
+
+# Do NOT resolve the "cannot confirm" lines above to a specific version without
+# re-reading the actual Kaggle T4x2 base image's preinstalled package list at
+# training time, or re-running the notebook and recording `pip freeze`
+# output. Do not guess a version and write it in as if verified.
