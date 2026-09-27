@@ -8,7 +8,7 @@ import { createDecisionEngine } from './engine.mjs';
 import { createControlLayer } from './control-layer.mjs';
 import { startMcp } from './mcp.mjs';
 import { installationPlan, applyInstallation, describeHookStatus, layaAgentPlistPath, layaAgentPlist, REPO_ROOT } from './installer.mjs';
-import { readMetrics } from './metrics.mjs';
+import { readMetrics, readAbMetrics } from './metrics.mjs';
 import { layaSocketPath, layaSocketExists, createLayaSocketClient } from './inference.mjs';
 import { readText } from './storage.mjs';
 
@@ -62,16 +62,17 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
     home: { type: 'string' }, target: { type: 'string' }, scope: { type: 'string' }, project: { type: 'string' },
     'dry-run': { type: 'boolean' }, live: { type: 'boolean' }, days: { type: 'string' }, help: { type: 'boolean' },
     hooks: { type: 'boolean' }, 'hooks-only': { type: 'boolean' }, 'no-skills': { type: 'boolean' }, 'laya-agent': { type: 'boolean' },
+    prices: { type: 'string' },
   } });
   const [command = 'help', subcommand] = positionals;
-  if (positionals.length > (command === 'key' ? 2 : 1)) fail('UNEXPECTED_ARGUMENTS');
+  if (positionals.length > (['key', 'metrics'].includes(command) ? 2 : 1)) fail('UNEXPECTED_ARGUMENTS');
   const home = resolveHome({ ...env, ...(values.home ? { POINTSMAN_HOME: values.home } : {}) });
   const engine = createDecisionEngine({ home, env });
   try {
   if (values.help || command === 'help') {
-    process.stdout.write(`pointsman ${VERSION}\n\nCommands:\n  install|uninstall [--target both|codex|claude] [--scope user|project] [--project PATH] [--dry-run]\n    install --hooks          Also install owned host hooks and the short managed instruction block\n    uninstall --hooks-only   Remove only owned host hooks and the instruction block (MCP/skills/shim/mode unchanged)\n    --no-skills              Leave the host skills directory untouched (e.g. a symlinked skills root)\n    --laya-agent              macOS only: also install/remove the user launchd agent that runs \`laya serve\` at login\n  off|shadow|on       Shared switch, reread on every decision\n  status|doctor      Offline diagnostics; never prints a key\n  key set|remove     Run set yourself in an interactive terminal\n  smoke [--live]     Offline by default; live needs a key and active mode\n  decide             Read one JSON request from stdin\n  metrics [--days 7] Local metadata, not inferred savings\n  hook --host codex|claude --event pre-spawn|post-spawn|subagent-start|subagent-stop\n                      Fail-open host hook executor; reads one hook JSON from stdin, never denies\n  mcp                Local stdio server\n  migrate --from OLD_HOME [--dry-run]\n                      Move an existing jev-agent-control data home to POINTSMAN_HOME and fix its absolute paths\n\nGlobal: --home ABSOLUTE_PATH. No command accepts a key as an argument.\n`); return;
+    process.stdout.write(`pointsman ${VERSION}\n\nCommands:\n  install|uninstall [--target both|codex|claude] [--scope user|project] [--project PATH] [--dry-run]\n    install --hooks          Also install owned host hooks and the short managed instruction block\n    uninstall --hooks-only   Remove only owned host hooks and the instruction block (MCP/skills/shim/mode unchanged)\n    --no-skills              Leave the host skills directory untouched (e.g. a symlinked skills root)\n    --laya-agent              macOS only: also install/remove the user launchd agent that runs \`laya serve\` at login\n  off|shadow|on       Shared switch, reread on every decision\n  status|doctor      Offline diagnostics; never prints a key\n  key set|remove     Run set yourself in an interactive terminal\n  smoke [--live]     Offline by default; live needs a key and active mode\n  decide             Read one JSON request from stdin\n  metrics [--days 7] Local metadata, not inferred savings\n  metrics ab [--days 7] [--prices FILE]\n                      Cost/time by A/B arm (see \`pointsman router ab\`); never task quality\n  hook --host codex|claude --event pre-spawn|post-spawn|subagent-start|subagent-stop\n                      Fail-open host hook executor; reads one hook JSON from stdin, never denies\n  mcp                Local stdio server\n  migrate --from OLD_HOME [--dry-run]\n                      Move an existing jev-agent-control data home to POINTSMAN_HOME and fix its absolute paths\n\nGlobal: --home ABSOLUTE_PATH. No command accepts a key as an argument.\n`); return;
   }
-  const allowed = { install: ['target', 'scope', 'project', 'dry-run', 'hooks', 'no-skills', 'laya-agent'], uninstall: ['target', 'scope', 'project', 'dry-run', 'hooks-only', 'no-skills', 'laya-agent'], smoke: ['live'], metrics: ['days'] };
+  const allowed = { install: ['target', 'scope', 'project', 'dry-run', 'hooks', 'no-skills', 'laya-agent'], uninstall: ['target', 'scope', 'project', 'dry-run', 'hooks-only', 'no-skills', 'laya-agent'], smoke: ['live'], metrics: ['days', 'prices'] };
   if (Object.keys(values).some(k => k !== 'home' && !(allowed[command] || []).includes(k))) fail('UNEXPECTED_OPTION');
   if (command === 'install' || command === 'uninstall') {
     const plan = installationPlan({ home, env, target: values.target || 'both', scope: values.scope || 'user', project: values.project || process.cwd(),
@@ -125,7 +126,13 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
     else fail('INVALID_KEY_COMMAND'); return;
   }
   if (command === 'decide') { output(await engine.decide(await readStdin())); return; }
-  if (command === 'metrics') { output(readMetrics(home, values.days ? Number(values.days) : 7)); return; }
+  if (command === 'metrics') {
+    const days = values.days ? Number(values.days) : 7;
+    if (subcommand === 'ab') { output(readAbMetrics(home, { days, prices: values.prices })); return; }
+    if (subcommand !== undefined) fail('INVALID_METRICS_COMMAND');
+    if (values.prices !== undefined) fail('UNEXPECTED_OPTION');
+    output(readMetrics(home, days)); return;
+  }
   if (command === 'mcp') {
     const server = startMcp(engine);
     process.once('SIGINT', () => { server.close(); process.exit(0); });

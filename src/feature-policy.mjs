@@ -28,6 +28,9 @@ export const FEATURE_DEFAULTS = Object.freeze({
     maxRiskProbability: 0.01, maxUnknownProbability: 0.05,
     economyMaxDifficulty: 2, standardMaxDifficulty: 3.5,
     economyMaxHardProbability: 0.02, standardMaxDeepProbability: 0.05,
+    // Fraction (0..0.5) of otherwise-rewritten spawns randomly held back as an unmodified 'control'
+    // arm instead of applying the route (see `pointsman router ab`); 0 means always apply (no A/B split).
+    abControlShare: 0,
     profiles: { codex: {}, claude: {} } },
   bulk: { mode: 'off', expectedModel: 'jev-1.13.0', maxItems: 128, batchSize: 8,
     maxRequests: 16, maxTotalMs: 10000, minRejectConfidence: 0.97, minRejectProbability: 0.99 },
@@ -111,6 +114,7 @@ export function validateFeaturePolicy(raw) {
   const r = policy.router, b = policy.bulk;
   for (const key of ['minConfidence', 'minProbability', 'maxRiskProbability', 'maxUnknownProbability', 'economyMaxHardProbability', 'standardMaxDeepProbability']) probability(r[key]);
   if (r.minConfidence < 0.5 || r.minProbability < 0.5 || r.maxRiskProbability > 0.1 || r.maxUnknownProbability > 0.2) fail('INVALID_FEATURE_POLICY');
+  if (!Number.isFinite(r.abControlShare) || r.abControlShare < 0 || r.abControlShare > 0.5) fail('INVALID_FEATURE_POLICY');
   if (!Number.isFinite(r.economyMaxDifficulty) || !Number.isFinite(r.standardMaxDifficulty) || !(r.economyMaxDifficulty >= 1 && r.economyMaxDifficulty <= r.standardMaxDifficulty && r.standardMaxDifficulty <= 5)) fail('INVALID_FEATURE_POLICY');
   fields(r.profiles, ['codex', 'claude']);
   for (const host of Object.keys(r.profiles)) {
@@ -142,6 +146,19 @@ export function setFeatureMode(home, feature, mode) {
   policy[feature].mode = mode;
   atomicWrite(file, JSON.stringify(policy, null, 2) + '\n', { expected: previous });
   return policy;
+}
+/** `pointsman router ab <share>|off`: writes only router.abControlShare; every other field is preserved. */
+export function setAbControlShare(home, value) {
+  const share = value === 'off' ? 0 : Number(value);
+  if (!Number.isFinite(share) || share < 0 || share > 0.5) fail('INVALID_AB_CONTROL_SHARE');
+  ensureDir(home, true);
+  const file = path.join(home, 'features.json');
+  const previous = readText(file, { optional: true, privateFile: true });
+  const policy = loadFeaturePolicy(home);
+  policy.router.abControlShare = share;
+  const validated = validateFeaturePolicy(policy);
+  atomicWrite(file, JSON.stringify(validated, null, 2) + '\n', { expected: previous });
+  return validated;
 }
 export function initializeFeaturePolicy(home) {
   ensureDir(home, true);

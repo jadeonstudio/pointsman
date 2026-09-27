@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { Readable } from 'node:stream';
 import { setup, response } from './features-helpers.mjs';
 import { processHookEvent, runHookCli, parseContextAnnotation, truncateUtf8, resolveSnapshotId,
-  HOSTS, HOOK_EVENTS } from '../src/hooks.mjs';
+  deriveAgentTranscriptPath, readAgentUsageSummary, HOSTS, HOOK_EVENTS } from '../src/hooks.mjs';
 import { createDecisionEngine } from '../src/engine.mjs';
 import { createControlLayer } from '../src/control-layer.mjs';
 import { createTrainingStore } from '../src/training/store.mjs';
@@ -387,4 +387,142 @@ test('L3: runHookCli with provider=laya and no resident server passes through fa
   const hookEvent = readEvents(s.home).find(e => e.kind === 'hook' && e.event === 'pre-spawn');
   assert.ok(hookEvent);
   assert.equal(hookEvent.applied, false);
+});
+
+// --- P5 outcome linking: content-free OUTCOME events, correct regardless of hook order ---------
+function writeTranscript(file, lines) {
+  fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+  fs.writeFileSync(file, lines.map(l => JSON.stringify(l)).join('\n') + '\n', { mode: 0o600 });
+}
+function outcomeEvents(home) { return readEvents(home).filter(e => e.kind === 'hook' && e.reason === 'OUTCOME'); }
+const usageLine = (model, input, output) => ({ message: { model, usage: { input_tokens: input, output_tokens: output, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 } } });
+
+test('deriveAgentTranscriptPath follows the documented "<session>/subagents/agent-<id>.jsonl" layout', () => {
+  assert.equal(deriveAgentTranscriptPath('/home/u/.claude/projects/p/sess-1.jsonl', 'agent-9'),
+    '/home/u/.claude/projects/p/sess-1/subagents/agent-agent-9.jsonl');
+  assert.equal(deriveAgentTranscriptPath('not-a-transcript', 'agent-9'), null);
+  assert.equal(deriveAgentTranscriptPath('/x/sess.jsonl', ''), null);
+});
+test('readAgentUsageSummary refuses a path outside ~/.claude/projects and a missing file, without throwing', () => {
+  const home = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'pointsman-usage-')));
+  assert.equal(readAgentUsageSummary(path.join(home, 'elsewhere', 'a.jsonl'), { HOME: home }), null);
+  assert.equal(readAgentUsageSummary(path.join(home, '.claude', 'projects', 'p', 'missing.jsonl'), { HOME: home }), null);
+  assert.equal(readAgentUsageSummary(null, { HOME: home }), null);
+  fs.rmSync(home, { recursive: true, force: true });
+});
+test('readAgentUsageSummary sums numeric usage per model, ignores lines without usage, never reads content', () => {
+  const home = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'pointsman-usage-')));
+  const file = path.join(home, '.claude', 'projects', 'p', 's', 'subagents', 'agent-1.jsonl');
+  writeTranscript(file, [usageLine('m-a', 10, 2), { message: { role: 'user', content: 'SECRET_MARKER no usage here' } }, usageLine('m-a', 5, 1), usageLine('m-b', 100, 20)]);
+  const summary = readAgentUsageSummary(file, { HOME: home });
+  assert.deepEqual(summary.byModel['m-a'], { input: 15, output: 3, cache_creation: 0, cache_read: 0, turns: 2 });
+  assert.deepEqual(summary.byModel['m-b'], { input: 100, output: 20, cache_creation: 0, cache_read: 0, turns: 1 });
+  assert.equal(summary.truncated, false);
+  fs.rmSync(home, { recursive: true, force: true });
+});
+test('readAgentUsageSummary refuses a symlinked transcript file', () => {
+  const home = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'pointsman-usage-')));
+  const real = path.join(home, 'real.jsonl');
+  writeTranscript(real, [usageLine('m-a', 1, 1)]);
+  const linked = path.join(home, '.claude', 'projects', 'p', 's', 'subagents', 'agent-1.jsonl');
+  fs.mkdirSync(path.dirname(linked), { recursive: true, mode: 0o700 });
+  fs.symlinkSync(real, linked);
+  assert.equal(readAgentUsageSummary(linked, { HOME: home }), null);
+  fs.rmSync(home, { recursive: true, force: true });
+});
+
+test('P5 real order: subagent-stop fires before post-spawn; post-spawn still records the OUTCOME with usage', async t => {
+  const s = setup({ provider: p => response(p, { intent: 'edit', difficulty: [1, 0, 0, 0, 0] }) }); t.after(s.cleanup);
+  installFixtureRoles(s.home, 'claude');
+  const mainTranscript = path.join(s.home, '.claude', 'projects', 'proj', 'sess-1.jsonl');
+  const agentTranscript = deriveAgentTranscriptPath(mainTranscript, 'agent-1');
+  writeTranscript(agentTranscript, [usageLine('claude-haiku-4-5', 100, 20), usageLine('claude-haiku-4-5', 50, 10)]);
+  const pre = await processHookEvent({ host: 'claude', event: 'pre-spawn', input: claudeInput(), home: s.home, env: s.env, layer: s.layer });
+  assert.ok(pre.telemetry.decision_id);
+  // SubagentStop first: no linked decision yet, but it memoizes the transcript path for post-spawn.
+  const stop = await processHookEvent({ host: 'claude', event: 'subagent-stop',
+    input: { agent_id: 'agent-1', agent_transcript_path: agentTranscript, last_assistant_message: 'done' }, home: s.home, env: s.env, layer: s.layer });
+  assert.equal(stop.telemetry.reason, 'NO_LINKED_DECISION');
+  assert.equal(stop.telemetry.last_message_length, 4);
+  assert.equal(outcomeEvents(s.home).length, 0, 'no decision is linked yet, so no OUTCOME can be recorded here');
+  // PostToolUse(Agent) second: resolves the decision via the tool_use link and reads the memoized transcript path.
+  const post = await processHookEvent({ host: 'claude', event: 'post-spawn',
+    input: { tool_use_id: 'tu-1', tool_response: { agentId: 'agent-1', totalDurationMs: 4321, totalToolUseCount: 7 } }, home: s.home, env: s.env, layer: s.layer });
+  assert.equal(post.telemetry.decision_id, pre.telemetry.decision_id);
+  const outcomes = outcomeEvents(s.home);
+  assert.equal(outcomes.length, 1);
+  assert.equal(outcomes[0].event, 'post-spawn');
+  assert.equal(outcomes[0].decision_id, pre.telemetry.decision_id);
+  assert.equal(outcomes[0].duration_ms, 4321);
+  assert.equal(outcomes[0].tool_uses, 7);
+  assert.equal(outcomes[0].arm, 'treatment'); // default abControlShare=0 -> always treatment when the route differs
+  assert.equal(outcomes[0].final_role, 'fixture-economy-role');
+  assert.deepEqual(outcomes[0].usage['claude-haiku-4-5'], { input: 150, output: 30, cache_creation: 0, cache_read: 0, turns: 2 });
+});
+
+test('P5 missing transcript: post-spawn still records the OUTCOME, just without usage', async t => {
+  const s = setup({ provider: p => response(p, { intent: 'edit', difficulty: [1, 0, 0, 0, 0] }) }); t.after(s.cleanup);
+  installFixtureRoles(s.home, 'claude');
+  await processHookEvent({ host: 'claude', event: 'pre-spawn', input: claudeInput(), home: s.home, env: s.env, layer: s.layer });
+  // No transcript exists anywhere (neither memoized nor derivable): the outcome must still be recorded, just without usage.
+  const post = await processHookEvent({ host: 'claude', event: 'post-spawn',
+    input: { tool_use_id: 'tu-1', tool_response: { agentId: 'agent-2' }, transcript_path: path.join(s.home, '.claude', 'projects', 'proj', 'sess-2.jsonl') },
+    home: s.home, env: s.env, layer: s.layer });
+  assert.equal(post.telemetry.reason, 'LINKED');
+  const outcomes = outcomeEvents(s.home);
+  assert.equal(outcomes.length, 1);
+  assert.equal(Object.hasOwn(outcomes[0], 'usage'), false, 'missing transcript degrades to no usage, not a failure');
+});
+
+test('P5 background agent: async_launched defers the OUTCOME to subagent-stop, joined via the agent alias', async t => {
+  const s = setup({ provider: p => response(p, { intent: 'edit', difficulty: [1, 0, 0, 0, 0] }) }); t.after(s.cleanup);
+  installFixtureRoles(s.home, 'claude');
+  const agentTranscript = path.join(s.home, '.claude', 'projects', 'proj', 'sess-1', 'subagents', 'agent-3.jsonl');
+  writeTranscript(agentTranscript, [usageLine('claude-sonnet-5', 200, 40)]);
+  const pre = await processHookEvent({ host: 'claude', event: 'pre-spawn', input: claudeInput(), home: s.home, env: s.env, layer: s.layer });
+  const post = await processHookEvent({ host: 'claude', event: 'post-spawn',
+    input: { tool_use_id: 'tu-1', tool_response: { agentId: 'agent-3', status: 'async_launched' } }, home: s.home, env: s.env, layer: s.layer });
+  assert.equal(post.telemetry.reason, 'ASYNC_LAUNCHED');
+  assert.equal(outcomeEvents(s.home).length, 0, 'async_launched carries no usage yet; nothing is recorded at post-spawn');
+  // Training-store capture (a separate opt-in) is off by default, so recordSubagentStop reports
+  // CAPTURE_OFF here; the content-free OUTCOME log this test cares about is independent of that.
+  await processHookEvent({ host: 'claude', event: 'subagent-stop',
+    input: { agent_id: 'agent-3', agent_transcript_path: agentTranscript }, home: s.home, env: s.env, layer: s.layer });
+  const outcomes = outcomeEvents(s.home);
+  assert.equal(outcomes.length, 1);
+  assert.equal(outcomes[0].event, 'subagent-stop');
+  assert.equal(outcomes[0].decision_id, pre.telemetry.decision_id);
+  assert.deepEqual(outcomes[0].usage['claude-sonnet-5'], { input: 200, output: 40, cache_creation: 0, cache_read: 0, turns: 1 });
+});
+
+// --- P5 randomised A/B arm assignment (`pointsman router ab`) -----------------------------------
+test('router ab: abControlShare=0 (default) always assigns treatment when the route differs', async t => {
+  const s = setup({ provider: p => response(p, { intent: 'edit', difficulty: [1, 0, 0, 0, 0] }) }); t.after(s.cleanup);
+  installFixtureRoles(s.home, 'claude');
+  for (let i = 0; i < 5; i++) {
+    const r = await processHookEvent({ host: 'claude', event: 'pre-spawn', input: claudeInput({ tool_use_id: `tu-${i}` }), home: s.home, env: s.env, layer: s.layer });
+    assert.equal(r.telemetry.arm, 'treatment');
+    assert.ok(r.output, 'treatment always applies the rewrite');
+  }
+});
+test('router ab: at the maximum share (0.5) both control and treatment occur; control keeps the original role and logs no rewrite', async t => {
+  const s = setup({ provider: p => response(p, { intent: 'edit', difficulty: [1, 0, 0, 0, 0] }) }); t.after(s.cleanup);
+  installFixtureRoles(s.home, 'claude');
+  s.policy.router.abControlShare = 0.5; s.save();
+  let sawControl = false, sawTreatment = false;
+  for (let i = 0; i < 40 && !(sawControl && sawTreatment); i++) {
+    const r = await processHookEvent({ host: 'claude', event: 'pre-spawn', input: claudeInput({ tool_use_id: `tu-ab-${i}` }), home: s.home, env: s.env, layer: s.layer });
+    if (r.telemetry.arm === 'control') { sawControl = true; assert.equal(r.output, null); assert.equal(r.telemetry.recommended_role, 'fixture-economy-role'); }
+    if (r.telemetry.arm === 'treatment') { sawTreatment = true; assert.ok(r.output); }
+  }
+  assert.ok(sawControl, 'expected at least one control assignment across 40 draws at share=0.5');
+  assert.ok(sawTreatment, 'expected at least one treatment assignment across 40 draws at share=0.5');
+});
+test('router ab: arm is "none" when the route does not apply or matches the original role', async t => {
+  const s = setup({ provider: p => response(p, { intent: 'edit', difficulty: [1, 0, 0, 0, 0] }) }); t.after(s.cleanup);
+  installFixtureRoles(s.home, 'claude');
+  s.policy.router.abControlShare = 0.5; s.save();
+  const input = claudeInput({ tool_input: { subagent_type: 'fixture-economy-role' } }); // already the target
+  const r = await processHookEvent({ host: 'claude', event: 'pre-spawn', input, home: s.home, env: s.env, layer: s.layer });
+  assert.equal(r.telemetry.arm, 'none');
 });

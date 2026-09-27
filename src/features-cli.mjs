@@ -1,7 +1,7 @@
 import { parseArgs } from 'node:util';
 import { MAX_FRAME_BYTES, fail } from './constants.mjs';
 import { resolveHome } from './storage.mjs';
-import { initializeFeaturePolicy, loadFeaturePolicy, setFeatureMode, presetHostRoles } from './feature-policy.mjs';
+import { initializeFeaturePolicy, loadFeaturePolicy, setFeatureMode, presetHostRoles, setAbControlShare } from './feature-policy.mjs';
 import { createDecisionEngine } from './engine.mjs';
 import { createControlLayer } from './control-layer.mjs';
 import { evaluatePairedRuns } from './evaluation.mjs';
@@ -26,14 +26,17 @@ export async function featureMain(argv = process.argv.slice(2), env = process.en
     options: { home: { type: 'string' }, help: { type: 'boolean' }, host: { type: 'string' }, 'dry-run': { type: 'boolean' }, replace: { type: 'boolean' } } });
   if (values.help) { process.stdout.write(FEATURE_HELP); return true; }
   const sub = positionals[1];
-  if (positionals.length > (['router', 'bulk', 'policy'].includes(command) ? 2 : 1)) fail('UNEXPECTED_ARGUMENTS');
+  const abOnly = command === 'router' && sub === 'ab';
+  if (positionals.length > (abOnly ? 3 : (['router', 'bulk', 'policy'].includes(command) ? 2 : 1))) fail('UNEXPECTED_ARGUMENTS');
+  if (abOnly && positionals.length !== 3) fail('UNEXPECTED_ARGUMENTS');
   const rolesOnly = command === 'policy' && sub === 'roles';
   if (!rolesOnly && (values.host !== undefined || values['dry-run'] !== undefined || values.replace !== undefined)) fail('UNEXPECTED_OPTION');
   const home = resolveHome({ ...env, ...(values.home ? { POINTSMAN_HOME: values.home } : {}) });
   const engine = createDecisionEngine({ home, env });
   const layer = createControlLayer({ home, env, engine });
   try {
-  if (command === 'router' || command === 'bulk') {
+  if (command === 'router' && abOnly) { setAbControlShare(home, positionals[2]); print(layer.status()); }
+  else if (command === 'router' || command === 'bulk') {
     if (!['off', 'shadow', 'on'].includes(sub)) fail('INVALID_FEATURE_MODE');
     setFeatureMode(home, command, sub); print(layer.status());
   } else if (command === 'status') print(layer.status());
@@ -54,4 +57,4 @@ export async function featureMain(argv = process.argv.slice(2), env = process.en
   return true;
   } finally { engine.close(); }
 }
-export const FEATURE_HELP = `\nClassifier-inspired features (explicit Jev or local Laya provider):\n  policy init|check   Create/validate private features.json; no automatic targets\n  policy roles --host codex|claude [--dry-run] [--replace]\n                      Preset router.profiles[host] from roles the host actually has (~/.codex/agents/*.toml, ~/.claude/agents/*.md); refuses to overwrite an existing profile unless --replace\n  router off|shadow|on  Cap routing independently of the global switch\n  bulk off|shadow|on    Cap prefiltering independently of the global switch\n  route|filter       Read bounded JSON from stdin; results contain no raw text\n  evaluate           Offline paired-execution report from JSON stdin\n`;
+export const FEATURE_HELP = `\nClassifier-inspired features (explicit Jev or local Laya provider):\n  policy init|check   Create/validate private features.json; no automatic targets\n  policy roles --host codex|claude [--dry-run] [--replace]\n                      Preset router.profiles[host] from roles the host actually has (~/.codex/agents/*.toml, ~/.claude/agents/*.md); refuses to overwrite an existing profile unless --replace\n  router off|shadow|on  Cap routing independently of the global switch\n  router ab SHARE|off Randomised control/treatment split (0..0.5) of otherwise-rewritten spawns; see README "Measuring cost and time"\n  bulk off|shadow|on    Cap prefiltering independently of the global switch\n  route|filter       Read bounded JSON from stdin; results contain no raw text\n  evaluate           Offline paired-execution report from JSON stdin\n`;

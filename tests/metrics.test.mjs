@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { appendEvent } from '../src/storage.mjs';
-import { readMetrics } from '../src/metrics.mjs';
+import { readMetrics, readAbMetrics, summarizeAbOutcomes } from '../src/metrics.mjs';
 import { evaluateStore } from '../src/training/evaluate.mjs';
 import { fixture, decision, outcome, REF } from './training-helpers.mjs';
 
@@ -212,4 +212,60 @@ test('doctor does not warn when no purpose has reached its strong-label minimum'
   const result = spawnSync(process.execPath, [bin, 'doctor'], { env: { ...f.env, POINTSMAN_HOME: f.home, HOME: f.home }, encoding: 'utf8' });
   const out = JSON.parse(result.stdout);
   assert.equal(out.warnings.some(w => w.startsWith('TRAINING_CANDIDATE_READY')), false);
+});
+
+// --- P5 `pointsman metrics ab`: cost/time by arm, never task quality --------------------------
+function outcomeEvent({ decisionId, event = 'post-spawn', arm, finalRole, durationMs, toolUses, usage }) {
+  return { kind: 'hook', at: new Date().toISOString(), host: 'claude', event, reason: 'OUTCOME', mode: 'on',
+    decision_id: decisionId, agent_id: 'agent-1', arm, final_role: finalRole, final_model: null,
+    ...(durationMs !== undefined ? { duration_ms: durationMs } : {}), ...(toolUses !== undefined ? { tool_uses: toolUses } : {}),
+    ...(usage ? { usage } : {}) };
+}
+test('summarizeAbOutcomes groups by arm, sums per-model usage and counts role transitions', () => {
+  const preA = { kind: 'hook', event: 'pre-spawn', reason: 'ACCEPTED', mode: 'on', decision_id: 'd1', original_role: 'general-purpose', recommended_role: 'implementer' };
+  const preB = { kind: 'hook', event: 'pre-spawn', reason: 'ACCEPTED', mode: 'on', decision_id: 'd2', original_role: 'general-purpose', recommended_role: 'implementer' };
+  const events = [preA, preB,
+    outcomeEvent({ decisionId: 'd1', arm: 'treatment', finalRole: 'implementer', durationMs: 1000, toolUses: 3, usage: { 'model-a': { input: 100, output: 20, cache_creation: 0, cache_read: 0, turns: 1 } } }),
+    outcomeEvent({ decisionId: 'd2', arm: 'control', finalRole: 'general-purpose', durationMs: 2000, toolUses: 5, usage: { 'model-a': { input: 50, output: 10, cache_creation: 0, cache_read: 0, turns: 1 } } }),
+  ];
+  const report = summarizeAbOutcomes(events, {});
+  assert.equal(report.outcomesTotal, 2);
+  assert.equal(report.byArm.treatment.count, 1);
+  assert.equal(report.byArm.control.count, 1);
+  assert.equal(report.byArm.treatment.durationMs.p50, 1000);
+  assert.deepEqual(report.byArm.treatment.tokensByModel['model-a'], { input: 100, output: 20, cache_creation: 0, cache_read: 0, turns: 1 });
+  assert.equal(report.byArm.treatment.costUsd, null); // no price table supplied
+  assert.equal(report.byRoleTransition['general-purpose->implementer'], 1);
+  assert.equal(report.byRoleTransition['general-purpose->general-purpose'], 1);
+  assert.equal(report.byArm.treatment.insufficientSample, true); // n=1 < 30
+});
+test('summarizeAbOutcomes estimates USD cost only when every seen model has a price', () => {
+  const events = [outcomeEvent({ decisionId: 'd1', arm: 'treatment', finalRole: 'implementer',
+    usage: { 'model-a': { input: 1_000_000, output: 1_000_000, cache_creation: 0, cache_read: 0, turns: 1 } } })];
+  const priced = summarizeAbOutcomes(events, { prices: { 'model-a': { input: 3, output: 15 } } });
+  assert.equal(priced.byArm.treatment.costUsd, 18);
+  const unpriced = summarizeAbOutcomes(events, { prices: { 'other-model': { input: 1, output: 1 } } });
+  assert.equal(unpriced.byArm.treatment.costUsd, null);
+  assert.equal(unpriced.byArm.treatment.costPartial, true);
+});
+test('readAbMetrics reads only from the log directory and rejects a malformed price file', t => {
+  const f = fixture(t);
+  appendEvent(f.home, { kind: 'hook', event: 'pre-spawn', reason: 'ACCEPTED', mode: 'on', decision_id: 'd1', original_role: 'x', recommended_role: 'y' });
+  appendEvent(f.home, outcomeEvent({ decisionId: 'd1', arm: 'treatment', finalRole: 'y', durationMs: 10 }));
+  const report = readAbMetrics(f.home, { days: 7 });
+  assert.equal(report.days, 7);
+  assert.equal(report.byArm.treatment.count, 1);
+  const badPrices = path.join(f.home, 'bad-prices.json');
+  fs.writeFileSync(badPrices, 'not json');
+  assert.throws(() => readAbMetrics(f.home, { days: 7, prices: badPrices }));
+});
+test('CLI `pointsman metrics ab` reports content-free cost/time by arm and never task quality', t => {
+  const f = fixture(t);
+  appendEvent(f.home, { kind: 'hook', event: 'pre-spawn', reason: 'ACCEPTED', mode: 'on', decision_id: 'd1', original_role: 'general-purpose', recommended_role: 'implementer' });
+  appendEvent(f.home, outcomeEvent({ decisionId: 'd1', arm: 'treatment', finalRole: 'implementer', durationMs: 500, toolUses: 2 }));
+  const result = spawnSync(process.execPath, [bin, 'metrics', 'ab'], { env: { ...f.env, POINTSMAN_HOME: f.home, HOME: f.home }, encoding: 'utf8' });
+  assert.equal(result.status, 0);
+  const out = JSON.parse(result.stdout);
+  assert.equal(out.byArm.treatment.count, 1);
+  assert.ok(out.note.includes('not task quality'));
 });

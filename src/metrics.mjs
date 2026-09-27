@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { readText, noSymlinks } from './storage.mjs';
-import { fail, errorCode } from './constants.mjs';
+import { fail, errorCode, isObject } from './constants.mjs';
 import { createTrainingStore } from './training/store.mjs';
 const percentile = (array, p) => array.length ? [...array].sort((a, b) => a - b)[Math.ceil(array.length * p) - 1] : null;
 const maxOf = array => array.length ? Math.max(...array) : null;
@@ -94,7 +94,8 @@ function readTrainingMetrics(home, hookEvents) {
     return { labels: { error: errorCode(error) }, followedOutcomes: summarizeFollowedOutcomes(hookEvents, []) };
   }
 }
-export function readMetrics(home, days = 7) {
+/** Shared JSONL log scan used by both readMetrics and readAbMetrics; never reads task/prompt content. */
+function scanLogEvents(home, days) {
   if (!Number.isInteger(days) || days < 1 || days > 30) fail('INVALID_DAYS');
   const dir = path.join(home, 'logs'); noSymlinks(dir);
   const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter(n => /^events-\d{4}-\d\d-\d\d\.jsonl$/.test(n)) : [];
@@ -108,6 +109,10 @@ export function readMetrics(home, days = 7) {
       catch { skipped++; }
     }
   }
+  return { events, skipped, cappedFiles };
+}
+export function readMetrics(home, days = 7) {
+  const { events, skipped, cappedFiles } = scanLogEvents(home, days);
   const decisions = events.filter(e => e.kind === 'decision'), feedback = events.filter(e => e.kind === 'feedback');
   const latency = decisions.filter(e => e.networkCalls === 1).map(e => e.elapsedMs).filter(Number.isFinite);
   const tokens = (rows, field, key) => rows.reduce((sum, e) => sum + (Number.isSafeInteger(e[field]?.[key]) ? e[field][key] : 0), 0);
@@ -152,4 +157,75 @@ export function readMetrics(home, days = 7) {
     hooks, labels, followedOutcomes,
     tokenSavings: null, costSavings: null, skippedLines: skipped, cappedFiles,
     note: 'OFF requests are not logged. API counts use decision events only, not wrapper events. Accepted primitives are not executed model routes. Missing usage is unknown, not zero. Host tokens and Jev tokens are not directly interchangeable. Whole-task savings require matched A/B runs. Logs are local best-effort metadata only. Hook events are only logged when router mode is shadow/on; hooks/labels/followedOutcomes are observational joins by decision_id, not causal measurements, and a training store read error surfaces only as labels.error.' };
+}
+
+// --- P5 A/B outcome report (`pointsman metrics ab`): cost and time only, never task quality. -----
+const PRICE_FIELDS = ['input', 'output', 'cache_write', 'cache_read'];
+/** {"<model id>": {input, output, cache_write, cache_read}} in USD per million tokens. Never hard-coded here. */
+function loadPriceTable(file) {
+  if (!file) return null;
+  let text;
+  try { text = readText(path.resolve(file), { maxBytes: 65536 }); }
+  catch { fail('INVALID_PRICE_FILE'); }
+  let table;
+  try { table = JSON.parse(text); } catch { fail('INVALID_PRICE_FILE'); }
+  if (!isObject(table)) fail('INVALID_PRICE_FILE');
+  for (const rate of Object.values(table)) {
+    if (!isObject(rate) || Object.keys(rate).some(k => !PRICE_FIELDS.includes(k))) fail('INVALID_PRICE_FILE');
+    for (const value of Object.values(rate)) if (!Number.isFinite(value) || value < 0) fail('INVALID_PRICE_FILE');
+  }
+  return table;
+}
+function emptyArmBucket() { return { count: 0, durationMs: [], toolUses: [], usageByModel: Object.create(null) }; }
+function addUsage(bucket, model, usage) {
+  const m = bucket[model] ?? (bucket[model] = { input: 0, output: 0, cache_creation: 0, cache_read: 0, turns: 0 });
+  for (const key of ['input', 'output', 'cache_creation', 'cache_read', 'turns']) m[key] += Number.isSafeInteger(usage?.[key]) ? usage[key] : 0;
+}
+function estimateCostUsd(usageByModel, prices) {
+  if (!prices) return null;
+  let total = 0, allKnown = true;
+  for (const [model, u] of Object.entries(usageByModel)) {
+    const rate = prices[model];
+    if (!rate) { allKnown = false; continue; }
+    total += (u.input / 1e6) * (rate.input ?? 0) + (u.output / 1e6) * (rate.output ?? 0) +
+      (u.cache_creation / 1e6) * (rate.cache_write ?? 0) + (u.cache_read / 1e6) * (rate.cache_read ?? 0);
+  }
+  return { usd: Math.round(total * 10000) / 10000, allModelsPriced: allKnown };
+}
+/** Content-free: only decision_id, arm, host-reported duration/tool-use counts and per-model token counts. */
+export function summarizeAbOutcomes(events, { prices } = {}) {
+  const preByDecision = new Map();
+  for (const e of events) if (e.kind === 'hook' && e.event === 'pre-spawn' && typeof e.decision_id === 'string' && e.decision_id) preByDecision.set(e.decision_id, e);
+  const outcomes = events.filter(e => e.kind === 'hook' && e.reason === 'OUTCOME' && typeof e.decision_id === 'string' && e.decision_id);
+  const byArm = Object.create(null);
+  const byRoleTransition = Object.create(null);
+  for (const o of outcomes) {
+    const arm = ['control', 'treatment', 'none'].includes(o.arm) ? o.arm : 'none';
+    const bucket = byArm[arm] ?? (byArm[arm] = emptyArmBucket());
+    bucket.count++;
+    if (Number.isFinite(o.duration_ms)) bucket.durationMs.push(o.duration_ms);
+    if (Number.isFinite(o.tool_uses)) bucket.toolUses.push(o.tool_uses);
+    if (isObject(o.usage)) for (const [model, usage] of Object.entries(o.usage)) addUsage(bucket.usageByModel, model, usage);
+    const pre = preByDecision.get(o.decision_id);
+    const from = pre?.original_role ?? 'unknown', to = o.final_role ?? pre?.recommended_role ?? 'unknown';
+    const key = `${from}->${to}`;
+    byRoleTransition[key] = (byRoleTransition[key] || 0) + 1;
+  }
+  const report = {};
+  for (const [arm, bucket] of Object.entries(byArm)) {
+    const cost = estimateCostUsd(bucket.usageByModel, prices);
+    report[arm] = { count: bucket.count, insufficientSample: bucket.count < 30,
+      durationMs: { n: bucket.durationMs.length, p50: percentile(bucket.durationMs, 0.5), p90: percentile(bucket.durationMs, 0.9) },
+      toolUses: { n: bucket.toolUses.length, p50: percentile(bucket.toolUses, 0.5), p90: percentile(bucket.toolUses, 0.9) },
+      tokensByModel: bucket.usageByModel,
+      costUsd: cost ? (cost.allModelsPriced ? cost.usd : null) : null,
+      costPartial: cost ? !cost.allModelsPriced : false };
+  }
+  return { outcomesTotal: outcomes.length, byArm: report, byRoleTransition,
+    note: 'Measures observed cost and time only, not task quality or correctness -- it never joins pass/fail or any host_review outcome. Counts under ~30 are not statistically reliable and are flagged with insufficientSample. costUsd is null unless every model seen for that arm has a price in the supplied table.' };
+}
+export function readAbMetrics(home, { days = 7, prices } = {}) {
+  const priceTable = loadPriceTable(prices);
+  const { events } = scanLogEvents(home, days);
+  return { days, ...summarizeAbOutcomes(events, { prices: priceTable }) };
 }

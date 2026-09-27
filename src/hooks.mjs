@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { randomUUID, createHash } from 'node:crypto';
+import { randomUUID, randomInt, createHash } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import { errorCode, isObject } from './constants.mjs';
 import { resolveHome, appendEvent, ensureDir, atomicWrite, readText } from './storage.mjs';
@@ -23,6 +23,12 @@ export const HOOK_TIMEOUT_MS = 4000;
 export const MAX_HOOK_STDIN_BYTES = 256 * 1024;
 const PENDING_RETENTION_MS = 60000;
 const MAX_PENDING = 256;
+// How long a subagent-stop's {agent_id -> transcript path} memo (written for the foreground case,
+// where SubagentStop fires before PostToolUse) stays available for the matching post-spawn to consume.
+const TRANSCRIPT_MEMO_RETENTION_MS = 5 * 60 * 1000;
+const MAX_TRANSCRIPT_MEMOS = 256;
+// Full-run usage transcripts are read once per outcome and capped well under Node's default string limit.
+const MAX_TRANSCRIPT_BYTES = 64 * 1024 * 1024;
 // [route scope=<local|cross-module|repository|unknown> complete=<yes|no> failures=<0-100> (impact=<high|normal>)? (exhaustive=<yes|no>)?]
 const CONTEXT_RE = /\[route scope=(local|cross-module|repository|unknown) complete=(yes|no) failures=(\d{1,3})(?: impact=(high|normal))?(?: exhaustive=(yes|no))?\]/;
 
@@ -153,6 +159,108 @@ function consumePendingCodex(home, { sessionId, agentType }, nowMs) {
   } catch { return null; }
 }
 
+// --- agent transcript usage (P5 outcome linking) -----------------------------------------------
+// SubagentStop fires BEFORE PostToolUse(Agent) for a foreground spawn (documented Claude Code
+// hook order, 2026 late). SubagentStop already carries agent_transcript_path directly, so it
+// memoizes {agent_id -> transcript path} here (content-free: a path, nothing from the transcript
+// itself) for the matching post-spawn -- which resolves the decision via the tool_use link created
+// at pre-spawn -- to read full-run usage from once the outcome is actually recorded.
+function transcriptMemoDir(home) { return path.join(home, 'links', 'transcripts'); }
+function transcriptMemoKey(host, agentId) { return createHash('sha256').update(`${host}|${agentId}`).digest('hex'); }
+function pruneTranscriptMemos(dir, nowMs) {
+  let names; try { names = fs.readdirSync(dir); } catch { return []; }
+  const alive = [];
+  for (const name of names) {
+    if (!name.endsWith('.json')) continue;
+    const file = path.join(dir, name);
+    const raw = readText(file, { optional: true, privateFile: true, maxBytes: 4096 });
+    let entry = null;
+    try { const e = raw === null ? null : JSON.parse(raw); if (e && typeof e.transcript_path === 'string' && typeof e.created_at === 'string') entry = e; } catch { entry = null; }
+    const at = entry ? Date.parse(entry.created_at) : NaN;
+    if (!entry || !Number.isFinite(at) || nowMs - at > TRANSCRIPT_MEMO_RETENTION_MS) { try { fs.unlinkSync(file); } catch { /* already gone */ } continue; }
+    alive.push({ file, entry, at });
+  }
+  return alive;
+}
+function rememberAgentTranscript(home, { host, agentId, transcriptPath }, nowMs) {
+  try {
+    const dir = transcriptMemoDir(home);
+    ensureDir(home, true); ensureDir(path.join(home, 'links'), true); ensureDir(dir, true);
+    const alive = pruneTranscriptMemos(dir, nowMs).sort((a, b) => a.at - b.at);
+    while (alive.length >= MAX_TRANSCRIPT_MEMOS) { const oldest = alive.shift(); try { fs.unlinkSync(oldest.file); } catch { /* already gone */ } }
+    const file = path.join(dir, `${transcriptMemoKey(host, agentId)}.json`);
+    atomicWrite(file, JSON.stringify({ transcript_path: transcriptPath, created_at: new Date(nowMs).toISOString() }) + '\n', { mode: 0o600, expected: null });
+  } catch { /* best-effort: a missed memo only falls back to deriving the path from PostToolUse's own transcript_path */ }
+}
+function recallAgentTranscript(home, { host, agentId }, nowMs) {
+  try {
+    const file = path.join(transcriptMemoDir(home), `${transcriptMemoKey(host, agentId)}.json`);
+    const raw = readText(file, { optional: true, privateFile: true, maxBytes: 4096 });
+    if (raw === null) return null;
+    const e = JSON.parse(raw);
+    if (typeof e.transcript_path !== 'string' || !e.transcript_path) return null;
+    if (!Number.isFinite(Date.parse(e.created_at)) || nowMs - Date.parse(e.created_at) > TRANSCRIPT_MEMO_RETENTION_MS) return null;
+    return e.transcript_path;
+  } catch { return null; }
+}
+/** Documented layout: "<session-transcript-dir>/<session>/subagents/agent-<id>.jsonl". */
+export function deriveAgentTranscriptPath(mainTranscriptPath, agentId) {
+  if (typeof mainTranscriptPath !== 'string' || !mainTranscriptPath.endsWith('.jsonl') || typeof agentId !== 'string' || !agentId) return null;
+  const dir = path.dirname(mainTranscriptPath);
+  const session = path.basename(mainTranscriptPath, '.jsonl');
+  if (!session) return null;
+  return path.join(dir, session, 'subagents', `agent-${agentId}.jsonl`);
+}
+/**
+ * Reads ONLY numeric usage fields and the model id from each transcript line (never message
+ * content). Refuses anything outside `<HOME>/.claude/projects`, a symlink anywhere on the path, or
+ * a non-regular/hard-linked file. Returns null (never throws) on any missing/unsafe/unreadable
+ * input, so a missing transcript degrades the outcome event to "no usage", never a hook failure.
+ */
+export function readAgentUsageSummary(transcriptPath, env = process.env) {
+  if (typeof transcriptPath !== 'string' || !transcriptPath) return null;
+  const root = path.resolve(env.HOME || os.homedir(), '.claude', 'projects');
+  let resolved;
+  try { resolved = path.resolve(transcriptPath); } catch { return null; }
+  if (resolved !== root && !resolved.startsWith(root + path.sep)) return null;
+  // Walk every path component (equivalent to storage.mjs's noSymlinks): a symlinked transcript file
+  // or any symlinked ancestor directory is refused, never followed.
+  let current = resolved;
+  for (;;) {
+    try { if (fs.lstatSync(current).isSymbolicLink()) return null; } catch (e) { if (e.code !== 'ENOENT') return null; }
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  let fd;
+  try { fd = fs.openSync(resolved, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0)); }
+  catch { return null; }
+  try {
+    const stat = fs.fstatSync(fd);
+    if (!stat.isFile() || stat.nlink !== 1) return null;
+    const size = Math.min(stat.size, MAX_TRANSCRIPT_BYTES);
+    const buf = Buffer.alloc(size);
+    fs.readSync(fd, buf, 0, size, 0);
+    const text = buf.toString('utf8');
+    const byModel = Object.create(null);
+    let turns = 0;
+    for (const line of text.split('\n')) {
+      if (!line.trim()) continue;
+      let row; try { row = JSON.parse(line); } catch { continue; }
+      const usage = row?.message?.usage, model = row?.message?.model;
+      if (!isObject(usage) || typeof model !== 'string' || !model) continue;
+      const num = v => Number.isFinite(v) ? v : 0;
+      const bucket = byModel[model] ?? (byModel[model] = { input: 0, output: 0, cache_creation: 0, cache_read: 0, turns: 0 });
+      bucket.input += num(usage.input_tokens); bucket.output += num(usage.output_tokens);
+      bucket.cache_creation += num(usage.cache_creation_input_tokens); bucket.cache_read += num(usage.cache_read_input_tokens);
+      bucket.turns += 1; turns += 1;
+    }
+    if (!turns) return { byModel: null, truncated: stat.size > MAX_TRANSCRIPT_BYTES };
+    return { byModel, truncated: stat.size > MAX_TRANSCRIPT_BYTES };
+  } catch { return null; }
+  finally { fs.closeSync(fd); }
+}
+
 async function preSpawn(host, input, ctx) {
   const info = extractPreSpawn(host, input);
   if (!info) {
@@ -182,13 +290,25 @@ async function preSpawn(host, input, ctx) {
   const telemetry = { reason: result.reason, original_role: info.originalRole,
     recommended_role: result.route?.role ?? null, decision_id: result.mode !== 'off' ? result.id : null };
   if (result.mode === 'off') return { output: null, telemetry };
-  if (info.toolUseId) ctx.links.put({ host, kind: 'tool_use', id: info.toolUseId, decision_id: result.id });
+  // Randomised A/B split (`pointsman router ab`): only ever considered when a rewrite would
+  // otherwise happen. 'control' logs the proposal but keeps the host's original choice; 'treatment'
+  // applies it as before; 'none' means the route didn't apply or already matched the original.
+  const wouldRewrite = Boolean(result.apply && result.route?.role && result.route.role !== info.originalRole);
+  let arm = 'none';
+  if (wouldRewrite) {
+    const share = Number.isFinite(policy.router.abControlShare) ? policy.router.abControlShare : 0;
+    arm = share > 0 && randomInt(1_000_000) < Math.round(share * 1_000_000) ? 'control' : 'treatment';
+  }
+  telemetry.arm = arm;
+  const applyRewrite = wouldRewrite && arm !== 'control';
+  const finalRole = applyRewrite ? result.route.role : info.originalRole;
+  const finalModel = applyRewrite ? (result.route.model ?? null) : null;
+  if (info.toolUseId) ctx.links.put({ host, kind: 'tool_use', id: info.toolUseId, decision_id: result.id, arm, final_role: finalRole, final_model: finalModel });
   if (host === 'codex' && info.sessionId) {
-    const finalRole = result.apply && result.route?.role ? result.route.role : info.originalRole;
     addPendingCodex(ctx.home, { sessionId: info.sessionId, agentType: finalRole, decisionId: result.id }, ctx.now());
   }
   let output = null;
-  if (result.apply && result.route?.role && result.route.role !== info.originalRole) {
+  if (applyRewrite) {
     output = host === 'claude'
       ? { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow',
           updatedInput: { ...info.toolInput, subagent_type: result.route.role, ...(result.route.model ? { model: result.route.model } : {}) } } }
@@ -197,13 +317,35 @@ async function preSpawn(host, input, ctx) {
   }
   return { output, telemetry };
 }
+/**
+ * PostToolUse(Agent). Claude fires SubagentStop BEFORE this event for a foreground (synchronous)
+ * spawn, so the decision is resolved here via the tool_use link created at pre-spawn -- never by
+ * waiting on the agent alias. A background spawn (`tool_response.status === 'async_launched'`)
+ * carries no usage yet; only the alias is created here, and subagent-stop records the OUTCOME once
+ * the agent actually finishes.
+ */
 function postSpawn(host, input, ctx) {
   if (host !== 'claude') return { output: null, telemetry: { reason: 'NOOP' } };
   if (!isObject(input) || typeof input.tool_use_id !== 'string' || !input.tool_use_id) return { output: null, telemetry: { reason: 'INVALID_HOOK_INPUT' } };
+  const response = isObject(input.tool_response) ? input.tool_response : null;
   const agentId = findAgentId(input.tool_response);
-  if (!agentId) return { output: null, telemetry: { reason: 'NO_AGENT_ID' } };
-  const r = ctx.links.alias({ host: 'claude', fromKind: 'tool_use', fromId: input.tool_use_id, toKind: 'agent', toId: agentId });
-  return { output: null, telemetry: { reason: r.stored ? 'LINKED' : (r.reason ?? 'NOT_LINKED') } };
+  const source = ctx.links.entry({ host: 'claude', kind: 'tool_use', id: input.tool_use_id });
+  if (agentId) ctx.links.alias({ host: 'claude', fromKind: 'tool_use', fromId: input.tool_use_id, toKind: 'agent', toId: agentId });
+  if (!agentId && !source) return { output: null, telemetry: { reason: 'NO_AGENT_ID' } };
+  if (!source) return { output: null, telemetry: { reason: 'NO_LINKED_DECISION' } };
+  if (response?.status === 'async_launched') return { output: null, telemetry: { reason: 'ASYNC_LAUNCHED', decision_id: source.decision_id } };
+  // Foreground/synchronous completion: prefer the transcript path subagent-stop already memoized
+  // (the real, documented order); otherwise derive it from this event's own transcript_path.
+  let transcriptPath = agentId ? recallAgentTranscript(ctx.home, { host: 'claude', agentId }, ctx.now()) : null;
+  if (!transcriptPath && agentId) transcriptPath = deriveAgentTranscriptPath(input.transcript_path, agentId);
+  const usage = transcriptPath ? readAgentUsageSummary(transcriptPath, ctx.env) : null;
+  logOutcomeEvent(ctx, { host, event: 'post-spawn', decisionId: source.decision_id, agentId,
+    arm: source.arm, finalRole: source.final_role, finalModel: source.final_model,
+    durationMs: response?.totalDurationMs, toolUses: response?.totalToolUseCount, usage: usage?.byModel ?? null });
+  // Note: this per-invocation telemetry reason feeds the standard hook-event log line (logHookEvent
+  // below); the separate content-free OUTCOME line was already written above via logOutcomeEvent.
+  // Reusing 'OUTCOME' here would double-log the same outcome under two events.
+  return { output: null, telemetry: { reason: 'LINKED', decision_id: source.decision_id } };
 }
 function subagentStart(host, input, ctx) {
   if (host !== 'codex') return { output: null, telemetry: { reason: 'NOOP' } };
@@ -216,10 +358,28 @@ function subagentStart(host, input, ctx) {
   ctx.links.put({ host: 'codex', kind: 'agent', id: input.agent_id, decision_id: decisionId });
   return { output: null, telemetry: { reason: 'LINKED', decision_id: decisionId, link: 'heuristic' } };
 }
+/**
+ * SubagentStop. For the common foreground order (this fires before PostToolUse) the decision is not
+ * linked to the agent id yet, so this only records what it can: the {agent_id -> transcript path}
+ * memo the matching post-spawn will consume, and the length (never the content) of the last
+ * assistant message. When the agent is already linked -- a background spawn whose post-spawn already
+ * aliased agent_id to a decision -- this is instead the sole place the OUTCOME gets recorded, reading
+ * usage straight from this event's own agent_transcript_path.
+ */
 function subagentStop(host, input, ctx) {
   if (!isObject(input) || typeof input.agent_id !== 'string' || !input.agent_id) return { output: null, telemetry: { reason: 'INVALID_HOOK_INPUT' } };
+  const transcriptPath = typeof input.agent_transcript_path === 'string' && input.agent_transcript_path ? input.agent_transcript_path : null;
+  if (transcriptPath) rememberAgentTranscript(ctx.home, { host, agentId: input.agent_id, transcriptPath }, ctx.now());
+  const lastMessageLength = typeof input.last_assistant_message === 'string' ? input.last_assistant_message.length : null;
+  const entry = ctx.links.entry({ host, kind: 'agent', id: input.agent_id });
   const r = recordSubagentStop(ctx.store, ctx.links, { host, agent_id: input.agent_id, status: 'completed' });
-  return { output: null, telemetry: { reason: r.stored ? 'RECORDED' : (r.reason ?? 'NOT_RECORDED') } };
+  const telemetry = { reason: r.stored ? 'RECORDED' : (r.reason ?? 'NOT_RECORDED'), ...(lastMessageLength !== null ? { last_message_length: lastMessageLength } : {}) };
+  if (entry?.decision_id) {
+    const usage = transcriptPath ? readAgentUsageSummary(transcriptPath, ctx.env) : null;
+    logOutcomeEvent(ctx, { host, event: 'subagent-stop', decisionId: entry.decision_id, agentId: input.agent_id,
+      arm: entry.arm, finalRole: entry.final_role, finalModel: entry.final_model, usage: usage?.byModel ?? null });
+  }
+  return { output: null, telemetry };
 }
 const HANDLERS = { 'pre-spawn': preSpawn, 'post-spawn': postSpawn, 'subagent-start': subagentStart, 'subagent-stop': subagentStop };
 
@@ -232,7 +392,29 @@ function logHookEvent({ home, layer, host, event, telemetry, applied, elapsedMs 
       mode, applied: Boolean(applied), original_role: telemetry?.original_role ?? null,
       recommended_role: telemetry?.recommended_role ?? null, decision_id: telemetry?.decision_id ?? null, elapsedMs,
       ...(telemetry?.tool_name !== undefined ? { tool_name: telemetry.tool_name } : {}),
-      ...(telemetry?.prompt_form !== undefined ? { prompt_form: telemetry.prompt_form } : {}) });
+      ...(telemetry?.prompt_form !== undefined ? { prompt_form: telemetry.prompt_form } : {}),
+      ...(telemetry?.arm !== undefined ? { arm: telemetry.arm } : {}),
+      ...(telemetry?.last_message_length !== undefined ? { last_message_length: telemetry.last_message_length } : {}) });
+  } catch { /* observability cannot become an availability dependency */ }
+}
+/**
+ * A distinct content-free log line (kind:'hook', reason:'OUTCOME') for the cost/time A/B report
+ * (`pointsman metrics ab`): decision_id, agent_id, the assigned arm, the role/model actually used,
+ * host-reported duration/tool-use counts, and per-model token usage summed from the agent transcript.
+ * Never the task text, the transcript content, or anything from `state`. Gated the same way as
+ * logHookEvent (router mode off, or telemetry disabled, logs nothing).
+ */
+function logOutcomeEvent(ctx, { host, event, decisionId, agentId, arm, finalRole, finalModel, durationMs, toolUses, usage }) {
+  try {
+    const status = ctx.layer.status();
+    const mode = status.features.router.mode;
+    if (mode === 'off' || !status.telemetry) return;
+    appendEvent(ctx.home, { kind: 'hook', at: new Date().toISOString(), host, event, reason: 'OUTCOME', mode,
+      decision_id: decisionId, agent_id: agentId ?? null, arm: arm ?? 'none',
+      final_role: finalRole ?? null, final_model: finalModel ?? null,
+      ...(Number.isFinite(durationMs) ? { duration_ms: durationMs } : {}),
+      ...(Number.isFinite(toolUses) ? { tool_uses: toolUses } : {}),
+      ...(usage ? { usage } : {}) });
   } catch { /* observability cannot become an availability dependency */ }
 }
 /** Pure-ish dispatcher: takes an already-parsed hook payload, never throws, only ever logs a content-free event. */

@@ -104,6 +104,21 @@ pointsman metrics --days 7
 
 The `[route scope=... complete=... failures=...]` line at the top of a routed prompt is how the hook decides whether it has enough context to route at all; leave it out or mark `scope=unknown`/`complete=no` when you're not sure, and the hook keeps the host's own choice.
 
+## Measuring cost and time
+
+`pointsman router ab 0.2` randomly holds back 20% of otherwise-rewritten spawns as an unmodified `control` arm (the host's own role/model choice, proposal only logged) instead of always applying the route (`treatment`); `pointsman router ab off` (or `0`) goes back to always applying. Share is capped at 0.5 and is off (0) by default, so nothing changes until you opt in.
+
+```sh
+pointsman router ab 0.2                       # start a 20% control / 80% treatment split
+pointsman metrics ab --days 7                  # cost/time by arm, from the local hook logs
+pointsman metrics ab --days 7 --prices FILE    # also estimate USD cost from a price table
+pointsman router ab off                        # back to always applying the route
+```
+
+The report groups content-free outcome events (duration, tool-use count, per-model token usage, all read from the host's own `PostToolUse`/`SubagentStop` payload and the agent's transcript usage lines — never the task or transcript content) by arm, and separately counts each observed original-role → final-role transition. It measures **cost and time only, not task quality or correctness**, and always shows the raw counts so a small sample isn't over-read (arms under ~30 outcomes are flagged `insufficientSample`).
+
+A price table (`--prices FILE`, JSON) maps a model id to USD-per-million-token rates: `{"<model id>": {"input": ..., "output": ..., "cache_write": ..., "cache_read": ...}}`. See [`examples/prices.example.json`](examples/prices.example.json) for the shape — fill it in yourself from the model provider's own current pricing page; nothing here hard-codes a price. Without `--prices`, `costUsd` is always `null`.
+
 ## Training your own checkpoint
 
 Training code lives in a separate kit, not in this repository: see [training/laya-kit/README.md](training/laya-kit/README.md). The lifecycle commands are `laya register` → `laya holdout freeze` → `laya qualify` (includes decision-gate flags) → `laya compare` → `laya promote`, and `laya package` builds a folder (weights plus a `pointsman.json` manifest) ready to upload with `hf upload`. All are explicit operator calls — nothing here starts training or promotes a checkpoint automatically.

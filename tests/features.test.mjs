@@ -5,7 +5,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { setup, response, ROUTE_INPUT, FILTER_INPUT } from './features-helpers.mjs';
-import { validateFeaturePolicy, setFeatureMode, loadFeaturePolicy, effectiveMode, CLAUDE_MODELS } from '../src/feature-policy.mjs';
+import { validateFeaturePolicy, setFeatureMode, loadFeaturePolicy, effectiveMode, CLAUDE_MODELS, setAbControlShare } from '../src/feature-policy.mjs';
 import { routeOrDelegate, ROUTE_QUESTIONS } from '../src/routing.mjs';
 import { setMode, atomicWrite } from '../src/storage.mjs';
 import { evaluatePairedRuns } from '../src/evaluation.mjs';
@@ -227,6 +227,26 @@ run('CLI mode/status/filter are runnable without original host executables', asy
   assert.equal(exec(['router', 'off']).status, 0);
   assert.equal(JSON.parse(exec(['status']).stdout).features.router.mode, 'off');
   assert.equal(exec(['policy', 'check']).status, 0);
+});
+run('abControlShare defaults to 0, is bounded to [0, 0.5], and `router ab` writes only that field', async s => {
+  assert.equal(loadFeaturePolicy(s.home).router.abControlShare, 0);
+  for (const bad of [-0.1, 0.51, 1, NaN, 'x']) assert.throws(() => validateFeaturePolicy({ router: { abControlShare: bad } }));
+  const before = loadFeaturePolicy(s.home);
+  const updated = setAbControlShare(s.home, '0.3');
+  assert.equal(updated.router.abControlShare, 0.3);
+  assert.deepEqual({ ...updated.router, abControlShare: before.router.abControlShare }, before.router); // every other router field preserved
+  assert.equal(setAbControlShare(s.home, 'off').router.abControlShare, 0);
+  assert.throws(() => setAbControlShare(s.home, '0.9'));
+});
+run('CLI `router ab` sets/clears abControlShare and is visible in status', async s => {
+  const bin = fileURLToPath(new URL('../bin/pointsman.mjs', import.meta.url));
+  const exec = args => spawnSync(process.execPath, [bin, ...args, '--home', s.home], { encoding: 'utf8', env: { PATH: process.env.PATH, HOME: s.home } });
+  const set = exec(['router', 'ab', '0.25']);
+  assert.equal(set.status, 0);
+  assert.equal(JSON.parse(set.stdout).features.router.abControlShare, 0.25);
+  assert.equal(JSON.parse(exec(['status']).stdout).features.router.abControlShare, 0.25);
+  assert.equal(JSON.parse(exec(['router', 'ab', 'off']).stdout).features.router.abControlShare, 0);
+  assert.notEqual(exec(['router', 'ab', '0.9']).status, 0);
 });
 test('paired evaluator rejects SHADOW predictions without execution evidence', () => {
   assert.throws(() => evaluatePairedRuns({ cases: [{ downgraded: true, baseline: { executed: true }, routed: { executed: false } }] }));

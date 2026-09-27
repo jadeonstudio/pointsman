@@ -40,7 +40,7 @@ export function createControlLayer({ home = resolveHome(), env = process.env, en
       const p = loadFeaturePolicy(home);
       return { ...base, features: { router: { mode: effectiveMode(base.mode, p.router.mode), configuredMode: p.router.mode,
         expectedModel: expected(base, p.router), configuredTargets: Object.fromEntries(Object.entries(p.router.profiles).map(([host, targets]) => [host, Object.keys(targets)])),
-        warnings: routerWarnings(p, env) },
+        abControlShare: p.router.abControlShare, warnings: routerWarnings(p, env) },
       bulk: { mode: effectiveMode(base.mode, p.bulk.mode), configuredMode: p.bulk.mode, expectedModel: expected(base, p.bulk) } }, featurePolicyError: null };
     } catch (error) { return { ...base, features: { router: { mode: 'off', warnings: [] }, bulk: { mode: 'off' } }, featurePolicyError: errorCode(error) }; }
   }

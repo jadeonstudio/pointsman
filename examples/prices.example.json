@@ -1,0 +1,6 @@
+{
+  "_comment": "Fill this from the model providers' own official pricing pages before use; nothing here is authoritative or kept up to date. Keys are model ids as they appear in the transcript's message.model / providerActivity, or a short alias you map yourself. Values are USD per MILLION tokens.",
+  "claude-sonnet-5": { "input": 3.0, "output": 15.0, "cache_write": 3.75, "cache_read": 0.3 },
+  "claude-haiku-4-5": { "input": 1.0, "output": 5.0, "cache_write": 1.25, "cache_read": 0.1 },
+  "claude-opus-4-5": { "input": 15.0, "output": 75.0, "cache_write": 18.75, "cache_read": 1.5 }
+}

@@ -10,6 +10,9 @@ import { only, id as validId } from './schema.mjs';
 // weak host_review outcome. No prompt, transcript, or message content is ever stored here.
 const HOSTS = ['codex', 'claude'];
 const KINDS = ['tool_use', 'agent'];
+// Optional content-free A/B/routing metadata carried alongside a link, so a later hook (post-spawn,
+// subagent-stop) can log an OUTCOME event without re-deriving what the router already decided.
+const ARMS = ['control', 'treatment', 'none'];
 export const LINK_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 export const MAX_LINKS = 10000;
 const keyDigest = (host, kind, refId) => createHash('sha256').update(`${host}|${kind}|${refId}`).digest('hex');
@@ -24,8 +27,14 @@ export function createLinkIndex({ home = resolveHome(), now = () => Date.now(), 
     const raw = readText(target, { optional: true, privateFile: true, maxBytes: 4096 });
     if (raw === null) return null;
     let e; try { e = JSON.parse(raw); } catch { return null; }
-    try { only(e, ['decision_id', 'host', 'kind', 'created_at'], ['decision_id', 'host', 'kind', 'created_at']); validId(e.decision_id); } catch { return null; }
+    try {
+      only(e, ['decision_id', 'host', 'kind', 'created_at', 'arm', 'final_role', 'final_model'], ['decision_id', 'host', 'kind', 'created_at']);
+      validId(e.decision_id);
+    } catch { return null; }
     if (!HOSTS.includes(e.host) || !KINDS.includes(e.kind)) return null;
+    if (e.arm !== undefined && !ARMS.includes(e.arm)) return null;
+    if (e.final_role !== undefined && e.final_role !== null && (typeof e.final_role !== 'string' || e.final_role.length > 128)) return null;
+    if (e.final_model !== undefined && e.final_model !== null && (typeof e.final_model !== 'string' || e.final_model.length > 128)) return null;
     const at = Date.parse(e.created_at);
     if (!Number.isFinite(at) || now() - at > LINK_RETENTION_MS) { try { fs.unlinkSync(target); } catch { /* already gone */ } return null; }
     return e;
@@ -44,25 +53,33 @@ export function createLinkIndex({ home = resolveHome(), now = () => Date.now(), 
       for (const { target } of live.slice(0, live.length - maxLinks)) { try { fs.unlinkSync(target); } catch { /* already gone */ } }
     }
   }
-  function put({ host, kind, id, decision_id }) {
+  function put({ host, kind, id, decision_id, arm, final_role, final_model }) {
     validId(decision_id);
+    if (arm !== undefined && arm !== null && !ARMS.includes(arm)) fail('INVALID_LINK_METADATA');
+    if (final_role !== undefined && final_role !== null && (typeof final_role !== 'string' || !final_role || final_role.length > 128)) fail('INVALID_LINK_METADATA');
+    if (final_model !== undefined && final_model !== null && (typeof final_model !== 'string' || final_model.length > 128)) fail('INVALID_LINK_METADATA');
     ensureDir(home, true); ensureDir(root, true); outsideGit(root);
     const target = file(host, kind, id); noSymlinks(target);
-    const body = { decision_id, host, kind, created_at: new Date(now()).toISOString() };
+    const body = { decision_id, host, kind, created_at: new Date(now()).toISOString(),
+      ...(arm != null ? { arm } : {}), ...(final_role != null ? { final_role } : {}), ...(final_model != null ? { final_model } : {}) };
     atomicWrite(target, JSON.stringify(body) + '\n', { mode: 0o600 });
     prune();
     return { stored: true };
   }
-  function get({ host, kind, id }) {
+  /** Full entry (decision_id plus any arm/final_role/final_model metadata), or null. */
+  function entry({ host, kind, id }) {
     if (!fs.existsSync(root)) return null;
-    return readEntry(file(host, kind, id))?.decision_id ?? null;
+    return readEntry(file(host, kind, id));
+  }
+  function get({ host, kind, id }) {
+    return entry({ host, kind, id })?.decision_id ?? null;
   }
   function alias({ host, fromKind, fromId, toKind, toId }) {
-    const decision_id = get({ host, kind: fromKind, id: fromId });
-    if (!decision_id) return { stored: false, reason: 'NO_LINKED_DECISION' };
-    return put({ host, kind: toKind, id: toId, decision_id });
+    const source = entry({ host, kind: fromKind, id: fromId });
+    if (!source) return { stored: false, reason: 'NO_LINKED_DECISION' };
+    return put({ host, kind: toKind, id: toId, decision_id: source.decision_id, arm: source.arm, final_role: source.final_role, final_model: source.final_model });
   }
-  return Object.freeze({ put, get, alias, root });
+  return Object.freeze({ put, get, entry, alias, root });
 }
 // completed is NOT success; only an executed, checked runner/human outcome may claim task_succeeded.
 export function recordSubagentStop(store, links, { host, agent_id, status }) {
