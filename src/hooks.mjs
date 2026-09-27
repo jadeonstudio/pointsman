@@ -29,8 +29,9 @@ const CONTEXT_RE = /\[route scope=(local|cross-module|repository|unknown) comple
 function withTimeout(promise, ms) {
   return new Promise(resolve => {
     let settled = false;
+    // Keep the timer referenced: it is always cleared on settle, and an unref'd timer lets Node 22 end
+    // the event loop while a never-ending stdin is still pending, so the timeout would never fire.
     const timer = setTimeout(() => { if (!settled) { settled = true; resolve(null); } }, ms);
-    if (typeof timer.unref === 'function') timer.unref();
     Promise.resolve(promise).then(
       value => { if (!settled) { settled = true; clearTimeout(timer); resolve(value); } },
       () => { if (!settled) { settled = true; clearTimeout(timer); resolve(null); } },
