@@ -15,9 +15,12 @@ from types import SimpleNamespace
 REPO = Path(__file__).resolve().parents[2]
 MANIFEST = "7b2a773b53f6169632a475d6256bac45b122924d67290e9a21cdb987591d7d28"
 FIELDS = "03cf28ef0229d26692ea034638f9b216b3df457645c29c9a2e556d16320e94b8"
+ENUM_SPEC = "ea825ab3e9043bfc559013855692b1cf8a71c55c987b1228eeffd67af209067d"
+ENUM_INPUT = "b755a9364dd91fccc4206a8dbe0ff6789ee1c5e9fbb2fc75594ac163f6fd2977"
 CHECKPOINTS = {"base": "2d115cbafc7a79194d6958794408e727b933887dcd03241d590824c58de67aed",
                "d6": "d145e848f7827fdd0a643b90727e65a8fe67d5637bf8c6c07ab3d26511edd434",
                "typed": "56f6474957ea3e5660562efd7e588ee631045a3c6ff557934787ac252fd5350c",
+               "clef4": "ef744cdfbba595a68a082368f047d6472a6e5ef576c97c074fb15d3291001b97",
                "clef8": "2d78acadca4a2d3865b6c9efd8402d1b2483c1dc6c43a802f81ecc72dcb45e63"}
 LIMIT = 14 * 1024**3
 
@@ -38,36 +41,50 @@ def canonical(value):
     return local.sha(json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode())
 
 
-def inputs(production):
-    assert local.file_sha(production / "manifest.json") == MANIFEST, "WIRE_MANIFEST_CHANGED"
-    path = production / "dev/fields.jsonl"
-    assert local.file_sha(path) == FIELDS, "DEV_FIELDS_CHANGED"
+def inputs(production, representation="binary"):
+    spec, file, expected_spec, expected_input, count = (
+        ("manifest.json", "dev/fields.jsonl", MANIFEST, FIELDS, 755) if representation == "binary" else
+        ("specification.json", "blind-inputs.jsonl", ENUM_SPEC, ENUM_INPUT, 127))
+    assert local.file_sha(production / spec) == expected_spec, "WIRE_MANIFEST_CHANGED"
+    path = production / file
+    assert local.file_sha(path) == expected_input, "DEV_FIELDS_CHANGED"
     rows = [json.loads(line) for line in path.read_text().splitlines() if line]
-    assert len(rows) == len({r["sample_id"] for r in rows}) == 755, "DEV_COHORT_CHANGED"
+    assert len(rows) == len({r["sample_id"] for r in rows}) == count, "DEV_COHORT_CHANGED"
     for row in rows:
         q = row["wire"]["questions"]
         assert row["split"] == "dev" and set(q) == {"tool_name"}, "FIELD_SCOPE_CHANGED"
-        assert q["tool_name"]["type"] == "choice" and set(q["tool_name"]["criteria"]) == {"yes", "no"}
+        criteria = q["tool_name"]["criteria"]
+        assert q["tool_name"]["type"] == "choice"
+        if representation == "binary":
+            assert set(criteria) == {"yes", "no"}
+        else:
+            assert 2 <= len(criteria) <= 5 and set(criteria) == {"none", *(f"candidate_{i:03}" for i in range(len(criteria) - 1))}
+            assert row["base_case_id"] == row["source_id"] + "/all_allowed"
+            assert row["input_identity"] == canonical({"state": row["wire"]["state"], "questions": q}), "ENUM_INPUT_IDENTITY_CHANGED"
     return rows
 
 
 def model_identity(name, root):
     common = {"model_id": f"tool-selection/{name}", "checkpoint": CHECKPOINTS[name],
               "producer_sha256": local.file_sha(__file__), "worker_sha256": local.file_sha(worker.__file__)}
-    if name == "clef8":
-        frozen = json.loads((root / "artifacts8/manifest.json").read_text())
+    if name in ("clef4", "clef8"):
+        _, converted, artifacts = local.paths(root, int(name[-1]))
+        frozen = json.loads((artifacts / "manifest.json").read_text())
         assert frozen["checkpoint"] == CHECKPOINTS[name], "CLEF_CHECKPOINT_CHANGED"
         assets = {n: local.file_sha(root / "upstream" / n) for n in
                   ("joint_head.safetensors", "joint_head_config.json", "config.json")}
         assert all(h == frozen["identity"]["input_hashes"][n] for n, h in assets.items()), "CLEF_UPSTREAM_ASSET_CHANGED"
+        for filename, expected_hash in frozen["identity"]["converted_hashes"].items():
+            assert local.file_sha(converted / filename) == expected_hash, "CLEF_WEIGHT_CHANGED"
         package = Path(importlib.metadata.distribution("mlx-lm").locate_file("mlx_lm/models"))
         paths = [package / n for n in ("qwen3_5.py", "qwen3_next.py", "gated_delta.py", "base.py", "cache.py")]
         paths += [Path(local.__file__), root / "upstream/joint_schema_model.py"]
         common.update(runtime=local.runtime(), frozen_identity=frozen["identity"],
-                      frozen_manifest_sha256=local.file_sha(root / "artifacts8/manifest.json"),
+                      frozen_manifest_sha256=local.file_sha(artifacts / "manifest.json"),
                       source_hashes={str(p): local.file_sha(p) for p in paths},
                       tokenizer_hashes={n: local.file_sha(root / "upstream" / n) for n in ("tokenizer.json", "tokenizer_config.json")},
-                      upstream_asset_hashes=assets, precision="mlx8/BF16-head", max_tokens=2048)
+                      upstream_asset_hashes=assets, precision=f"mlx{name[-1]}/BF16-head", max_tokens=2048,
+                      converted_storage_bytes={n: (converted / n).stat().st_size for n in frozen["identity"]["converted_hashes"]})
     else:
         assert worker.fingerprint(root) == CHECKPOINTS[name], "LAYA_CHECKPOINT_CHANGED"
         package = Path(importlib.metadata.distribution("laya").locate_file("laya"))
@@ -84,7 +101,7 @@ def model_identity(name, root):
 def admission(name, root, rows):
     from transformers import AutoTokenizer
     records, details = [], []
-    if name == "clef8":
+    if name in ("clef4", "clef8"):
         tokenizer = AutoTokenizer.from_pretrained(root / "upstream", local_files_only=True)
         official = local.official(root / "upstream")
     else:
@@ -97,7 +114,7 @@ def admission(name, root, rows):
         info = {"sample_id": row["sample_id"], "input_identity": canonical({"state": wire["state"], "questions": wire["questions"]})}
         record = None
         try:
-            if name == "clef8":
+            if name in ("clef4", "clef8"):
                 record = official.encode_record(tokenizer, wire, max_length=1_000_000)
                 info["tokens"] = {"sequence": len(record.input_ids)}
                 if len(record.input_ids) > 2048:
@@ -120,15 +137,17 @@ def admission(name, root, rows):
     return tokenizer, records, details
 
 
-def prepare(name, root, production, output):
+def prepare(name, root, production, output, representation="binary"):
     assert not output.exists(), "OUTPUT_EXISTS"
-    rows = inputs(production)
+    rows = inputs(production, representation)
     identity = model_identity(name, root)
     _, _, details = admission(name, root, rows)
     manifest = {"revision": "tool-selection-producer-r1", "model": name, "root": str(root), "identity": identity,
-                "wire_manifest_sha256": MANIFEST, "dev_fields_sha256": FIELDS, "sample_count": 755,
+                "representation": representation, "wire_manifest_sha256": MANIFEST if representation == "binary" else ENUM_SPEC,
+                "dev_fields_sha256": FIELDS if representation == "binary" else ENUM_INPUT, "sample_count": len(rows),
+                "max_inference_calls": len(rows),
                 "admission": dict(Counter(x["status"] for x in details)), "rows": details,
-                "combined_metal_limit_bytes": LIMIT, "source_scope": "dev/fields.jsonl only; no reference or test reads",
+                "combined_metal_limit_bytes": LIMIT, "source_scope": "DEV blind inputs only; no reference, projected label or test reads",
                 "output_contract": "sample_id/model_id/checkpoint/input_identity/status/choice/probabilities/elapsed_ms/UTC timestamps",
                 "model_loads": 0, "inference_calls": 0, "prepared_at_utc": local.utc_now()}
     local.write_json(output / "manifest.json", manifest)
@@ -136,20 +155,21 @@ def prepare(name, root, production, output):
                       "admission": manifest["admission"], "maximum_sequence_tokens": max(x["tokens"]["sequence"] for x in details)}))
 
 
-def validate_answer(answer):
+def validate_answer(answer, criteria=("yes", "no")):
     probabilities = answer["probabilities"]
-    assert answer["choice"] in ("yes", "no") and set(probabilities) == {"yes", "no"}, "OUTPUT_OPTIONS_CHANGED"
+    assert answer["choice"] in criteria and set(probabilities) == set(criteria), "OUTPUT_OPTIONS_CHANGED"
     assert all(type(x) in (int, float) and 0 <= x <= 1 for x in probabilities.values()), "INVALID_PROBABILITY"
     assert abs(sum(probabilities.values()) - 1) <= .02 and sum(probabilities.values()) > 0, "INVALID_MASS"
     return answer["choice"], probabilities
 
 
-def run(name, root, production, output, expected):
+def run(name, root, production, output, expected, representation="binary"):
     assert local.file_sha(output / "manifest.json") == expected, "PRODUCER_MANIFEST_CHANGED"
     manifest = json.loads((output / "manifest.json").read_text())
     assert manifest["model"] == name and manifest["identity"] == model_identity(name, root), "MODEL_OR_SOURCE_CHANGED"
+    assert manifest.get("representation", "binary") == representation, "REPRESENTATION_CHANGED"
     assert not (output / "predictions.jsonl").exists(), "PREDICTIONS_EXIST"
-    rows = inputs(production)
+    rows = inputs(production, representation)
     tokenizer, records, details = admission(name, root, rows)
     assert details == manifest["rows"], "ADMISSION_CHANGED"
     attempted, statuses, aborted = 0, Counter(), False
@@ -171,13 +191,12 @@ def run(name, root, production, output, expected):
 
     try:
         import torch
-        if admitted and name == "clef8":
+        if admitted and name in ("clef4", "clef8"):
             import mlx.core as mx
             from mlx_lm.utils import load_model
             local.bounded_mlx(); mx.set_memory_limit(int(13.5 * 1024**3))
-            for filename, expected_hash in manifest["identity"]["frozen_identity"]["converted_hashes"].items():
-                assert local.file_sha(root / "mlx8" / filename) == expected_hash, "CLEF_WEIGHT_CHANGED"
-            model, _ = load_model(root / "mlx8", lazy=False); model.eval()
+            _, converted, _ = local.paths(root, int(name[-1]))
+            model, _ = load_model(converted, lazy=False); model.eval()
             official = local.official(root / "upstream"); head = local.head(root / "upstream", official)
             mx.eval(model.language_model.lm_head.weight); mx.synchronize()
             lexical = torch.as_tensor(model.language_model.lm_head.weight)
@@ -198,6 +217,7 @@ def run(name, root, production, output, expected):
             pass
         local.write_json(output / "completion.json", {"model_id": manifest["identity"]["model_id"],
                          "producer_manifest_sha256": expected, "status": "MODEL_LOAD_FAILED", "attempted_calls": 0,
+                         "representation": representation, "sample_count": len(rows),
                          "reason": str(error) if isinstance(error, AssertionError) else type(error).__name__,
                          "error_detail": str(error),
                          "model_load_started_at_utc": loaded_at, "model_load_seconds": time.monotonic() - load_started,
@@ -207,6 +227,7 @@ def run(name, root, production, output, expected):
     with (output / "predictions.jsonl").open("x") as stream:
         (output / "predictions.jsonl").chmod(0o600)
         for row, record, info in zip(rows, records, details):
+            criteria = row["wire"]["questions"]["tool_name"]["criteria"]
             started_at = local.utc_now(); started = time.monotonic()
             result = {"sample_id": row["sample_id"], "model_id": manifest["identity"]["model_id"], "checkpoint": CHECKPOINTS[name],
                       "input_identity": info["input_identity"], "status": info["status"], "choice": None, "probabilities": None,
@@ -218,7 +239,7 @@ def run(name, root, production, output, expected):
             else:
                 attempted += 1
                 try:
-                    if name == "clef8":
+                    if name in ("clef4", "clef8"):
                         hidden = model.model(mx.array([record.input_ids], dtype=mx.int32)); mx.eval(hidden); mx.synchronize()
                         observe_memory("BACKBONE_MEMORY_BUDGET")
                         batch = official.collate_records([record], tokenizer.pad_token_id, torch.device("mps"))
@@ -227,14 +248,14 @@ def run(name, root, production, output, expected):
                             assert torch.isfinite(logits).all().item(), "NONFINITE_LOGITS"
                             probabilities = dict(zip(record.questions[0].option_ids, logits.float().softmax(-1).cpu().tolist()))
                             answer = official.systemone_answer(row["wire"]["questions"]["tool_name"], probabilities)
-                        choice, _ = validate_answer(answer)
-                        validate_answer({"choice": choice, "probabilities": probabilities})
+                        choice, _ = validate_answer(answer, criteria)
+                        validate_answer({"choice": choice, "probabilities": probabilities}, criteria)
                         del hidden, batch, logits
                     else:
                         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
                             answer = agent.system_one(row["wire"]["state"], row["wire"]["questions"])["answers"]["tool_name"]
                         assert str(agent.device).split(":")[0] == "mps", "DEVICE_FALLBACK_REFUSED"
-                        choice, probabilities = validate_answer(answer)
+                        choice, probabilities = validate_answer(answer, criteria)
                     torch.mps.synchronize()
                     observe_memory("INFERENCE_MEMORY_BUDGET")
                     result.update(choice=choice, probabilities=probabilities)
@@ -244,9 +265,10 @@ def run(name, root, production, output, expected):
             result.update(completed_at_utc=local.utc_now(), elapsed_ms=(time.monotonic() - started) * 1000)
             stream.write(json.dumps(result, ensure_ascii=False, separators=(",", ":")) + "\n"); stream.flush()
             statuses[result["status"]] += 1
-            if admitted and name == "clef8":
+            if admitted and name in ("clef4", "clef8"):
                 mx.clear_cache()
     local.write_json(output / "completion.json", {"model_id": manifest["identity"]["model_id"], "producer_manifest_sha256": expected,
+                    "representation": representation, "sample_count": len(rows),
                     "predictions_sha256": local.file_sha(output / "predictions.jsonl"), "attempted_calls": attempted, "status": dict(statuses),
                     "model_load_started_at_utc": loaded_at, "model_load_seconds": load_seconds, "completed_at_utc": local.utc_now(),
                     "effective_parameter_dtype": effective_dtype, "memory": memory,
@@ -261,14 +283,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("command", choices=("prepare", "run"))
     parser.add_argument("--model", choices=tuple(CHECKPOINTS), required=True)
+    parser.add_argument("--representation", choices=("binary", "enum"), default="binary")
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--production", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--manifest-sha")
     args = parser.parse_args()
     if args.command == "prepare":
-        prepare(args.model, args.root, args.production, args.output)
+        prepare(args.model, args.root, args.production, args.output, args.representation)
     else:
         if not args.manifest_sha:
             parser.error("run requires --manifest-sha")
-        run(args.model, args.root, args.production, args.output, args.manifest_sha)
+        run(args.model, args.root, args.production, args.output, args.manifest_sha, args.representation)

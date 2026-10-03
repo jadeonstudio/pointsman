@@ -107,8 +107,9 @@ the full builder exited0. Test/model quality evaluation was not run.
 ## DEV producer and evaluator checkpoint
 
 The as-shipped baselines `base`, `d6`, `typed` and `clef8` each admit all 755 DEV
-fields. The three Laya runs and their frozen scoring are complete; the original
-uncached Clef run is still in progress. No calibration, promotion or test
+fields. The three Laya runs and their frozen scoring are complete. The original
+uncached Clef8 arm was interrupted for observed shared-machine memory/I/O
+contention before its quality results were opened. No calibration, promotion or test
 evaluation occurs at this checkpoint. The accepted analysis
 specification SHA256 is
 `ba3cfedf5ebaa67aff0b93744f21d5627f0d78291b27479fa78f1bc601ee16e3`.
@@ -128,9 +129,9 @@ prediction IDs, adds zero inference calls and invents no derived confidence.
 Its zero policy violations follow from code; they are not raw model rule quality.
 All 755 raw field evaluations and their GO gates remain required.
 
-Use the appropriate existing environment and model root for one of the four
-model names. Producer manifest hashes below are placeholders until the refreshed
-manifests are accepted. Run inference only after resource/manifest release;
+Use the appropriate existing environment and model root for `base`, `d6`,
+`typed`, `clef8` or `clef4`. Completed manifest and result identities are recorded
+in [evidence.json](evidence.json). Run inference only after resource/manifest release;
 score only after its completion receipt and prediction hash are frozen:
 
 ```sh
@@ -148,16 +149,54 @@ The producer opens blind DEV fields only; the evaluator opens frozen DEV
 references only. Test references remain sealed. Each model is scored once after
 its completion receipt and prediction hash have been verified.
 
-| Completed model | Primary exact set, 80 cases | All three policy variants correct | Forbidden selections | Research GO |
-|---|---:|---:|---:|---|
-| Laya base | 1/80 | 0/80 | 284 | NO |
-| Laya d6 | 0/80 | 0/80 | 191 | NO |
-| Laya typed | 0/80 | 0/80 | 308 | NO |
+| Model | Served fields | Primary exact set | Auxiliary no-call | All three policy variants correct | Forbidden selections | Research GO |
+|---|---:|---:|---:|---:|---:|---|
+| Laya base | 755/755 | 1/80 | 1/47 | 0/80 | 284 | NO |
+| Laya d6 | 755/755 | 0/80 | 41/47 | 0/80 | 191 | NO |
+| Laya typed | 755/755 | 0/80 | 0/47 | 0/80 | 308 | NO |
+| Clef-Flash 8-bit, interrupted | 402/755 | 49/80 | 0/47, all unserved | 22/80 | 30 | NO, incomplete |
+| Clef-Flash 4-bit | 755/755 | **80/80** | 24/47 | 36/80 | 48 | NO |
 
 Each completed model served all 755 fields. Separate deterministic projection
 removed forbidden selections by construction but left primary semantic accuracy
 unchanged. A posthoc diagnostic forced one selection by highest normalized
 P(yes): base/d6/typed scored 30/28/45 of 80, versus 31/80 for first-lexicographic.
 This is a representation hypothesis, not a replacement gate or no-call evidence.
-The original comparison remains frozen; unfinished Clef predictions are neither
-scored nor extrapolated.
+The original comparison remains frozen. Clef8 scored 49/49 on completely served
+primary cases, but 31 primary and all 47 auxiliary cases are unserved. That
+conditional result is not an unbiased estimate of the whole cohort. Original
+missing fields count as failures; no producer completion or complete-arm latency
+was fabricated. The original process exited 143 after root's scoped SIGTERM and
+was not restarted. Completed-field median/p95 was 2,284/44,602 ms under variable
+shared-machine load. The source of all system pressure and true peak allocation
+remain UNKNOWN; this is not an OOM or intrinsic model-speed conclusion.
+
+The completed 4-bit arm demonstrates strong primary semantic selection on this
+DEV cohort. Code projection preserves those 80 choices and enforces all derived
+allowed-tool restrictions, giving 264/287 correct variants and zero forbidden
+selections by construction. It does not fix the 23 no-call errors, prove learned
+rule compliance, or establish task savings. Its all-request median/p95 was
+1,763.016/2,345.354 ms (755 requests); excluding the first request gives
+1,761.878/2,306.842 ms (754 requests). Model loading is separate at 2.899 seconds;
+the complete stage took 1,346.728 seconds. Observed latency includes ambient load.
+
+The separate typed-Laya enum arm chooses one tool or none in one request per
+origin. It served 127/127 cases and scored **51/80 primary, 0/47 auxiliary**,
+versus its original binary 0/80 and 0/47. It fails the preregistered enum screen
+requiring full coverage and at least 90% correctness in each slice. Code
+projection gives 182/287 correct variants with zero additional calls. Categorical
+NLL/Brier/ECE are 1.100321/0.713257/0.418360 in a different option space from the
+binary metrics. All-request median/p95 was 109.329/171.949 ms (127 requests);
+loading took 1.144 seconds and the complete stage 15.529 seconds.
+
+These two additional arms made exactly 882 calls and exited normally. Each was
+scored once; the original reports and sealed test remain unchanged. The enum
+scorer has six focused tests, and the producer has five. See the complete
+aggregate and closed artifact hashes in [evidence.json](evidence.json), and the
+accepted specification identities in [PLAN.md](../../PLAN.md).
+
+The next Clef4 enum proposal is separate and has completed CPU admission only.
+Its 127 requests must be compared with the 283 original all-allowed binary
+fields, not the 755 fields including diagnostic policy variants. A joint binary
+request could also share the state in one forward per origin and has not been
+measured; no optimized-client or whole-task speedup is established here.

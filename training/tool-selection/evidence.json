@@ -1,0 +1,567 @@
+{
+  "schema_version": 1,
+  "status": "CLOSED_DEV_ONLY; all prespecified raw/enum screens NO_GO",
+  "source": {
+    "revision": "916260dfc116bf06793a1af79b4ec8195b0453b6",
+    "license": "Apache-2.0",
+    "scope": "Native multiple+irrelevance tool-name projection, independent benchmark_reference and separate derived_policy_oracle; not published DecisionIndex reproduction",
+    "details": "admission-evidence.json",
+    "pretraining": "UNKNOWN"
+  },
+  "cohort": {
+    "binary_fields": 755,
+    "variants": 287,
+    "origins": 127,
+    "schema_components": 76,
+    "primary": 80,
+    "auxiliary": 47,
+    "enum_choices": 127,
+    "schema_components_are_domains": false,
+    "test_access": false
+  },
+  "contracts": {
+    "binary_source": "a645a289198e94788add25e187c29ec92e39159dd8b603e8d0db165518e25dd2",
+    "binary_spec": "ba3cfedf5ebaa67aff0b93744f21d5627f0d78291b27479fa78f1bc601ee16e3",
+    "enum_source": "bc30698e1045e0cd11c9b7f894f4e1677f70345c9f56cb46133bb4c698c50dbd",
+    "enum_spec": "0c5cd98005134d05150f7685a6b7de78966953afe7800dccf142da4ccbcdbf7e"
+  },
+  "arms": [
+    {
+      "arm": "base",
+      "representation": "binary755_fields_287_variants",
+      "checkpoint": "2d115cbafc7a79194d6958794408e727b933887dcd03241d590824c58de67aed",
+      "producer_source_sha256": "4ff13ffb499d2297d1da58ef7f298554117fb2bbfe0751c387fb9f37b0330ae3",
+      "status": "COMPLETE",
+      "producer_exit_code": 0,
+      "attempted_calls": 755,
+      "attempted_bounds": null,
+      "hashes": {
+        "completion.json": "52de28860e10f5870058d26223eaee882fa584112c6c0c4ac74edcc6c253b8eb",
+        "manifest.json": "e51de493788350297773340d1356e4c085005aa6792d56bddc2b39ab3dba9c73",
+        "predictions.jsonl": "0a8d21016978fda8caae6e81a11e845ca523e4c22ad64aafb9efd1dc3820a5cc",
+        "report": "1bec3e271a4d59aaee64278fdc197325abc7fd24a6240501628834b97a9ea806",
+        "scoring_receipt": "b92a5df232d653bf56b0ab000845a6e04899c95b323eb6adfd5ad131d595b76f"
+      },
+      "quality": {
+        "primary_correct": 1,
+        "primary_total": 80,
+        "primary_served": 80,
+        "auxiliary_correct": 1,
+        "auxiliary_total": 47,
+        "auxiliary_served": 47,
+        "primary_nested_ci95": [
+          0,
+          0.04
+        ],
+        "research_status": "RESEARCH_NO_GO",
+        "complete_case_correct": 9,
+        "complete_case_total": 287,
+        "complete_case_served": 287,
+        "fields": 755,
+        "served_fields": 755,
+        "missing_fields": 0,
+        "raw_all_three_correct": 0,
+        "raw_all_three_total": 80,
+        "forbidden_selections": 284,
+        "field_macro_f1": 0.21991000427116397,
+        "conditional_served_macro_f1": 0.21991000427116397,
+        "probability_scored_fields": 755,
+        "nll": 1.7732785152691182,
+        "brier": 1.1758214266142988,
+        "ece": 0.6218234621570957
+      },
+      "code_projection": {
+        "correct": 98,
+        "cases": 287,
+        "served": 287,
+        "policy_violations": 0,
+        "by_construction": true,
+        "additional_model_calls": 0
+      },
+      "timing": {
+        "all_requests": {
+          "count": 755,
+          "mean": 56.48207934388262,
+          "median": 56.55545834451914,
+          "p95": 77.33104191720486
+        },
+        "stage_seconds": 44.961227,
+        "load_seconds": 2.215107584372163,
+        "score_window_utc": [
+          "2026-10-03T11:38:00.811734+00:00",
+          "2026-10-03T11:38:01.016337+00:00"
+        ]
+      },
+      "memory": {
+        "samples": 756,
+        "maximum_sampled_driver_bytes": 2426093568,
+        "maximum_sampled_torch_current_bytes": 659024128,
+        "mlx_allocator_peak_bytes": null,
+        "torch_allocator_peak_bytes": "UNKNOWN: MPS exposes no peak counter here"
+      },
+      "dtype": "torch.float16"
+    },
+    {
+      "arm": "d6",
+      "representation": "binary755_fields_287_variants",
+      "checkpoint": "d145e848f7827fdd0a643b90727e65a8fe67d5637bf8c6c07ab3d26511edd434",
+      "producer_source_sha256": "4ff13ffb499d2297d1da58ef7f298554117fb2bbfe0751c387fb9f37b0330ae3",
+      "status": "COMPLETE",
+      "producer_exit_code": 0,
+      "attempted_calls": 755,
+      "attempted_bounds": null,
+      "hashes": {
+        "completion.json": "0c1c0976677e8df4d5fffe86abcf827300fe2d9855da1f73c4bc88421d8c2ca7",
+        "manifest.json": "6d5d1a7db5bbdf2365b437ac45f1fb73820be39634c7a92777bbba7252b2869f",
+        "predictions.jsonl": "2affaf01fd24bae053c092faec7a826d89dc1144c0ee7b1b9a4b4feabb8b0ab9",
+        "report": "1a44dc8511f9dea07ba067d7cfff88da76321638c9f865c79b7d497ce7430a90",
+        "scoring_receipt": "1acca96ab1d55383c75632a11bc8a9483270f8ff27df675110bc2dc42c77c877"
+      },
+      "quality": {
+        "primary_correct": 0,
+        "primary_total": 80,
+        "primary_served": 80,
+        "auxiliary_correct": 41,
+        "auxiliary_total": 47,
+        "auxiliary_served": 47,
+        "primary_nested_ci95": [
+          0,
+          0
+        ],
+        "research_status": "RESEARCH_NO_GO",
+        "complete_case_correct": 82,
+        "complete_case_total": 287,
+        "complete_case_served": 287,
+        "fields": 755,
+        "served_fields": 755,
+        "missing_fields": 0,
+        "raw_all_three_correct": 0,
+        "raw_all_three_total": 80,
+        "forbidden_selections": 191,
+        "field_macro_f1": 0.4138336026342857,
+        "conditional_served_macro_f1": 0.4138336026342857,
+        "probability_scored_fields": 755,
+        "nll": 0.7568930398080826,
+        "brier": 0.5605695030728477,
+        "ece": 0.1619847682119208
+      },
+      "code_projection": {
+        "correct": 136,
+        "cases": 287,
+        "served": 287,
+        "policy_violations": 0,
+        "by_construction": true,
+        "additional_model_calls": 0
+      },
+      "timing": {
+        "all_requests": {
+          "count": 755,
+          "mean": 56.25386402158942,
+          "median": 55.93129200860858,
+          "p95": 77.91587524116039
+        },
+        "stage_seconds": 44.969873,
+        "load_seconds": 2.417239415924996,
+        "score_window_utc": [
+          "2026-10-03T11:39:29.046725+00:00",
+          "2026-10-03T11:39:29.247433+00:00"
+        ]
+      },
+      "memory": {
+        "samples": 756,
+        "maximum_sampled_driver_bytes": 2426093568,
+        "maximum_sampled_torch_current_bytes": 659024128,
+        "mlx_allocator_peak_bytes": null,
+        "torch_allocator_peak_bytes": "UNKNOWN: MPS exposes no peak counter here"
+      },
+      "dtype": "torch.float16"
+    },
+    {
+      "arm": "typed",
+      "representation": "binary755_fields_287_variants",
+      "checkpoint": "56f6474957ea3e5660562efd7e588ee631045a3c6ff557934787ac252fd5350c",
+      "producer_source_sha256": "4ff13ffb499d2297d1da58ef7f298554117fb2bbfe0751c387fb9f37b0330ae3",
+      "status": "COMPLETE",
+      "producer_exit_code": 0,
+      "attempted_calls": 755,
+      "attempted_bounds": null,
+      "hashes": {
+        "completion.json": "7f7e8c68d50d933f83d9c647e5f424944515b97c869061ef3d7f96e1045604dd",
+        "manifest.json": "aa1e38eb7bfa51c2413009f1052984ad98e5d804e041aaa744902b0b9f6edb6b",
+        "predictions.jsonl": "99635fc56cd84ec3415d209732504a3bf6804bf05d9cf8bf158c27c037ddc7ee",
+        "report": "55f64b16b904a26aabeeb419c4a07bd9632ff2b9d943c51ab6230c58eb4708a8",
+        "scoring_receipt": "3a8f68bf7d03e21176452e339b8369edf653388e5d95fd3182bed1c59b8733a0"
+      },
+      "quality": {
+        "primary_correct": 0,
+        "primary_total": 80,
+        "primary_served": 80,
+        "auxiliary_correct": 0,
+        "auxiliary_total": 47,
+        "auxiliary_served": 47,
+        "primary_nested_ci95": [
+          0,
+          0
+        ],
+        "research_status": "RESEARCH_NO_GO",
+        "complete_case_correct": 0,
+        "complete_case_total": 287,
+        "complete_case_served": 287,
+        "fields": 755,
+        "served_fields": 755,
+        "missing_fields": 0,
+        "raw_all_three_correct": 0,
+        "raw_all_three_total": 80,
+        "forbidden_selections": 308,
+        "field_macro_f1": 0.1598785705025712,
+        "conditional_served_macro_f1": 0.1598785705025712,
+        "probability_scored_fields": 755,
+        "nll": 0.9544690855253527,
+        "brier": 0.7461227896423838,
+        "ece": 0.47717867549668846
+      },
+      "code_projection": {
+        "correct": 94,
+        "cases": 287,
+        "served": 287,
+        "policy_violations": 0,
+        "by_construction": true,
+        "additional_model_calls": 0
+      },
+      "timing": {
+        "all_requests": {
+          "count": 755,
+          "mean": 126.7646195582848,
+          "median": 126.35349994525313,
+          "p95": 173.19591715931892
+        },
+        "stage_seconds": 97.325832,
+        "load_seconds": 1.5023213331587613,
+        "score_window_utc": [
+          "2026-10-03T11:41:26.571516+00:00",
+          "2026-10-03T11:41:26.878378+00:00"
+        ]
+      },
+      "memory": {
+        "samples": 756,
+        "maximum_sampled_driver_bytes": 2266710016,
+        "maximum_sampled_torch_current_bytes": 845735168,
+        "mlx_allocator_peak_bytes": null,
+        "torch_allocator_peak_bytes": "UNKNOWN: MPS exposes no peak counter here"
+      },
+      "dtype": "torch.float16"
+    },
+    {
+      "arm": "clef8",
+      "representation": "binary755_fields_287_variants",
+      "checkpoint": "2d78acadca4a2d3865b6c9efd8402d1b2483c1dc6c43a802f81ecc72dcb45e63",
+      "producer_source_sha256": "4ff13ffb499d2297d1da58ef7f298554117fb2bbfe0751c387fb9f37b0330ae3",
+      "status": "EXTERNALLY_TERMINATED_RESOURCE_CONTENTION",
+      "producer_exit_code": 143,
+      "attempted_calls": null,
+      "attempted_bounds": [
+        402,
+        403
+      ],
+      "hashes": {
+        "external-termination.json": "7bbe6dcc70a341f25bf88bd624bc8980597cb7de1b29d3bf3a135f71bf3d396f",
+        "manifest.json": "ddb58d00e0f01a803f0337afc23e3937ac13568b56570ad818f7f49d9ed96318",
+        "predictions.jsonl": "4b76fc4917b7284c5a0b9601c01ce6e5706abf9997835c5019bc0125d462837f",
+        "report": "a9638e29f10ca1cd261edacfe98cd132df0e5ec1a1c37dad36d21efdaf615529",
+        "scoring_receipt": "c72578bd94c895ae2a619dc7d0bf90ed320ddcec7328e961ea150877f666074e"
+      },
+      "quality": {
+        "primary_correct": 49,
+        "primary_total": 80,
+        "primary_served": 49,
+        "auxiliary_correct": 0,
+        "auxiliary_total": 47,
+        "auxiliary_served": 0,
+        "primary_nested_ci95": [
+          0.4842105263157895,
+          0.9393939393939394
+        ],
+        "research_status": "RESEARCH_NO_GO",
+        "complete_case_correct": 116,
+        "complete_case_total": 287,
+        "complete_case_served": 147,
+        "fields": 755,
+        "served_fields": 402,
+        "missing_fields": 353,
+        "raw_all_three_correct": 22,
+        "raw_all_three_total": 80,
+        "forbidden_selections": 30,
+        "field_macro_f1": 0.6444597321592368,
+        "conditional_served_macro_f1": 0.8911758284940838,
+        "probability_scored_fields": 402,
+        "nll": 0.1858569709270224,
+        "brier": 0.11106486994158363,
+        "ece": 0.024321702915976004
+      },
+      "code_projection": {
+        "correct": 147,
+        "cases": 287,
+        "served": 147,
+        "policy_violations": 0,
+        "by_construction": true,
+        "additional_model_calls": 0
+      },
+      "timing": {
+        "all_requests": {
+          "count": 402,
+          "mean": 7507.144995024474,
+          "median": 2284.227500203997,
+          "p95": 44601.585833355784
+        },
+        "stage_seconds": null,
+        "load_seconds": null,
+        "score_window_utc": [
+          "2026-10-03T12:40:29.407632+00:00",
+          "2026-10-03T12:40:29.613870+00:00"
+        ]
+      },
+      "memory": {
+        "true_peak": "UNKNOWN; no producercompletion",
+        "shared_pressure_causal_model_attribution": "UNKNOWN"
+      },
+      "dtype": "reference BF16 embedding/head; final receipt absent"
+    },
+    {
+      "arm": "clef4",
+      "representation": "binary755_fields_287_variants",
+      "checkpoint": "ef744cdfbba595a68a082368f047d6472a6e5ef576c97c074fb15d3291001b97",
+      "producer_source_sha256": "ef877cbb1524a16368c17be3ef4a04a63cf2ef018f97f645e5c2cff9c468b267",
+      "status": "COMPLETE",
+      "producer_exit_code": 0,
+      "attempted_calls": 755,
+      "attempted_bounds": null,
+      "hashes": {
+        "completion.json": "7cc9f232cd72896b8bf23de43797bb83a8ffefa22e6ea3e94c8262e4361ab0ff",
+        "manifest.json": "80bd8c2f3b9fa301adecb0092c4477ad49466394f2ec565f99760eb7cfb3c0c6",
+        "predictions.jsonl": "7db0b5d38bb4761f58c5cf2b6fce95d17fee8a32bc08dab352cf7c1e0ee93b2c",
+        "report": "451ecba34cefe67a2bb1d629ec4c4d121f42910aac8346ad4690e8824a53595f",
+        "scoring_receipt": "e0b34766a504879f582ca9c246e3e9508efc02cc3cc02072154bb44249e7cd62"
+      },
+      "quality": {
+        "primary_correct": 80,
+        "primary_total": 80,
+        "primary_served": 80,
+        "auxiliary_correct": 24,
+        "auxiliary_total": 47,
+        "auxiliary_served": 47,
+        "primary_nested_ci95": [
+          1,
+          1
+        ],
+        "research_status": "RESEARCH_NO_GO",
+        "complete_case_correct": 215,
+        "complete_case_total": 287,
+        "complete_case_served": 287,
+        "fields": 755,
+        "served_fields": 755,
+        "missing_fields": 0,
+        "raw_all_three_correct": 36,
+        "raw_all_three_total": 80,
+        "forbidden_selections": 48,
+        "field_macro_f1": 0.8604006163328197,
+        "conditional_served_macro_f1": 0.8604006163328197,
+        "probability_scored_fields": 755,
+        "nll": 0.25421592666357706,
+        "brier": 0.1495675230618331,
+        "ece": 0.0433384185920562
+      },
+      "code_projection": {
+        "correct": 264,
+        "cases": 287,
+        "served": 287,
+        "policy_violations": 0,
+        "by_construction": true,
+        "additional_model_calls": 0
+      },
+      "timing": {
+        "all_requests": {
+          "count": 755,
+          "mean": 1778.7196415057097,
+          "median": 1763.0158327519894,
+          "p95": 2345.35437496379,
+          "warm_count": 754,
+          "warm_median": 1761.8782077915967,
+          "warm_p95": 2306.8424169905484
+        },
+        "stage_seconds": 1346.727731,
+        "load_seconds": 2.899063083343208,
+        "score_window_utc": [
+          "2026-10-03T13:22:21.779917+00:00",
+          "2026-10-03T13:22:21.986488+00:00"
+        ]
+      },
+      "memory": {
+        "samples": 1511,
+        "maximum_sampled_driver_bytes": 8576237568,
+        "maximum_sampled_torch_current_bytes": 243526656,
+        "mlx_allocator_peak_bytes": 8820693682,
+        "torch_allocator_peak_bytes": "UNKNOWN: MPS exposes no peak counter here"
+      },
+      "dtype": {
+        "embedding": "mlx.core.bfloat16",
+        "head": "torch.bfloat16"
+      }
+    },
+    {
+      "arm": "typed_enum",
+      "representation": "categorical127_origins",
+      "checkpoint": "56f6474957ea3e5660562efd7e588ee631045a3c6ff557934787ac252fd5350c",
+      "producer_source_sha256": "ef877cbb1524a16368c17be3ef4a04a63cf2ef018f97f645e5c2cff9c468b267",
+      "status": "COMPLETE",
+      "producer_exit_code": 0,
+      "attempted_calls": 127,
+      "attempted_bounds": null,
+      "hashes": {
+        "completion.json": "2a4130aa600871144f1e2364f1313dcf0f3c520d74a05e580d1a5dcd1aa3a929",
+        "manifest.json": "b21414ff2db3f132e0e16fd4dbe67876198e69529e4fd45096bbd933c178f42b",
+        "predictions.jsonl": "8a10561d40daf5d76b530adad19c47367185324c73075476345ac5d5661faf13",
+        "report": "6c98f61344fef107961f2a214ce4ddff73af88346d97837f7d4a216b652c1055",
+        "scoring_receipt": "6d2f62a0a65076dfc3d8bcec1b68325688763da5cea961d8a5c5c1400134cc8b"
+      },
+      "quality": {
+        "primary_correct": 51,
+        "primary_total": 80,
+        "primary_served": 80,
+        "auxiliary_correct": 0,
+        "auxiliary_total": 47,
+        "auxiliary_served": 47,
+        "primary_nested_ci95": [
+          0.5,
+          0.7948717948717948
+        ],
+        "research_status": "ENUM_RESEARCH_SCREEN_NO_GO",
+        "native_correct": 51,
+        "native_total": 127,
+        "served": 127,
+        "nll": 1.1003212547223222,
+        "brier": 0.7132566301920422,
+        "ece": 0.41836003601415933,
+        "paired_primary_vs_typed_binary": {
+          "count": 80,
+          "improved": 51,
+          "regressed": 0,
+          "accuracy_difference": 0.6375,
+          "interval95": {
+            "interval95": [
+              0.5,
+              0.7948717948717948
+            ],
+            "draws": 2000,
+            "seed": 42,
+            "components": 29,
+            "origins": 80
+          }
+        }
+      },
+      "code_projection": {
+        "correct": 182,
+        "cases": 287,
+        "served": 287,
+        "policy_violations": 0,
+        "by_construction": true,
+        "additional_model_calls": 0
+      },
+      "timing": {
+        "all_requests": {
+          "count": 127,
+          "mean": 113.1207434438521,
+          "median": 109.32945879176259,
+          "p95": 171.9493749551475
+        },
+        "stage_seconds": 15.529373,
+        "load_seconds": 1.1444528745487332,
+        "score_window_utc": [
+          "2026-10-03T13:25:33.962673+00:00",
+          "2026-10-03T13:25:34.097904+00:00"
+        ]
+      },
+      "memory": {
+        "samples": 128,
+        "maximum_sampled_driver_bytes": 2266710016,
+        "maximum_sampled_torch_current_bytes": 845735168,
+        "mlx_allocator_peak_bytes": null,
+        "torch_allocator_peak_bytes": "UNKNOWN: MPS exposes no peak counter here"
+      },
+      "dtype": "torch.float16"
+    }
+  ],
+  "dev_controls": {
+    "none": {
+      "primary_correct": 0,
+      "primary_total": 80,
+      "auxiliary_correct": 47,
+      "auxiliary_total": 47,
+      "complete_case_correct": 158,
+      "complete_case_total": 287
+    },
+    "all": {
+      "primary_correct": 0,
+      "primary_total": 80,
+      "auxiliary_correct": 0,
+      "auxiliary_total": 47,
+      "complete_case_correct": 0,
+      "complete_case_total": 287
+    },
+    "first_allowed": {
+      "primary_correct": 31,
+      "primary_total": 80,
+      "auxiliary_correct": 0,
+      "auxiliary_total": 47,
+      "complete_case_correct": 136,
+      "complete_case_total": 287
+    }
+  },
+  "posthoc_ranking": {
+    "scope": "explicitlyposthoc80multipleonly; exactPyes ties lexicographic; no confidence/no-call claim",
+    "correct": {
+      "base": 30,
+      "d6": 28,
+      "typed": 45,
+      "first_lexicographic": 31
+    },
+    "tie_counts": {
+      "base": 1,
+      "d6": 0,
+      "typed": 1
+    },
+    "diagnostic_sha256": "f7fc16d5ee67460968a9b2455c0dd26ec124d0da14eccc0efa8f58dd59566d10"
+  },
+  "definitions": {
+    "actual_choice": "used; no argmax overwrite; missing/malformed complete cases fail original denominators",
+    "probabilities": "finite exact keys,mass tolerance0.02 normalized,NLL floor1e-15,Brier option-sum,ECE10bins selected-choice probability; served count exposed",
+    "loss_spaces": "Binary fields and categorical origins differ; NLL/Brier/ECE are not directly equivalent",
+    "intervals": "2000seed42 component/source nested bootstrap; empirical degenerate all-correct/all-wrong intervals do not imply population certainty or1%critical certification",
+    "latency": "all completed request elapsed_ms includes sync/validation and excludes separate model load; sorted p95 index floor(0.95*N)-1,no interpolation",
+    "clef4_all": "N755 median1763.015833ms/p952345.354375ms; first2866.120ms included",
+    "clef4_warm": "N754 excludesfirstonly median1761.878208ms/p952306.842417ms; no inventedwarmenumstat",
+    "enum": "N127 allrequests median109.329459ms/p95171.949375ms",
+    "memory": "sampled MPS driver maximum and MLX allocator peak overlap; never sum; trueTorchpeak unavailable",
+    "speed_or_task_savings": "NOT_ESTABLISHED; sharedmachine observations, distinct127-vs755 workloads"
+  },
+  "operational_amendment": {
+    "clef8": "RootSIGTERMexit143 for sharedmachine contention before qualityunblind;402valid+353missing;attemptbounds402–403; no producercompletion/OOM/timeout/intrinsicaccuracyfailure claim",
+    "clef8_cpu_gate_overlap": "11:58:00.522–12:03:36.413UTC and recovery12:05:07.031–12:05:19.739UTC; slowdown precededfullgate; causalmodelattributionUNKNOWN",
+    "closed_new_budget": {
+      "clef4_binary": 755,
+      "typed_enum": 127,
+      "total": 882,
+      "other_enum_arms": 0
+    }
+  },
+  "conclusions": {
+    "Clef4": "80/80primary semantic strength;24/47no-call,36/80rawrulecontrast,48forbidden→rawNO_GO. Codeprojection264/287/0forbidden byconstruction is separate",
+    "typed_enum": "51/80primary vsraw0/80,posthoc45/80;0/47no-call→enumNO_GO. Existingoption-count temperature configuration unchanged, effectivebucketnaturallychanges",
+    "A_B_C": "NOT_ESTABLISHED",
+    "promotion": false,
+    "training": false,
+    "Jev_calls": 0,
+    "Jev_equivalence": "NOT_ESTABLISHED",
+    "task_AST_execution": "NOT_MEASURED",
+    "critical1percent_floor": "NOT_ESTABLISHED"
+  }
+}

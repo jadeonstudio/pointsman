@@ -918,6 +918,139 @@ Pointsman tools without `run`; its actual status readback confirms global OFF,
 d6 unchanged and no local worker running. Codex current-app workflow delivery
 therefore remains open. The checklist is **104/157** at this checkpoint.
 
+**Operational amendment — Clef8 interrupted, original denominator retained:**
+after the delivery checkpoint, a bounded read-only observation found 533.8 MiB
+swap-in and 252.1 MiB swap-out over 2.010 seconds, approximately 1 GiB each of
+compression/decompression, 79% CPU idle and about 460 MB/s disk traffic. The
+owned inference process was in uninterruptible wait with normal nice 0. These
+support substantial shared-machine memory/I/O contention, not attribution of
+all pressure to Clef or an OOM diagnosis. Root stopped only the verified original
+PID 42642 with SIGTERM; original session 86532 exited 143 and process absence
+was verified. No restart or unrelated-process change occurred.
+
+The external termination receipt is
+`7bbe6dcc70a341f25bf88bd624bc8980597cb7de1b29d3bf3a135f71bf3d396f`;
+the immutable prediction prefix is
+`4b76fc4917b7284c5a0b9601c01ce6e5706abf9997835c5019bc0125d462837f`.
+There are 402 valid rows and 353 missing/unexecuted-or-inflight rows of the
+original 755; attempted calls are bounded at 402–403. No producer completion
+was manufactured; final model-load, effective-dtype and peak-memory receipts
+remain UNKNOWN. Interruption preceded any Clef quality unblinding.
+One score using the original frozen specification retained all 755 fields:
+primary is 49/80 overall and 49/49 conditional on complete served cases;
+all 47 irrelevance cases are unserved, so their conditional quality is UNKNOWN.
+Thirty forbidden selections occurred; deterministic projection repaired the
+observed rule cases without extra inference. This incomplete arm is NO-GO and
+does not establish full-cohort accuracy, an unbiased prefix estimate, OOM or
+inferior model semantics. Its completed-field median/p95 was 2,284/44,602 ms
+under ambient load, not an isolated comparison with hosted Jev.
+
+The next bounded experiment uses the existing smaller 4-bit weights on the
+**same entire 755-field cohort**, plus one typed-Laya enum representation arm on
+all 127 original all-allowed DEV cases. No new weights, training, paid calls,
+test access, calibration fitting or production activation are authorized by this
+amendment. The additional budget is at most **755 + 127 = 882** calls, serially,
+under the existing 14 GiB sampled combined-Metal boundary. The old 8-bit arm is
+not repaired or replaced in its frozen comparison. Input and scoring manifests
+must be accepted before either new arm executes.
+
+The private enum prototype specification is
+`ea825ab3e9043bfc559013855692b1cf8a71c55c987b1228eeffd67af209067d`;
+its blind inputs are
+`b755a9364dd91fccc4206a8dbe0ff6789ee1c5e9fbb2fc75594ac163f6fd2977`.
+It preserves full original state, uses one Choice among the exact original
+function-name descriptions and a distinct none option, and projects to the
+287 original policy variants without substitution. Gold remains outside inputs.
+Typed CPU admission passed 127/127 with 227–1001 total tokens and a 77-token
+head, within its actual limits. A separate pre-inference screen requires 100%
+coverage and at least 90% primary and auxiliary correctness; code-enforced
+policy compliance is not learned rule-following or A/B/C qualification.
+
+Root reviewed and accepted producer
+`ef877cbb1524a16368c17be3ef4a04a63cf2ef018f97f645e5c2cff9c468b267`.
+It reuses the existing model loop for 4-bit and categorical inputs; old executed
+source/manifests remain immutable. Five focused producer tests and syntax passed.
+The 4-bit binary manifest is
+`80bd8c2f3b9fa301adecb0092c4477ad49466394f2ec565f99760eb7cfb3c0c6`
+(755/755 admitted, max 872 tokens); the typed enum manifest is
+`b21414ff2db3f132e0e16fd4dbe67876198e69529e4fd45096bbd933c178f42b`
+(127/127 admitted, max 1001). Frozen 4-bit weight files total 7,962,376,719 bytes
+plus a 243,538,016-byte BF16 head; these are file sizes, not measured live memory.
+The 4-bit arm ran under the original binary scoring specification. Root
+also accepted the enum scorer
+`bc30698e1045e0cd11c9b7f894f4e1677f70345c9f56cb46133bb4c698c50dbd`
+and its pre-inference scoring specification
+`0c5cd98005134d05150f7685a6b7de78966953afe7800dccf142da4ccbcdbf7e`.
+Six focused enum tests passed; a CPU-only empty-prediction join verified the full
+127-origin/287-variant denominator without any model calls. Typed enum inference
+was authorized only after the 4-bit process exited and GPU ownership was released.
+This sequencing does not alter either input cohort or acceptance criterion.
+
+Stable installed delivery was fast-forwarded from `ca6aebd4` to
+`6d83f4516ff620f356e27924d47bd5cf1473d130`, with a clean checkout and verified
+runtime file hashes. Global/workflow/native remain OFF and d6 is unchanged.
+The pending Claude trial has submitted no task: both arms will use the new
+runtime pin, preserving the original startup receipt. Its native trust prompt
+is untouched; delivery is not native trial completion.
+
+**Bounded experiment completed — 882 calls, no production change:** both new
+processes exited 0 and their absence was verified. Clef4 served all 755 fields;
+its completion/prediction hashes are
+`7cc9f232cd72896b8bf23de43797bb83a8ffefa22e6ea3e94c8262e4361ab0ff` /
+`7db0b5d38bb4761f58c5cf2b6fce95d17fee8a32bc08dab352cf7c1e0ee93b2c`.
+One frozen score found **80/80 primary tool selections**, 24/47 auxiliary no-call
+cases, 36/80 origins correct across all three raw policy variants and 48 emitted
+forbidden selections. The original raw screen is NO-GO. Separate code projection
+retained all 80 primary choices and corrected their derived policy variants,
+yielding 264/287 correct overall with zero policy violations by construction.
+This supports semantic selection plus deterministic enforcement as an architecture;
+it does not establish adequate no-call behavior, learned rule following or A/B/C.
+The report/receipt hashes are
+`451ecba34cefe67a2bb1d629ec4c4d121f42910aac8346ad4690e8824a53595f` /
+`e0b34766a504879f582ca9c246e3e9508efc02cc3cc02072154bb44249e7cd62`.
+All-request median/p95 is 1,763.016/2,345.354 ms (N=755); excluding the first
+request gives 1,761.878/2,306.842 ms (N=754). The separate load is 2.899 seconds
+and full stage 1,346.728 seconds. Sampled driver maximum 8,576,237,568 bytes and
+MLX allocator peak 8,820,693,682 bytes overlap and must not be summed. The tiny
+all-correct empirical primary bootstrap interval is not population certainty.
+
+Typed enum served all 127 origins with 127 calls; completion/prediction hashes are
+`2a4130aa600871144f1e2364f1313dcf0f3c520d74a05e580d1a5dcd1aa3a929` /
+`8a10561d40daf5d76b530adad19c47367185324c73075476345ac5d5661faf13`.
+One score found **51/80 primary** and 0/47 auxiliary cases correct: enum screen
+NO-GO. Compared with its original binary outcomes, primary improved by 51 cases
+with no regressions, but the no-call failure remains. Categorical NLL/Brier/ECE
+are 1.100321/0.713257/0.418360 in their separate option space. Code projection is
+182/287 correct; it adds no inference or derived confidence. Observed median/p95
+is 109.329/171.949 ms, separate load 1.144 seconds and full stage 15.529 seconds.
+The report/receipt hashes are
+`6c98f61344fef107961f2a214ce4ddff73af88346d97837f7d4a216b652c1055` /
+`6d2f62a0a65076dfc3d8bcec1b68325688763da5cea961d8a5c5c1400134cc8b`.
+Tests/specifications and the sealed test split are unchanged. The current source
+passes syntax checks for 247 JS modules; the accepted six enum and five producer
+tests supplement the existing valid repository gate. Both GPU owners are released.
+
+**Next bounded representation test — CLEF4-ENUM r1, preparation only:** the
+completed Clef4 primary result and the typed model's representation improvement
+justify testing the existing Clef4 weights on the identical 127 enum inputs.
+This changes representation, not state, gold, weights, temperature or split.
+CPU admission passed 127/127 losslessly at 301–944 tokens with unchanged producer
+`ef877cbb1524a16368c17be3ef4a04a63cf2ef018f97f645e5c2cff9c468b267`;
+the new manifest is
+`451b891f730f5ba5c38ca80bc503ab02c59ce3437d57ec3a33c587016925629a`.
+No GPU/model call has run. Root will first preserve the completed typed scorer
+revision in Git, then freeze the same enum screen and a paired Clef4 binary
+baseline in the reused scorer before opening this arm. Additional budget is
+**127 forwards once**, existing local assets only, under the same 14 GiB sampled
+combined-Metal boundary; stop on the first structural/nonfinite/inference error.
+A failed no-call screen will not trigger another prompt-tuning or training retry.
+
+The request-count comparison must use the 283 original all-allowed binary fields
+for these 127 origins, not all 755 fields including diagnostic policy variants.
+Code projection adds zero calls. A jointly batched binary request could also use
+one forward per origin and has not been measured here; therefore this test alone
+cannot establish a speed win over an optimized Clef client, or whole-task savings.
+
 The parallel three-avenue public-reference search found one additional explicitly
 licensed archive: [evalsafe-onet at
 `bda14bdd85be4d93140a842332359f526543b314`](https://huggingface.co/datasets/typesafe/evalsafe-onet/tree/bda14bdd85be4d93140a842332359f526543b314).
