@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { setup, response } from './features-helpers.mjs';
 import { atomicWrite, setMode } from '../src/storage.mjs';
 import { createDecisionEngine } from '../src/engine.mjs';
-import { runHookCli } from '../src/hooks.mjs';
+import { processHookEvent, runHookCli } from '../src/hooks.mjs';
 
 const bin = fileURLToPath(new URL('../bin/pointsman.mjs', import.meta.url));
 function effortFixture(t, mode = 'on') {
@@ -48,4 +48,17 @@ test('real hook executable processes effort while router OFF and global OFF supp
   assert.ok(events().some(e => e.reason === 'TURN_OUTCOME' && e.event === 'turn-outcome'));
   const count = events().length; setMode(s.home, 'off', s.env);
   const off = run(); assert.equal(off.status, 0); assert.equal(off.stdout, ''); assert.equal(events().length, count);
+});
+
+test('late effort completion leaves no output, successful event or pending effort decision', async t => {
+  const s = effortFixture(t), controller = new AbortController(); let received;
+  const layer = { ...s.layer, effort: async (_input, options) => {
+    received = options.signal; controller.abort();
+    return { id: 'late-effort', mode: 'on', apply: true, level: 'medium', arm: 'treatment', reason: 'LOWER' };
+  } };
+  const result = await processHookEvent({ host: 'claude', event: 'turn-effort', home: s.home, env: s.env,
+    input: { text: 'Rename this variable.', loop: 'subagent' }, layer, signal: controller.signal });
+  assert.equal(received, controller.signal); assert.equal(result.output, null);
+  assert.equal(fs.existsSync(path.join(s.home, 'links', 'pending-effort')), false);
+  assert.equal(fs.existsSync(path.join(s.home, 'logs')), false);
 });

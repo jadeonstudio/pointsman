@@ -4,6 +4,7 @@ import type { Register } from 'claude-code';
 // This module never accepts a completed result from prompt text or manufactures tool calls.
 let pending: unknown = null;
 async function prepare($: any, options: any, request: unknown, event: any) {
+  const deadline = performance.now() + options.timeoutMs;
   try {
     const bin = options.pointsmanPath || `${await $.env.get('HOME')}/.local/bin/pointsman`;
     const out = await $.process.run([bin, 'workflow-native', '--host', 'claude', '--event', 'turn-step',
@@ -11,7 +12,7 @@ async function prepare($: any, options: any, request: unknown, event: any) {
       stdin: JSON.stringify({ scope: 'workflow', request, event: { turnId: event.turnId, index: event.index, model: event.model } }),
       timeoutMs: options.timeoutMs,
     });
-    if (out.exitCode !== 0) return null;
+    if (performance.now() >= deadline || out.exitCode !== 0) return null;
     const response = JSON.parse(out.stdout);
     if (response.apply !== true || typeof response.text !== 'string' || response.text.length === 0 ||
         response.contractRevision !== 'claude-turn-step-2026-10-03') return null;

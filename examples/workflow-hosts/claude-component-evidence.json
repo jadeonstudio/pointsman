@@ -1,10 +1,10 @@
 {
-  "observedAt": "2026-10-03T07:38:50.673Z",
+  "observedAt": "2026-10-03T08:37:39.131Z",
   "host": "claude",
   "version": "2.1.288",
   "grade": "installed_native_plugin_test_host_with_injected_bottom_hooks",
   "binaryHash": "bbe93063f7a0879a1021b2891e5c9354e5b3b98433e32efe6750f7710afed750",
-  "moduleHash": "d56803fe63e607d159814d7a685a2407bf4b69994bf2c028513f64dd607fc4b5",
+  "moduleHash": "49dff1938e9cdaab285057d0344e423f48a1a5b26b920a853da18ace6b5b79c4",
   "contractRevision": "claude-turn-step-2026-10-03",
   "officialTypes": {
     "commit": "684800b206824dfd0cc8a876e8604b20f72c3617",
@@ -19,7 +19,7 @@
   ],
   "productionManifestValidation": "PASS",
   "nativeTestExitCode": 0,
-  "nativeTestOutput": "(pass) pointsman-workflows installed native component > completed segment streams text and final result without bottom model request; ordinary continuation delegates once [62.36ms]\n(pass) pointsman-workflows installed native component > unapplied bridge result delegates once and preserves fallback chunks/result [15.86ms]\n(pass) pointsman-workflows installed native component > subagent and later step bypass the bridge unchanged [10.74ms]\n(pass) pointsman-workflows installed native component > closing before stream consumption calls neither bridge nor bottom model [10.19ms]\n 4 pass\n 0 fail\nRan 4 tests across 1 file. [0.25s]",
+  "nativeTestOutput": "(pass) pointsman-workflows installed native component > completed segment streams text and final result without bottom model request; ordinary continuation delegates once [141.41ms]\n(pass) pointsman-workflows installed native component > unapplied bridge result delegates once and preserves fallback chunks/result [8.15ms]\n(pass) pointsman-workflows installed native component > subagent and later step bypass the bridge unchanged [7.60ms]\n(pass) pointsman-workflows installed native component > closing before stream consumption calls neither bridge nor bottom model [6.79ms]\n(pass) pointsman-workflows installed native component > successful bridge stdout arriving after its deadline delegates without synthetic output [149.11ms]\n 5 pass\n 0 fail\nRan 5 tests across 1 file. [0.48s]",
   "installedTestingStream": "Async generator: capture done.value through next(); installed test stream has no .result property.",
   "actualProviderPresentInTestHost": false,
   "actualExternalModelRequests": 0,
@@ -28,6 +28,19 @@
   "workflowNetworkCalls": 0,
   "globalSettingsChanged": false,
   "activationChanged": false,
+  "testConfigOverride": {
+    "timeoutMs": 100,
+    "scope": "owned temporary plugin copy; production default unchanged"
+  },
+  "lateSuccessFallback": "PASS_NATIVE_TEST_HOST",
+  "priorRevision": {
+    "receiptSha256": "c331b0cd25bad00192425a07eaec2b7f8feb2925e8d868180e4df82993735703",
+    "moduleHash": "d56803fe63e607d159814d7a685a2407bf4b69994bf2c028513f64dd607fc4b5",
+    "observedAt": "2026-10-03T07:38:50.673Z",
+    "passedTests": 4,
+    "nativeTestExitCode": 0,
+    "note": "Earlier four component checks retained in Git history; this run repeats them and adds late-success fallback."
+  },
   "streamAndResult": "PASS_NATIVE_TEST_HOST",
   "ordinaryContinuation": "PASS_NATIVE_HOOK_CHAIN_WITH_SENTINEL",
   "cancellationBeforeConsumption": "PASS_NATIVE_TEST_HOST",

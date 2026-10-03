@@ -15,6 +15,8 @@ assert.equal(version, '2.1.288', 'Revalidate the installed native testing API af
 const root = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'pointsman-claude-native-')));
 const plugin = path.join(root, 'plugin');
 const sourcePlugin = new URL('../../mods/pointsman-workflows/', import.meta.url);
+const receipt = new URL('claude-component-evidence.json', import.meta.url);
+const priorText = await fs.readFile(receipt, 'utf8'), prior = JSON.parse(priorText);
 try {
   await fs.writeFile(path.join(root, 'source.mjs'), 'export function sum(a,b) { return a+b; }\n');
   await fs.writeFile(path.join(root, 'source.test.mjs'), 'sum(1,2);\n');
@@ -25,22 +27,27 @@ try {
   assert.equal(packet.stats.inferenceCalls, 0);
   assert.equal(packet.stats.networkCalls, 0);
   await fs.cp(sourcePlugin, plugin, { recursive: true });
+  const manifestPath = path.join(plugin, '.claude-plugin', 'plugin.json');
+  const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+  manifest.userConfig.timeoutMs.default = 100;
+  await fs.writeFile(manifestPath, JSON.stringify(manifest));
   await fs.mkdir(path.join(plugin, 'tests'));
   const testSource = `import { describe, expect, mock, test } from 'claude-code/testing';
 const request = ${JSON.stringify(request)};
 const packet = ${JSON.stringify(packet)};
 const response = { apply: true, text: JSON.stringify(packet), contractRevision: ${JSON.stringify(WORKFLOW_HOST_CONTRACTS.claude.revision)} };
 const event = { turnId: 'owned-native-fixture', index: 0, model: 'unchanged-model', messageCount: 1 };
-function fixture(on, output = response) {
+function fixture(on, output = response, late = false) {
   const calls = { bridge: 0, delegate: 0, network: 0 };
   mock.env(on, { HOME: '/owned-probe-home' });
   on('prompt.submit', ($, e) => ({ text: e.text, origin: e.origin }));
   on('turn.complete', () => ({ text: '' }));
   on('http.fetch', () => { calls.network++; throw new Error('NETWORK_FORBIDDEN'); });
-  on('process.run', ($, e) => {
+  on('process.run', async ($, e) => {
     calls.bridge++;
     expect(e.argv).toEqual(['/owned-probe-home/.local/bin/pointsman', 'workflow-native', '--host', 'claude', '--event', 'turn-step']);
     expect(JSON.parse(e.init.stdin).request).toEqual(request);
+    if (late) await new Promise(resolve => setTimeout(resolve, e.init.timeoutMs + 40));
     return { value: { exitCode: 0, stdout: JSON.stringify(output), stderr: '' } };
   });
   on('turn.step', async function* ($, e) {
@@ -95,6 +102,14 @@ describe('pointsman-workflows installed native component', () => {
     await stream.return();
     expect(calls).toEqual({ bridge: 0, delegate: 0, network: 0 });
   });
+  test('successful bridge stdout arriving after its deadline delegates without synthetic output', async ($, on) => {
+    const calls = fixture(on, response, true);
+    await prompt($, '/pointsman-workflow ' + JSON.stringify(request));
+    const out = await consume($);
+    expect(out.chunks[0].text).toBe('fallback-sentinel');
+    expect(out.result.answer).toBe('fallback-sentinel');
+    expect(calls).toEqual({ bridge: 1, delegate: 1, network: 0 });
+  });
 });
 `;
   await fs.writeFile(path.join(plugin, 'tests/pointsman-workflows.test.ts'), testSource);
@@ -117,12 +132,17 @@ describe('pointsman-workflows installed native component', () => {
     providerCountScope: 'No provider implementation exists beneath native testing hooks; this does not measure an authenticated CLI session.',
     workflowInferenceCalls: packet.stats.inferenceCalls, workflowNetworkCalls: packet.stats.networkCalls,
     globalSettingsChanged: false, activationChanged: false,
+    testConfigOverride: { timeoutMs: 100, scope: 'owned temporary plugin copy; production default unchanged' },
+    lateSuccessFallback: run.status === 0 ? 'PASS_NATIVE_TEST_HOST' : 'FAIL',
+    priorRevision: { receiptSha256: createHash('sha256').update(priorText).digest('hex'), moduleHash: prior.moduleHash,
+      observedAt: prior.observedAt, passedTests: 4, nativeTestExitCode: prior.nativeTestExitCode,
+      note: 'Earlier four component checks retained in Git history; this run repeats them and adds late-success fallback.' },
     streamAndResult: run.status === 0 ? 'PASS_NATIVE_TEST_HOST' : 'FAIL',
     ordinaryContinuation: run.status === 0 ? 'PASS_NATIVE_HOOK_CHAIN_WITH_SENTINEL' : 'FAIL',
     cancellationBeforeConsumption: run.status === 0 ? 'PASS_NATIVE_TEST_HOST' : 'FAIL',
     visibleUi: 'UNKNOWN', assistantHistoryRetention: 'UNKNOWN', authenticatedContinuation: 'UNKNOWN', inFlightCancellation: 'UNKNOWN',
     adoption: 'UNQUALIFIED_FULL_NATIVE_SESSION' };
-  await fs.writeFile(new URL('claude-component-evidence.json', import.meta.url), JSON.stringify(evidence, null, 2) + '\n');
+  await fs.writeFile(receipt, JSON.stringify(evidence, null, 2) + '\n');
   console.log(JSON.stringify(evidence));
   assert.equal(run.status, 0, run.stdout + run.stderr);
 } finally { await fs.rm(root, { recursive: true, force: true }); }

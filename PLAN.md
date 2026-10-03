@@ -293,9 +293,9 @@ Current Claude docs require `2.1.287+` for the documented default-enabled mods
 path and say the old function-hooks environment flag is ignored. A later readback
 found installed `2.1.288`; this work did not upgrade the host. The existing
 effort-mod instructions describe the older path. The new workflow mod was checked
-against the actual `2.1.288` plugin test engine: [four native component tests
+against the actual `2.1.288` plugin test engine: [five native component tests
 passed](examples/workflow-hosts/claude-component-evidence.json), covering synthetic
-stream/result, normal fallback and closing before consumption. Native manifest
+stream/result, normal fallback, late-success rejection and closing before consumption. Native manifest
 validation required two missing user-config descriptions; those are now present.
 The production bridge also completed a fixed recipe in isolated local state.
 These checks do not prove authenticated CLI behavior, visible output, retained
@@ -305,10 +305,13 @@ The [isolated full-session attempt](examples/workflow-hosts/claude-session-prefl
 used the actual binary with OS-enforced network denial and no real credentials.
 It stopped at online bootstrap before any workflow prompt, then was terminated;
 its owned temporary files were removed after evidence preservation. A read-only
-`claude auth status` subsequently reported `loggedIn: false` in the tool context;
-this does not establish the user's subscription status. Full native acceptance
-remains open. Global pointsman modes, installed trust state and the active model
-were not changed by these probes.
+`claude auth status` initially reported `loggedIn: false` inside the sandbox. The
+same official read-only command with normal host access then confirmed
+`loggedIn: true`, `authMethod: claude.ai`, `subscriptionType: max`. The earlier
+result was context-limited, not evidence that the host lacked a subscription.
+The separate in-app browser was not logged in; usage-credit billing controls
+remain unverified. Full native acceptance remains open. Global pointsman modes,
+installed trust state and the active model were not changed by these probes.
 [Current mod availability](https://code.claude.com/docs/en/plugins/mods/overview)
 
 Cache-aware effort has a stronger supported route in an owned Claude API client:
@@ -876,7 +879,7 @@ portable work-segment execution plus host/version capability records.
 - [x] Other MCP/owned SDK consumers: use existing JS/CLI/MCP interfaces and supported dispatch settings; mark each untested native consumer UNKNOWN.
 - [x] Before consumption, recheck actual state/candidate freshness, deadline, cancellation and target availability; stale advice must not dispatch.
 - [x] Preserve installer ownership, reviewed dry-run, trust/approval separation and fail-open behavior; hooks never spawn or wait for a cold worker.
-- [ ] Verify late CLI output is discarded, hooks have bounded latency and shared-host contention is measured without claiming a global rate limit.
+- [x] Verify late CLI output is discarded, hooks have bounded latency and shared-host contention is measured without claiming a global rate limit. [Deadline evidence](examples/workflow-hosts/hook-deadline-evidence.json) covers 23 offline child processes, an open stdin and a late injected decision. No late success output/link/pending record survived; the installed Claude component also rejected late success. Single/6-way process-and-filesystem p95 was 62.617/127.980 ms under ambient load, not provider contention or a global rate guarantee. Full regression was 599/600; the unchanged 100 ms cold-unavailable timing assertion passed alone (40.356 ms whole test), with no threshold change. All other passing cases were reused.
 
 **Accept when:** the common executor finishes a work segment with one parent
 dispatch and returns complete evidence; native claims additionally require
@@ -1235,7 +1238,7 @@ documentation delivery.
 | Host | Lowest common integration | Optional application path | Exact limitation / next evidence |
 |---|---|---|---|
 | Codex | Existing advice tools; proposed shared workflow tool | Current-app workflow segments; stronger owned app-server client | Installed 0.154.0 schema confirms direct command/MCP execution and conditional `turn/start`. Native hooks do not document transparent model-response synthesis. Opaque spawn input limits routing, not the portable workflow path. |
-| Claude Code | Existing advice/Agent hooks and older effort mod; opt-in workflow mod | `turn.step` synthetic response/tool chunks; PostToolBatch stop; full tool-output replacement | Installed 2.1.288 passes four native component tests and manifest validation. An isolated full CLI run stopped at online bootstrap before the workflow prompt; visible/history output, authenticated continuation and in-flight cancellation remain UNKNOWN. Ordinary stop text differs from clean synthetic completion. |
+| Claude Code | Existing advice/Agent hooks and older effort mod; opt-in workflow mod | `turn.step` synthetic response/tool chunks; PostToolBatch stop; full tool-output replacement | Installed 2.1.288 passes five native component tests and manifest validation. An isolated full CLI run stopped at online bootstrap before the workflow prompt; visible/history output, authenticated continuation and in-flight cancellation remain UNKNOWN. Existing Max authentication is verified; the planned subscription-only session waits for Usage credits OFF confirmation. Ordinary stop text differs from clean synthetic completion. |
 | Gemini CLI | Proposed workflow tool | `BeforeModel.llm_response` skips the model with synthetic text | Installed 0.42.0 is an identity observation, not a verified adapter. Current translator's response parts are strings; arbitrary synthetic function calls are not this contract. |
 | Other MCP hosts | Shared workflow tool after implementation | Multiple internal actions behind one dispatch | Removes internal round trips without control of the host's outer calls. Existing `decide` alone has no such executor. |
 | Owned SDK/API harness | JS/shared workflow plus supported model/run APIs | App owns when model calls occur; optional programmatic tool calling/per-message effort | Measure cache and actual requests. API beta support does not imply the same mechanism is active in a native mod. |
@@ -1669,9 +1672,11 @@ coverage, cold/warm/concurrent measurements, limitations, qualification, active
 comparison and tested rollback. Publish only permitted artifacts with a revised
 model card. Provider selection and checkpoint promotion remain explicit actions.
 
-Current result: the architecture and a feasible staged investigation are defined;
-new training, native verification and Jev superiority have **not** been performed
-or established by this documentation change.
+Current result: shared runtime implementation, local training pilots and bounded
+native/component checks have been executed; their accepted evidence is recorded
+above. No new checkpoint passed all qualification gates, full native acceptance
+remains incomplete, and A/B/C superiority is not established. Earlier
+documentation-only verification below is historical, not the current work scope.
 
 ## Source-to-work-package traceability
 

@@ -133,5 +133,19 @@
     "authMethod": "none",
     "apiProvider": "firstParty",
     "subscriptionStatus": "UNKNOWN: login status does not establish subscription availability"
+  },
+  "hostAuthenticationReadback": {
+    "command": "claude auth status --json; only loggedIn/authMethod/apiProvider/subscriptionType retained",
+    "scope": "normal host access; sandbox-only status was context-limited",
+    "exitCode": 0,
+    "toolOutput": "1a991e",
+    "loggedIn": true,
+    "authMethod": "claude.ai",
+    "apiProvider": "firstParty",
+    "subscriptionType": "max",
+    "credentialsReadByAgent": false,
+    "modelRequests": 0,
+    "usageCreditsEnabled": "UNKNOWN",
+    "browserUsagePage": "Separate in-app browser redirected to sign-in; no login or settings change; temporary tab closed"
   }
 }

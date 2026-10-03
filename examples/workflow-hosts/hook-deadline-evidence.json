@@ -1,0 +1,234 @@
+{
+  "version": 1,
+  "observedAt": "2026-10-03T08:36:51.941Z",
+  "node": "v26.5.0",
+  "grade": "offline actual CLI children plus one delayed injected decision fixture",
+  "sourceHashes": {
+    "src/hooks.mjs": "83f4c0532368c02df8799f1e0ff7d1020e3c0ff9137d4abc914813196e765ef1",
+    "mods/pointsman-workflows/hooks/pointsman-workflows.ts": "49dff1938e9cdaab285057d0344e423f48a1a5b26b920a853da18ace6b5b79c4",
+    "examples/workflow-hosts/hook-deadline-probe.mjs": "3339be49c52716132c366dc7285ffc2fc576220f1b912faa5d65eabcf75a20eb"
+  },
+  "scope": "Same temporary private home: process startup, policy/status reads and content-free hook logging. No provider admission/global rate limit measurement.",
+  "installedConfigurationChanged": false,
+  "actualGpuInference": 0,
+  "externalProviderRequests": 0,
+  "injectedFixtureCalls": 1,
+  "contentionCaveat": "Ambient workload, including separate local training, is uncontrolled; these light timings establish observed bounds, not a speedup or provider-contention claim.",
+  "perProcessLimitScope": "Existing limits remain per-process; no global limiter is introduced or claimed.",
+  "serial": {
+    "processes": 3,
+    "p50Ms": 54.844,
+    "p95Ms": 62.617,
+    "maxMs": 62.617
+  },
+  "concurrent": {
+    "processes": 18,
+    "p50Ms": 70.706,
+    "p95Ms": 127.98,
+    "maxMs": 127.98
+  },
+  "rows": [
+    {
+      "concurrency": 1,
+      "attempt": 0,
+      "elapsedMs": 62.617,
+      "exitCode": 0,
+      "stdoutBytes": 0
+    },
+    {
+      "concurrency": 1,
+      "attempt": 1,
+      "elapsedMs": 54.844,
+      "exitCode": 0,
+      "stdoutBytes": 0
+    },
+    {
+      "concurrency": 1,
+      "attempt": 2,
+      "elapsedMs": 51.506,
+      "exitCode": 0,
+      "stdoutBytes": 0
+    },
+    {
+      "concurrency": 6,
+      "attempt": 0,
+      "elapsedMs": 72.266,
+      "exitCode": 0,
+      "stdoutBytes": 0
+    },
+    {
+      "concurrency": 6,
+      "attempt": 0,
+      "elapsedMs": 72.452,
+      "exitCode": 0,
+      "stdoutBytes": 0
+    },
+    {
+      "concurrency": 6,
+      "attempt": 0,
+      "elapsedMs": 70.706,
+      "exitCode": 0,
+      "stdoutBytes": 0
+    },
+    {
+      "concurrency": 6,
+      "attempt": 0,
+      "elapsedMs": 71.305,
+      "exitCode": 0,
+      "stdoutBytes": 0
+    },
+    {
+      "concurrency": 6,
+      "attempt": 0,
+      "elapsedMs": 70.425,
+      "exitCode": 0,
+      "stdoutBytes": 0
+    },
+    {
+      "concurrency": 6,
+      "attempt": 0,
+      "elapsedMs": 70.205,
+      "exitCode": 0,
+      "stdoutBytes": 0
+    },
+    {
+      "concurrency": 6,
+      "attempt": 1,
+      "elapsedMs": 115.703,
+      "exitCode": 0,
+      "stdoutBytes": 0
+    },
+    {
+      "concurrency": 6,
+      "attempt": 1,
+      "elapsedMs": 117.811,
+      "exitCode": 0,
+      "stdoutBytes": 0
+    },
+    {
+      "concurrency": 6,
+      "attempt": 1,
+      "elapsedMs": 127.98,
+      "exitCode": 0,
+      "stdoutBytes": 0
+    },
+    {
+      "concurrency": 6,
+      "attempt": 1,
+      "elapsedMs": 122.945,
+      "exitCode": 0,
+      "stdoutBytes": 0
+    },
+    {
+      "concurrency": 6,
+      "attempt": 1,
+      "elapsedMs": 127.721,
+      "exitCode": 0,
+      "stdoutBytes": 0
+    },
+    {
+      "concurrency": 6,
+      "attempt": 1,
+      "elapsedMs": 122.602,
+      "exitCode": 0,
+      "stdoutBytes": 0
+    },
+    {
+      "concurrency": 6,
+      "attempt": 2,
+      "elapsedMs": 58.004,
+      "exitCode": 0,
+      "stdoutBytes": 0
+    },
+    {
+      "concurrency": 6,
+      "attempt": 2,
+      "elapsedMs": 56.175,
+      "exitCode": 0,
+      "stdoutBytes": 0
+    },
+    {
+      "concurrency": 6,
+      "attempt": 2,
+      "elapsedMs": 56.04,
+      "exitCode": 0,
+      "stdoutBytes": 0
+    },
+    {
+      "concurrency": 6,
+      "attempt": 2,
+      "elapsedMs": 57.169,
+      "exitCode": 0,
+      "stdoutBytes": 0
+    },
+    {
+      "concurrency": 6,
+      "attempt": 2,
+      "elapsedMs": 56.682,
+      "exitCode": 0,
+      "stdoutBytes": 0
+    },
+    {
+      "concurrency": 6,
+      "attempt": 2,
+      "elapsedMs": 58.84,
+      "exitCode": 0,
+      "stdoutBytes": 0
+    }
+  ],
+  "openStdin": {
+    "configuredTimeoutMs": 4000,
+    "processExitMs": 4050.452,
+    "exitCode": 0,
+    "stdoutBytes": 0
+  },
+  "delayedCompletion": {
+    "configuredTimeoutMs": 100,
+    "fixtureDelayMs": 200,
+    "hookReturnMs": 103.212,
+    "processExitMs": 255.832,
+    "exitCode": 0,
+    "stdoutBytes": 0,
+    "successfulLinkOrPendingFiles": 0
+  },
+  "hookEvents": 23,
+  "appliedEvents": 0,
+  "timeoutEvents": 2,
+  "cleanup": "PASS: owned temporary home and every child removed/closed",
+  "totalRuntimeIncludingCleanupMs": 4754.444,
+  "integration": {
+    "syntaxModules": 238,
+    "fullNodeSuite": {
+      "tests": 600,
+      "pass": 599,
+      "fail": 1,
+      "durationMs": 32673.230708,
+      "failure": "Existing cold-unavailable hook wall-time <100ms assertion under parallel host load; full test duration303.451084ms",
+      "logSha256": "ab6214fd30bdeb83b52c473be922c18bb4e4d139f2601817d02a698a8550785b"
+    },
+    "focusedCompletion": {
+      "tests": 1,
+      "pass": 1,
+      "wholeTestDurationMs": 40.356167,
+      "thresholdChanged": false,
+      "productionSourceChangedBetweenRuns": false,
+      "logSha256": "ae6fa63d61b832c8c9169015a6c24de39f78ca004b00585d8673412fc9f67576"
+    },
+    "offlineSmokeAndThreeDemos": "PASS",
+    "actualExternalApiCalls": 0,
+    "wholeSuiteRerun": false,
+    "clefInferenceOverlapUtc": {
+      "fullGate": [
+        "2026-10-03T08:42:47.171618Z",
+        "2026-10-03T08:43:27.310777Z"
+      ],
+      "completion": [
+        "2026-10-03T08:44:18.495514Z",
+        "2026-10-03T08:44:19.216495Z"
+      ],
+      "timestampBasis": "Gate log creation and last-write filesystem times; not exact child start/end timestamps",
+      "gpuWorkStartedByGate": false,
+      "latencyInterpretation": "Overlapping invoice timings include ambient CPU verification load; no uncontended or hosted-speed equivalence claim"
+    }
+  }
+}

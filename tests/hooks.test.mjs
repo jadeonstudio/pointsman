@@ -213,7 +213,34 @@ test('runHookCli: a stdin that never ends times out and yields no output', async
   await runHookCli({ host: 'claude', event: 'pre-spawn', home: s.home, env: s.env, stdin: neverEnding, write: t2 => { wrote += t2; }, timeoutMs: 100 });
   assert.equal(wrote, '');
   assert.ok(Date.now() - start < 2000);
+  assert.equal(neverEnding.destroyed, true);
   neverEnding.destroy();
+});
+
+test('aborted late route cannot rewrite or leave successful links even when its layer ignores cancellation', async t => {
+  const s = setup(); t.after(s.cleanup); t.after(() => s.engine.close());
+  installFixtureRoles(s.home, 'claude');
+  const controller = new AbortController(); let received;
+  const layer = { ...s.layer, route: async (_input, options) => {
+    received = options.signal; controller.abort();
+    return { id: 'late-route', mode: 'on', apply: true, route: { role: 'fixture-economy-role', model: 'haiku' }, reason: 'ACCEPTED' };
+  } };
+  const result = await processHookEvent({ host: 'claude', event: 'pre-spawn', input: claudeInput(), home: s.home, env: s.env, layer, signal: controller.signal });
+  assert.equal(received, controller.signal); assert.equal(result.output, null);
+  assert.deepEqual(readLinkFiles(s.home), []); assert.equal(readEvents(s.home).some(e => e.applied), false);
+});
+
+test('runHookCli discards a delayed fixture completion and aborts its pending decision', async t => {
+  const s = setup(); t.after(s.cleanup); t.after(() => s.engine.close()); installFixtureRoles(s.home, 'claude');
+  let output = '', decisionSignal, finish;
+  const pending = new Promise(resolve => { finish = resolve; });
+  await runHookCli({ host: 'claude', event: 'pre-spawn', home: s.home, env: s.env, timeoutMs: 100,
+    stdin: Readable.from([JSON.stringify(claudeInput())]), write: text => { output += text; },
+    engineFactory: options => createDecisionEngine({ ...options, provider: async (payload, _key, opts) => { decisionSignal = opts.signal; await pending; return response(payload); } }) });
+  assert.equal(decisionSignal.aborted, true); assert.equal(output, ''); finish();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(output, ''); assert.deepEqual(readLinkFiles(s.home), []);
+  assert.equal(readEvents(s.home).some(e => e.kind === 'hook' && e.applied), false);
 });
 
 // --- no deny/ask ever appears ---

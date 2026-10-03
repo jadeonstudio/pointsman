@@ -44,14 +44,15 @@ const MAX_TRANSCRIPT_BYTES = 64 * 1024 * 1024;
 // [route scope=<local|cross-module|repository|unknown> complete=<yes|no> failures=<0-100> (impact=<high|normal>)? (exhaustive=<yes|no>)?]
 const CONTEXT_RE = /\[route scope=(local|cross-module|repository|unknown) complete=(yes|no) failures=(\d{1,3})(?: impact=(high|normal))?(?: exhaustive=(yes|no))?\]/;
 
-function withTimeout(promise, ms) {
+function withTimeout(promise, ms, expire = () => {}) {
   return new Promise(resolve => {
-    let settled = false;
+    let settled = false; const deadline = performance.now() + ms;
+    const timedOut = () => { if (!settled) { settled = true; clearTimeout(timer); expire(); resolve(null); } };
     // Keep the timer referenced: it is always cleared on settle, and an unref'd timer lets Node 22 end
     // the event loop while a never-ending stdin is still pending, so the timeout would never fire.
-    const timer = setTimeout(() => { if (!settled) { settled = true; resolve(null); } }, ms);
+    const timer = setTimeout(timedOut, ms);
     Promise.resolve(promise).then(
-      value => { if (!settled) { settled = true; clearTimeout(timer); resolve(value); } },
+      value => { if (performance.now() >= deadline) return timedOut(); if (!settled) { settled = true; clearTimeout(timer); resolve(value); } },
       () => { if (!settled) { settled = true; clearTimeout(timer); resolve(null); } },
     );
   });
@@ -346,7 +347,8 @@ async function preSpawn(host, input, ctx) {
       highImpact: annotation.highImpact, modelLocked: info.modelLocked, exhaustive: annotation.exhaustive },
     availableRoles: discoverHostRoles(host, { env: ctx.env, userHome: ctx.env.HOME || os.homedir() }), availableSkills: [] };
   const trace = { task_id: randomUUID(), snapshot_id: resolveSnapshotId(info.cwd) };
-  const result = await ctx.layer.route(routeInput, { trace });
+  const result = await ctx.layer.route(routeInput, { trace, signal: ctx.signal });
+  if (ctx.signal?.aborted || performance.now() >= ctx.deadline) return { output: null, telemetry: null };
   const telemetry = { reason: result.reason, original_role: info.originalRole,
     recommended_role: result.route?.role ?? null, decision_id: result.mode !== 'off' ? result.id : null };
   if (result.mode === 'off') return { output: null, telemetry };
@@ -481,7 +483,8 @@ async function turnEffort(host, input, ctx) {
   const loop = v.loop === 'subagent' ? 'subagent' : 'main';
   const trace = { task_id: randomUUID(), snapshot_id: resolveSnapshotId(process.cwd()) };
   const result = await ctx.layer.effort({ text, ...(context !== undefined ? { context } : {}), loop,
-    ...(loop === 'main' ? { sinceLastMainMs: typeof v.since_last_main_ms === 'number' ? v.since_last_main_ms : null } : {}) }, { trace });
+    ...(loop === 'main' ? { sinceLastMainMs: typeof v.since_last_main_ms === 'number' ? v.since_last_main_ms : null } : {}) }, { trace, signal: ctx.signal });
+  if (ctx.signal?.aborted || performance.now() >= ctx.deadline) return { output: null, telemetry: null };
   const telemetry = { reason: result.reason, decision_id: result.mode !== 'off' ? result.id : null, arm: result.arm };
   if (result.mode === 'off') return { output: null, telemetry };
   if (result.mode === 'on' && result.id) rememberEffortDecision(ctx.home, { decisionId: result.id, arm: result.arm, level: result.level }, ctx.now());
@@ -568,8 +571,9 @@ function logOutcomeEvent(ctx, { host, event, decisionId, agentId, arm, finalRole
 }
 /** Pure-ish dispatcher: takes an already-parsed hook payload, never throws, only ever logs a content-free event. */
 export async function processHookEvent({ host, event, input, home = resolveHome(), env = process.env, now = () => Date.now(),
-  layer, links = createLinkIndex({ home, now }), store = createTrainingStore({ home }) } = {}) {
+  layer, links = createLinkIndex({ home, now }), store = createTrainingStore({ home }), signal, deadline = Infinity } = {}) {
   const start = performance.now();
+  if (signal?.aborted || performance.now() >= deadline) return { output: null, telemetry: null };
   if (!HOSTS.includes(host) || !HOOK_EVENTS.includes(event) || typeof layer?.route !== 'function' || typeof layer?.effort !== 'function') return { output: null, telemetry: null };
   // The whole owned hook passes through immediately when global OFF, POINTSMAN_DISABLE=1, or (for the
   // event's own feature -- router for the original four, effort for turn-effort/turn-outcome) that
@@ -577,10 +581,11 @@ export async function processHookEvent({ host, event, input, home = resolveHome(
   let status;
   try { status = layer.status(); } catch { return { output: null, telemetry: null }; }
   if (gateModeFor(status, event) === 'off') return { output: null, telemetry: null };
-  const ctx = { home, env, now, layer, links, store };
+  const ctx = { home, env, now, layer, links, store, signal, deadline };
   let outcome;
   try { outcome = await HANDLERS[event](host, input, ctx); }
   catch (error) { outcome = { output: null, telemetry: { reason: errorCode(error) } }; }
+  if (signal?.aborted || performance.now() >= deadline) return { output: null, telemetry: null };
   const elapsedMs = Math.round((performance.now() - start) * 1000) / 1000;
   logHookEvent({ home, layer, host, event, telemetry: outcome.telemetry, applied: Boolean(outcome.output), elapsedMs });
   return { output: outcome.output ?? null, telemetry: outcome.telemetry ?? null };
@@ -607,6 +612,8 @@ async function readHookInput({ stdin, maxBytes }) {
 export async function runHookCli({ host, event, home: homeOverride, env = process.env, now = () => Date.now(),
   stdin = process.stdin, write = text => process.stdout.write(text), timeoutMs = HOOK_TIMEOUT_MS,
   engineFactory = createDecisionEngine } = {}) {
+  const start = performance.now(), deadline = start + timeoutMs, controller = new AbortController();
+  const expire = () => { controller.abort(); try { stdin?.destroy(); } catch { /* fail-open */ } };
   try {
     if (!HOSTS.includes(host) || !HOOK_EVENTS.includes(event)) return;
     const home = resolveHome({ ...env, ...(homeOverride ? { POINTSMAN_HOME: homeOverride } : {}) });
@@ -618,21 +625,23 @@ export async function runHookCli({ host, event, home: homeOverride, env = proces
     try {
       const status = layer.status();
       if (gateModeFor(status, event) === 'off') return;
-      const start = performance.now();
+      if (performance.now() >= deadline) { expire(); return; }
       let settledReason = null;
       const result = await withTimeout((async () => {
         const input = await readHookInput({ stdin, maxBytes: MAX_HOOK_STDIN_BYTES });
+        if (controller.signal.aborted || performance.now() >= deadline) return null;
         if (input === null) { settledReason = 'INVALID_STDIN'; return null; }
-        const r = await processHookEvent({ host, event, input, home, env, now, layer });
+        const r = await processHookEvent({ host, event, input, home, env, now, layer, signal: controller.signal, deadline });
+        if (controller.signal.aborted || performance.now() >= deadline) return null;
         settledReason = 'PROCESSED';
         return r;
-      })(), timeoutMs);
+      })(), deadline - performance.now(), expire);
       // Content-free diagnostics: distinguish "host never called us" from "called but input rejected / timed out".
       if (settledReason !== 'PROCESSED') {
         logHookEvent({ home, layer, host, event, telemetry: { reason: settledReason ?? 'HOOK_TIMEOUT' }, applied: false,
           elapsedMs: Math.round((performance.now() - start) * 1000) / 1000 });
       }
-      if (result?.output) write(JSON.stringify(result.output) + '\n');
+      if (!controller.signal.aborted && performance.now() < deadline && result?.output) write(JSON.stringify(result.output) + '\n');
     } finally { engine.close(); }
   } catch { /* fail-open */ }
 }
