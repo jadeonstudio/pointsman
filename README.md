@@ -1,6 +1,21 @@
 # Pointsman
 
-Pointsman is a local decision layer for Claude Code (and optionally Codex) on macOS. A small local classifier — **pointsman-router**, fine-tuned from Laya multilingual on Claude Opus reference labels — reads each subagent spawn and moves it to a lighter or stronger role/model (Haiku/Sonnet/Opus), or leaves the host's own choice alone. A decision takes about 0.1 seconds on-device and costs no API call. It ships OFF by default: nothing routes until you turn it on.
+Pointsman is an optional typed decision layer for agents, with a paid **Jev/TypeSafe** provider and a local **Laya/pointsman-router** provider behind the same engine. It exposes bounded Choice, Noul and Score judgments through MCP, CLI and JavaScript. The host consumes eligible advice and retains its own permissions and execution controls. Everything ships OFF by default.
+
+The existing automatic integration routes Claude Code subagents to a lighter or stronger role/model, or keeps the host's choice. The local **pointsman-router** checkpoint was fine-tuned from Laya multilingual on Claude Opus reference labels; its measured scope is coding-task routing, not general Jev replacement. Codex has explicit decision tools, with a more limited hook integration described below.
+
+## Cross-agent design and learning roadmap
+
+The [architecture](ARCHITECTURE.md) defines how to reuse the shared engine across Codex, Claude Code, other MCP clients and owned agent harnesses. The [training plan](TRAINING_PLAN.md) and [evaluation gates](EVALUATION.md) separate three goals: better completed-task efficiency, higher decision quality than Jev, and generalization to unseen tasks and schemas. These are plans, not shipped integrations or demonstrated superiority.
+
+| Surface | Current repository support | Application boundary |
+|---|---|---|
+| MCP / CLI / JavaScript | Shared typed decision engine | Caller must consume `apply=true`; no automatic host control |
+| Claude Code | Owned spawn hooks; separate opt-in effort mod | Host/version and policy dependent; native behavior needs verification |
+| Codex | MCP decisions and spawn-recording hooks | Previously observed opaque spawn input prevents task-based hook routing |
+| Other MCP clients / owned SDK harnesses | Common engine is reusable; no host-specific installer | Proposed capability checks and adapters; native integration unverified |
+
+Jev is selected explicitly; a local failure never silently calls the paid provider. Likewise, an unqualified local checkpoint does not acquire general-purpose capabilities just because the request uses the same schema.
 
 > An agent asked to install this should read [AGENTS.md](AGENTS.md) first. It preserves existing branches, uncommitted changes and configuration, and never requests or prints a key in chat.
 
@@ -14,7 +29,7 @@ A Claude Code `PreToolUse` hook watches every `Agent` (subagent spawn) call. Eac
 
 The hook applies guard rules first (sensitive content, a model the caller already locked, unknown/incomplete scope, prior failures) that keep the host's own choice untouched. Otherwise the model answers three questions about the task — intent, difficulty (1–5) and risk — and a decision-level gate (tier probability ≥ 0.80 **and** keep-host probability ≤ 0.20, both fitted on held-out data and shipped with the checkpoint) decides whether to rewrite the spawn's `subagent_type`/`model` or leave it as the host chose.
 
-Codex support is more limited: `codex-cli` hands hooks an opaque, encrypted spawn message, so the Codex hook cannot read the task text and only records spawns (role distribution, no routing decision). The MCP tools (`route`, `decide`, `status`, …) are still available to Codex.
+Codex support is more limited: the repository records opaque spawn messages on `codex-cli` 0.154.0, so that integration cannot read task text and only records spawns (role distribution, no routing decision). Current official hook documentation describes broader capabilities; this repository has not reverified task visibility and rewriting on a newer host. The MCP tools (`route`, `decide`, `status`, …) remain available. See the [capability matrix](ARCHITECTURE.md#host-capability-matrix) before assuming automatic routing.
 
 ## Measured results
 
@@ -33,7 +48,7 @@ These numbers describe agreement with a labeling model, not measured savings or 
 
 ## Requirements
 
-- macOS (the resident server that keeps the model warm uses a user `launchd` agent).
+- macOS, Linux or WSL for the Node engine and Jev provider. The optional resident-server LaunchAgent installer is macOS only; other local deployments need an explicitly managed worker lifecycle.
 - Node.js version from [package.json](package.json) `engines` (currently `>=22`).
 - Python ≥3.8 in a dedicated virtual environment, with the official `laya` package installed:
 
@@ -43,7 +58,7 @@ These numbers describe agreement with a labeling model, not measured savings or 
   ```
 
   Only needed to run the local Laya provider (routing with the pointsman-router checkpoint). Using the remote Jev/TypeSafe provider instead needs no Python.
-- Claude Code (Codex is optional and only gets spawn recording, not routing).
+- Claude Code or Codex for the existing host installers. Other MCP clients can use the stdio server, but are not verified native integrations.
 
 ## Install
 
@@ -148,16 +163,16 @@ It never changes the model, never changes a subagent's role, and never rewrites 
 
 ## Training your own checkpoint
 
-Training code lives in a separate kit, not in this repository: see [training/laya-kit/README.md](training/laya-kit/README.md). The lifecycle commands are `laya register` → `laya holdout freeze` → `laya qualify` (includes decision-gate flags) → `laya compare` → `laya promote`, and `laya package` builds a folder (weights plus a `pointsman.json` manifest) ready to upload with `hf upload`. All are explicit operator calls — nothing here starts training or promotes a checkpoint automatically.
+The training kit is included at [training/laya-kit/](training/laya-kit/README.md), with an explicit local training path. The [learning plan](TRAINING_PLAN.md) describes the data, evaluation and qualification changes needed for broader decisions. The lifecycle commands are `laya register` → `laya holdout freeze` → `laya qualify` (includes decision-gate flags) → `laya compare` → `laya promote`, and `laya package` builds a folder (weights plus a `pointsman.json` manifest) ready to upload with `hf upload`. All are explicit operator calls — nothing here starts training or promotes a checkpoint automatically.
 
 ## Security and privacy
 
 Summary; full detail in [SECURITY.md](SECURITY.md):
 
 - The local Laya provider makes no network calls; it starts only a locally configured Python runtime and checkpoint with an allowlisted environment (no inherited API/HF secrets).
-- Logs are content-free: only timing, mode, purpose and bounded reason codes — never task text, prompts or keys.
+- Operational logs are content-free: only timing, mode, purpose and bounded reason codes. Separately enabled training capture uses a private evidence store; do not publish its raw records.
 - Keys are never written into arguments, generated configs or Git; the managed credentials file is plaintext with restrictive permissions, not an encrypted vault.
-- The optional Jev/TypeSafe provider sends only the caller-supplied task state and model name over HTTPS to a fixed endpoint; it is a remote call and incurs API usage.
+- The optional Jev/TypeSafe provider sends the caller-supplied state, question instructions/criteria and model name over HTTPS to a fixed endpoint; it is a remote call and incurs API usage.
 
 ## Uninstall
 

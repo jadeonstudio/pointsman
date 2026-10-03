@@ -1,7 +1,7 @@
 {
   "name": "pointsman",
   "version": "0.3.0",
-  "description": "A local, switchable TypeSafe decision layer with policy routing and selective filtering for Codex and Claude Code",
+  "description": "A typed decision layer for agents with Jev and local Laya providers, MCP/CLI interfaces, and Codex and Claude Code integrations",
   "type": "module",
   "private": true,
   "engines": {
