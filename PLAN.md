@@ -1,6 +1,6 @@
 # Pointsman integrated architecture, learning and delivery plan
 
-Updated: 2026-10-03. Status: **EXECUTION ACTIVE — owner authorized the complete checklist**.
+Updated: 2026-10-03. Status: **EXECUTION BLOCKED — 104/157 verified; full objective unchanged**.
 Runtime source baseline: `39bf5a4`; original design bundle: `e18cd21`; first
 consolidation: `b950227`. The revision below replaces routing-first priorities
 with execution that removes repeated parent-model requests.
@@ -86,6 +86,30 @@ research evidence directory with byte-for-byte hash verification. Their public
 aggregate is in `examples/workflow-hosts/measurement-evidence.json`. Original
 prediction files, model assets and experiment source snapshots remain preserved.
 No active worker or unrelated-file cleanup remains.
+
+### Remaining execution boundaries — 2026-10-03
+
+After delivery of `e043fb5`, three bounded GPT-6.1 Sol read-only assessments
+rechecked the remaining Codex, effort and data/model dependencies. No additional
+READY node was found under the current constraints. Previous successful checks
+were reused; no new host/model process, paid request, global change or research
+retry was started. This is an incomplete objective, not a completed release or
+a narrower replacement target.
+
+| Remaining requirements | Current authoritative boundary | What is required to continue |
+|---|---|---|
+| WP02/WP11/WP12 native execution and task economics | Claude session 25566 is still live; the owner-only trust question remains unanswered and no task was submitted. This root's current catalog still has seven tools without `run`. Separate Codex direct MCP/OFF evidence does not prove current-app delivery, provider request counts or native in-flight cancellation. Gemini omits synthetic assistant history. | The normal owner trust decision opens the prepared Claude trial only. Codex needs a supported current-app connection/catalog and observable native boundaries; Gemini needs a supported history-preserving path. Existing UI-policy refusals are not bypassed. |
+| WP02 per-message effort and cache preservation | Existing effort gates and prior regressions remain accepted. The [documented per-message API beta](https://platform.claude.com/docs/en/build-with-claude/effort#per-message-effort-beta) is distinct from the current mod's `e.effort`; no verified transport/entitlement executes that contract at zero additional spend. | Supported model, beta, actual request payload, effective turn and before/after cache usage in one authorised run. Documentation or a subscription alone is not that proof. |
+| WP04/WP05/WP07–WP10 generalization and qualification | Three trained Laya candidates failed their preregistered learning gates. The seven-arm tool-selection study is closed; Clef's semantic strength did not repair no-call quality. No accepted prospective/unseen-family executor corpus or qualifying new candidate exists. | Independently adjudicated, rights-cleared executor decision cases and completion outcomes, plus a justified candidate hypothesis and an explicitly bounded next experiment. A new node name, more duplicate rows, calibration or opening test is not a remedy for a failed learning gate. |
+| WP10 B/C superiority versus pinned Jev | The permitted invoice comparison tied; O*NET's licensed AI-consensus labels are not independently established gold. New competitive Jev API use remains unavailable under the owner's stated permission/budget constraints. | An applicable permitted broader comparison with independent gold and adequate effective samples. Missing results cannot become PASS. |
+| WP12/WP13 applying rollout, qualification and promotion | The preceding quality/native utility gates remain unaccepted. Existing d6 and OFF modes are retained. | Actual upstream acceptance, followed by scoped operational checks; an installer run or forced promotion cannot replace it. |
+
+The Claude trust boundary has persisted across consecutive goal turns. Automatic
+approval review refused even the proposed `No` response to close it, requiring
+the owner's normal trust decision. No response, alternate termination or trust
+state write followed. [AGENTS.md](AGENTS.md) requires: "Respect normal trust and
+approvals." The pending question is retained rather than duplicated. All research
+GPU processes exited and their absence was verified; no research writer remains.
 
 ## Reading and execution order
 
