@@ -57,6 +57,33 @@ execution and native adapters while retaining existing authority boundaries.
 Implementation and contract verification now exist, alongside a completed local pilot. Checked work-package items below refer to those specific artifacts; native task quality and superiority still require their separate evidence. Unknown capability, rights, timing or performance stays UNKNOWN.
 Private `docs/` notes, captures and checkpoints are not moved into this plan.
 
+### Verified delivery checkpoint
+
+Implementation and experiment commit `973c9cd3beeaf322412292cc65ae8aebc15a35c5`
+was pushed to `origin/main` and read back with the identical remote SHA. GitHub's
+repository description now distinguishes Jev/Laya runtime adapters from local
+Laya/Clef evaluation. Public documentation/evidence include no raw private captures
+or weights. The unchanged d6 model card remains the historical route-reference
+card; rejected new candidates have no promoted model card or public weight release.
+The CLI/MCP status readback retained global OFF and active d6 checkpoint
+`d145e848f7827fdd0a643b90727e65a8fe67d5637bf8c6c07ab3d26511edd434`.
+
+A (whole-task efficiency): **NOT ESTABLISHED**. Small controlled code batches beat
+the executor; actual Codex direct MCP execution passed, but no matched end-to-end
+three-arm task-success/cost/latency experiment passed. B (above pinned Jev):
+**UNKNOWN**, no permitted/financed comparison. C (broad generalization above Jev):
+**NOT ESTABLISHED / UNKNOWN**; all new local candidates failed their applicable
+gates and the broader Jev comparison is unavailable. No operational promotion or
+rollback was performed; the previous model and settings are retained.
+
+Cleanup removed owned temporary Python bytecode and native probe fixture/home/
+schema directories after process-exit checks. Two newly created packet reports
+were moved from the separate private `docs/evidence/` checkout to the ignored
+research evidence directory with byte-for-byte hash verification. Their public
+aggregate is in `examples/workflow-hosts/measurement-evidence.json`. Original
+prediction files, model assets and experiment source snapshots remain preserved.
+No active worker or unrelated-file cleanup remains.
+
 ## Reading and execution order
 
 1. [Targets and feasibility](#three-independent-targets).
@@ -780,7 +807,7 @@ measured throughput/resource record. Starting design: about 2,000 question rows.
 
 - [x] Record hypothesis, supervised recipe, seed, revisions, real runtime/hardware, expected evidence and attempt limit before running.
 - [x] Verify token/head admission and gold integrity on the frozen pilot; do not bypass a failed truncation check merely to start training.
-- [ ] Run the smallest useful supervised experiment; measure memory, throughput, total time and resume behavior.
+- [x] Run the smallest useful supervised experiment; measure memory, throughput, total time and resume behavior.
 - [ ] Confirm learning on dev, including unseen-rule response, label permutation and rule-swap tests, not only familiar route questions.
 - [x] Compare the permitted base and d6 under the same pilot envelope and report scope-specific regression.
 - [x] Estimate larger-run duration and memory from measured work with uncertainty; the historical 12.8-hour run is not a forecast.
@@ -907,16 +934,16 @@ grade. No universal host support is inferred from one successful integration.
 **Owner:** integration lead and explicit operator. **Output:** scoped release,
 reproducible evidence bundle, updated user documentation and remote readback.
 
-- [ ] Assemble permitted dataset/split hashes, source/model/runtime identities, metrics, gates, coverage, limitations and native evidence.
+- [x] Assemble permitted dataset/split hashes, source/model/runtime identities, metrics, gates, coverage, limitations and native evidence.
 - [ ] Generate required qualification, compare with the active checkpoint and verify fixed-regression/prospective-holdout non-regression.
 - [x] Keep registration, provider selection, promotion, rollback and publication explicit; do not activate features as a side effect of installation/tests.
 - [ ] Verify promotion/rollback metadata and actual checkpoint identity; retain the previous checkpoint and recovery instructions.
-- [ ] Update model card and README to list only qualified families/hosts and measured results; label reference agreement, offline/replay/native evidence accurately.
-- [ ] Publish only artifacts with permitted redistribution; exclude private raw state, credentials and unreviewed labels.
+- [x] Update model card and README to list only qualified families/hosts and measured results; label reference agreement, offline/replay/native evidence accurately.
+- [x] Publish only artifacts with permitted redistribution; exclude private raw state, credentials and unreviewed labels.
 - [x] Run change-appropriate focused tests and required repository gates once on frozen input; reuse valid evidence, rerunning only invalidated boundaries.
-- [ ] Check the diff for unrelated edits, duplicate paths and obsolete consumers; remove superseded artifacts only after reference checks.
-- [ ] Commit explicit paths, push within authorization and verify remote revision/artifact identity rather than assuming a successful request was applied.
-- [ ] Report A/B/C separately, remaining UNKNOWNs, accepted revision, rollback status and removed files; mark overall superiority only when all three pass.
+- [x] Check the diff for unrelated edits, duplicate paths and obsolete consumers; remove superseded artifacts only after reference checks.
+- [x] Commit explicit paths, push within authorization and verify remote revision/artifact identity rather than assuming a successful request was applied.
+- [x] Report A/B/C separately, remaining UNKNOWNs, accepted revision, rollback status and removed files; mark overall superiority only when all three pass.
 
 **Accept when:** the delivered claim, runtime capability and evidence agree, with
 no uncontrolled mutation or unattended writer. A scoped useful release can be
