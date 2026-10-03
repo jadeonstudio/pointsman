@@ -328,6 +328,9 @@ class MainLocalResume(unittest.TestCase):
         return base + [epochs, json.dumps(run_config), resume, keep]
 
     def run_local(self, argv, ns=None):
+        # Epoch selection uses independent dev items; temperature fitting keeps calib_path.
+        out = Path(argv[2]); out.mkdir(parents=True, exist_ok=True)
+        torch.save(make_items(9, seed=3), out / "dev_items.pt")
         ns = ns or self.script()
         with mock.patch.object(sys, 'argv', argv), mock.patch('builtins.print'):
             ns['main_local']()

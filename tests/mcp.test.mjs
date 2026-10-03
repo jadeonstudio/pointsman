@@ -15,9 +15,9 @@ function client(t, engine) {
   const ready = () => { send(1, 'initialize', { protocolVersion: '2025-06-18', clientInfo: { name: 'test', version: '1' }, capabilities: {} }); send(undefined, 'notifications/initialized'); };
   return { input, output, lines, send, wait, ready };
 }
-test('MCP negotiates version, advertises six tools, and serves a typed decision', async t => {
+test('MCP negotiates version, advertises eight tools, and serves a typed decision', async t => {
   const f = fixture(t), c = client(t, f.engine); c.ready(); const init = await c.wait(1); assert.equal(init.result.protocolVersion, '2025-06-18');
-  c.send(2, 'tools/list'); assert.deepEqual((await c.wait(2)).result.tools.map(x => x.name), ['decide', 'status', 'feedback', 'route', 'filter', 'observe', 'record']);
+  c.send(2, 'tools/list'); assert.deepEqual((await c.wait(2)).result.tools.map(x => x.name), ['run', 'decide', 'status', 'feedback', 'route', 'filter', 'observe', 'record']);
   c.send(3, 'tools/call', { name: 'decide', arguments: request() }); const r = JSON.parse((await c.wait(3)).result.content[0].text); assert.equal(r.apply, true);
   c.send(4, 'tools/call', { name: 'feedback', arguments: { id: r.id, baseline: { category: 'documentation', passed: true, complexity: .02 } } }); assert.equal(JSON.parse((await c.wait(4)).result.content[0].text).matched, 3);
 });

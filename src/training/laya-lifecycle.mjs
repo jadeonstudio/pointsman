@@ -2,13 +2,13 @@
 // Nothing here starts training or promotes automatically; every step is one operator-invoked CLI command.
 import fs from 'node:fs';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { noSymlinks, ensureDir, readText, atomicWrite } from '../storage.mjs';
 import { fail, PURPOSES, DEFAULTS, ControlError } from '../constants.mjs';
 import { HASH, MAX_DERIVED_BYTES, digest, encode, only } from './schema.mjs';
-import { readDataset } from './dataset.mjs';
+import { readDataset, splitIdentity } from './dataset.mjs';
 import { createTrainingStore } from './store.mjs';
 import { loadProviderConfig, validateProviderConfig, normalizeInference, createLayaClient } from '../inference.mjs';
 import { validateRequest, wireRequest } from '../contracts.mjs';
@@ -106,17 +106,23 @@ export function registerCheckpoint(home, { checkpointDir, model, device, python,
 }
 
 // --- holdout ------------------------------------------------------------
-export function freezeHoldout(home, { datasetVersion, name = datasetVersion, store } = {}) {
+export function freezeHoldout(home, { datasetVersion, name = datasetVersion, store, role = 'regression_copy', trainingDatasetVersion } = {}) {
+  if (!['regression_copy', 'prospective'].includes(role)) fail('INVALID_HOLDOUT_ROLE');
   if (!NAME_RE.test(String(name))) fail('INVALID_HOLDOUT_NAME');
   const s = store ?? createTrainingStore({ home });
-  const { samples } = readDataset(s, datasetVersion);
+  const { manifest: datasetManifest, samples } = readDataset(s, datasetVersion);
+  if (role === 'prospective') {
+    if (!trainingDatasetVersion || trainingDatasetVersion === datasetVersion) fail('PROSPECTIVE_DATASET_REQUIRED');
+    const training = readDataset(s, trainingDatasetVersion);
+    assertIndependentConfirmation(training.samples, samples.filter(x => x.split === 'test'));
+  }
   const testSamples = samples.filter(x => x.split === 'test');
   if (!testSamples.length) fail('EMPTY_HOLDOUT');
   ensureDir(layaRoot(home), true); ensureDir(holdoutsDir(home), true);
   const dataFile = path.join(holdoutsDir(home), `${name}.jsonl`), manifestFile = path.join(holdoutsDir(home), `${name}.json`);
   if (fs.existsSync(dataFile) || fs.existsSync(manifestFile)) fail('HOLDOUT_ALREADY_EXISTS');
   const contents = testSamples.map(encode).join('\n') + '\n';
-  const manifest = { name: String(name), dataset_version: datasetVersion, sample_count: testSamples.length, sha256: digest(contents), created_at: new Date().toISOString() };
+  const manifest = { schema_version: 2, role, independent_confirmation: role === 'prospective', training_dataset_version: trainingDatasetVersion ?? null, source_data_sha256: datasetManifest.data_sha256, ...(datasetManifest.split_version === 2 ? { split_hashes: datasetManifest.split_hashes, provenance_sha256: datasetManifest.provenance_sha256, group_sha256: datasetManifest.group_sha256 } : {}), name: String(name), dataset_version: datasetVersion, sample_count: testSamples.length, sha256: digest(contents), created_at: new Date().toISOString() };
   atomicWrite(dataFile, contents, { expected: null });
   atomicWrite(manifestFile, JSON.stringify(manifest, null, 2) + '\n', { expected: null });
   return manifest;
@@ -134,7 +140,7 @@ function readHoldout(home, name) {
   if (manifest.sha256 !== digest(contents)) fail('HOLDOUT_CORRUPTED');
   const samples = contents.trim() ? contents.trim().split('\n').map(JSON.parse) : [];
   if (samples.length !== manifest.sample_count) fail('HOLDOUT_CORRUPTED');
-  return { manifest, samples };
+  return { manifest: { ...manifest, role: manifest.role ?? 'regression_copy', independent_confirmation: manifest.role === 'prospective' }, samples };
 }
 
 // --- inference over dataset/holdout samples ------------------------------
@@ -164,7 +170,7 @@ export async function inferOne(layaClient, laya, sample, { timeoutMs = 30000, en
     if (e instanceof ControlError && INPUT_REFUSAL_CODES.has(e.code)) {
       // Never covered by any qualify/compare threshold (metric -Infinity), and never counted correct.
       return { purpose: sample.purpose, question_id: sample.question_id, correct: false, metric: -Infinity, predicted: null,
-        label_source: sample.label_source, refused: true, task_key: taskKey, target: sample.target.value, probabilities: null };
+        label_source: sample.label_source, refused: true, refusal_code: e.code, task_key: taskKey, target: sample.target.value, probabilities: null };
     }
     throw e;
   }
@@ -187,7 +193,7 @@ export async function inferOne(layaClient, laya, sample, { timeoutMs = 30000, en
     : sample.question.type === 'choice' ? Math.min(answer.confidence, answer.selectedProbability)
     : answer.confidence;
   return { purpose: sample.purpose, question_id: sample.question_id, correct, metric, predicted, label_source: sample.label_source, refused: false,
-    task_key: taskKey, target: sample.target.value, probabilities: answer.probabilities };
+    task_key: taskKey, target: sample.target.value, probabilities: sample.question.type === 'noul' ? { false: 1 - answer.probabilityTrue, true: answer.probabilityTrue } : answer.probabilities };
 }
 // Content-free per-question raw stats: n, raw agreement (argmax-correct / n), refused.
 function byQuestionStats(records) {
@@ -361,8 +367,14 @@ export async function qualifyCandidate(home, { candidateHash, datasetVersion, ho
   if (!Number.isInteger(routeMinApplied) || routeMinApplied < 1) fail('INVALID_QUALIFY_PARAMS');
   const laya = loadCandidate(home, candidateHash);
   const s = store ?? createTrainingStore({ home });
-  const { samples } = readDataset(s, datasetVersion);
+  const { manifest: datasetManifest, samples } = readDataset(s, datasetVersion);
+  if (datasetManifest.split_version === 2 && loadQualification(home, candidateHash)) fail('SEALED_TEST_ALREADY_CONSUMED');
+  const trainingIdentity = validateTrainingIdentity(laya, datasetManifest);
   const { manifest: holdoutManifest, samples: holdoutSamples } = readHoldout(home, holdoutName);
+  if (holdoutManifest.role === 'prospective') {
+    if (holdoutManifest.training_dataset_version !== datasetVersion) fail('PROSPECTIVE_TRAINING_IDENTITY_MISMATCH');
+    assertIndependentConfirmation(samples, holdoutSamples);
+  }
   const opts = { timeoutMs, env, signal };
   const calibrationRecords = await inferAll(layaClient, laya, samples.filter(x => x.split === 'calibration'), opts);
   const testRecords = await inferAll(layaClient, laya, samples.filter(x => x.split === 'test'), opts);
@@ -410,8 +422,8 @@ export async function qualifyCandidate(home, { candidateHash, datasetVersion, ho
     // the runtime path above never reads it).
     minConfidence: globalThreshold ?? 1, minChoiceProbability: globalThreshold ?? 1, noulCertainty: globalThreshold ?? 1,
     calibrationVersion, dataset_version: datasetVersion, holdout: holdoutManifest.name, holdout_sha256: holdoutManifest.sha256,
-    precision: laya.precision ?? 'fp32', params, evidence, ...(routeGate ? { routeGate } : {}),
-    // Per split, never pooled: calibration also tunes epoch/threshold and the holdout freezes the test split.
+    precision: laya.precision ?? 'fp32', inputFit: laya.inputFit, runtime_version: laya.runtimeVersion, training_identity: trainingIdentity, split_identity: datasetManifest.split_version === 2 ? splitIdentity(samples) : null, holdout_role: holdoutManifest.role, independent_confirmation: holdoutManifest.independent_confirmation, params, evidence, ...(routeGate ? { routeGate } : {}),
+    // Per split, never pooled: dev chooses epochs, calibration tunes thresholds; a regression copy is not independent confirmation.
     by_question: { calibration: byQuestionStats(calibrationRecords), test: byQuestionStats(testRecords), holdout: byQuestionStats(holdoutRecords) },
     generated_at: new Date().toISOString(),
     ...labelSourceSummary(allRecords) };
@@ -436,6 +448,8 @@ export async function compareCandidate(home, { candidateHash, holdoutName, layaC
   const { manifest: holdoutManifest, samples: holdoutSamples } = readHoldout(home, holdoutName);
   const opts = { timeoutMs, env, signal };
   const candidateQual = loadQualification(home, candidateHash);
+  if (candidateQual?.training_identity) validateTrainingIdentity(candidate, { dataset_version: candidateQual.dataset_version, ...candidateQual.training_identity.dataset });
+  if (candidateQual && (candidateQual.checkpoint !== candidateHash || candidateQual.precision !== (candidate.precision ?? 'fp32') || (candidateQual.inputFit && candidateQual.inputFit !== candidate.inputFit) || (candidateQual.runtime_version && candidateQual.runtime_version !== candidate.runtimeVersion))) fail('QUALIFICATION_IDENTITY_MISMATCH');
   // raw = every holdout answer (threshold 0): comparable across checkpoints and the basis of the forgetting check.
   // selective = the checkpoint's own qualified threshold; only comparable when BOTH sides are qualified for the purpose.
   const side = (records, qual, purpose) => {
@@ -457,7 +471,7 @@ export async function compareCandidate(home, { candidateHash, holdoutName, layaC
     for (const purpose of PURPOSES) purposes[purpose].active = side(activeByPurpose[purpose] || [], activeUsed.qualification, purpose);
   }
   const report = { active: activeUsed?.checkpoint ?? null, candidate: candidateHash, holdout: holdoutManifest.name,
-    holdout_sha256: holdoutManifest.sha256, purposes,
+    holdout_sha256: holdoutManifest.sha256, holdout_role: holdoutManifest.role, independent_confirmation: holdoutManifest.independent_confirmation, qualification_split_identity: candidateQual?.split_identity ?? null, purposes,
     by_question: { candidate: byQuestionStats(candidateRecords), active: activeRecords ? byQuestionStats(activeRecords) : null },
     generated_at: new Date().toISOString(), ...labelSourceSummary(holdoutSamples) };
   ensureDir(layaRoot(home), true); ensureDir(comparisonsDir(home), true);
@@ -536,6 +550,8 @@ export function promoteCandidate(home, { candidateHash, holdoutName, maxRegressi
   }
   if (violations.length) return { promoted: false, reason: 'PROMOTION_REFUSED', violations };
   const candidate = loadCandidate(home, candidateHash);
+  if (qualification.training_identity) validateTrainingIdentity(candidate, { dataset_version: qualification.dataset_version, ...qualification.training_identity.dataset });
+  if (comparison.holdout_sha256 !== qualification.holdout_sha256) fail('QUALIFICATION_HOLDOUT_IDENTITY_MISMATCH');
   const file = providersFile(home);
   const old = readText(file, { optional: true, privateFile: true });
   const currentConfig = old === null ? { version: 1, provider: 'jev', laya: null } : JSON.parse(old);
@@ -615,4 +631,76 @@ export function layaStatus(home) {
       ...(published ? { published: { repo: published.repo, revision: published.revision } } : {}) };
   }) : [];
   return { active_checkpoint: active?.checkpoint ?? null, candidates, holdouts: listHoldouts(home) };
+}
+
+function assertIndependentConfirmation(training, confirmation) {
+  const identities = samples => new Set(samples.flatMap(s => [s.sample_id, s.request_hash, digest(s.state), s.group_id,
+    ...(s.task_ids || []).map(x => `task:${x}`), ...Object.entries(s.lineage || {}).filter(([k]) => k !== 'sibling_ids').map(([k,v]) => `${k}:${v}`),
+    ...(s.lineage?.sibling_ids || []).map(x => `sibling:${x}`)]));
+  const used = identities(training);
+  if ([...identities(confirmation)].some(x => used.has(x))) fail('PROSPECTIVE_FAMILY_LEAKAGE');
+}
+function directoryDigest(root) {
+  const files = [];
+  const visit = dir => { for (const name of fs.readdirSync(dir).sort()) { const file = path.join(dir,name); const st = fs.lstatSync(file); if (st.isSymbolicLink()) fail('LAYA_MODEL_SYMLINK_REFUSED'); if (st.isDirectory()) visit(file); else if (st.isFile()) files.push([path.relative(root,file).split(path.sep).join('/'), createHash('sha256').update(fs.readFileSync(file)).digest('hex')]); } };
+  visit(root);
+  return digest(JSON.stringify(files.sort(([a],[b]) => a < b ? -1 : a > b ? 1 : 0)));
+}
+// A checkpoint carries actual output/tokenizer hashes, never just a model display name.
+function validateTrainingIdentity(laya, manifest) {
+  const metadata = readText(path.join(laya.modelPath,'training_metadata.json'), { optional: true, privateFile: false, maxBytes: 1048576 });
+  if (metadata === null) return null; // base checkpoints remain valid independent baselines.
+  const m = JSON.parse(metadata);
+  if (m.exporter_version !== 'laya-typed-decisions-json-v3') return null; // preserve historical route metadata.
+  if (m.export_dataset_version !== manifest.dataset_version || m.export_source_data_sha256 !== manifest.data_sha256 ||
+      encode(m.split_hashes) !== encode(manifest.split_hashes) || m.provenance_sha256 !== manifest.provenance_sha256 ||
+      m.group_sha256 !== manifest.group_sha256 || m.input_fit !== laya.inputFit || m.calibration_split !== 'calibration' ||
+      (m.hyperparameters?.select_best_epoch && m.selection_split !== 'dev') ||
+      m.output_weights_sha256 !== createHash('sha256').update(fs.readFileSync(path.join(laya.modelPath,'model.safetensors'))).digest('hex') ||
+      m.model_config_sha256 !== createHash('sha256').update(fs.readFileSync(path.join(laya.modelPath,'rl_agent_config.json'))).digest('hex') ||
+      m.tokenizer_sha256 !== directoryDigest(path.join(laya.modelPath,'tokenizer')) ||
+      m.runtime?.laya !== laya.runtimeVersion || !m.runtime?.python || !m.runtime?.torch) fail('TRAINING_IDENTITY_MISMATCH');
+  return { output_weights_sha256: m.output_weights_sha256, tokenizer_sha256: m.tokenizer_sha256, model_config_sha256: m.model_config_sha256, runtime: m.runtime,
+    dataset: { data_sha256: manifest.data_sha256, split_hashes: manifest.split_hashes, provenance_sha256: manifest.provenance_sha256, group_sha256: manifest.group_sha256 } };
+}
+
+// Explicit local evaluation through the existing worker; no training, adoption or fallback.
+export async function collectCandidatePredictions(home, { candidateHash, datasetVersion, split = 'dev', sealedSpec,
+  layaClient, clientFactory = createLayaClient, store, timeoutMs = 30000, env = process.env, signal } = {}) {
+  if (!['dev','calibration','test'].includes(split)) fail('INVALID_PREDICTION_SPLIT');
+  if (split === 'test' && !HASH.test(sealedSpec ?? '')) fail('SEALED_SPEC_REQUIRED');
+  if (signal?.aborted) fail('CANCELLED');
+  const candidate = loadCandidate(home,candidateHash);
+  const { manifest, samples } = readDataset(store ?? createTrainingStore({home}),datasetVersion);
+  const trainingIdentity = validateTrainingIdentity(candidate,manifest);
+  const selected = samples.filter(s => s.split === split);
+  if (!selected.length) fail('EMPTY_SPLIT');
+  const rows = [], client = layaClient ?? clientFactory();
+  try {
+    for (const sample of selected) {
+      if (signal?.aborted) fail('CANCELLED');
+      const identity = { sample_id: sample.sample_id, model_id: candidate.model, checkpoint: candidateHash };
+      const started = performance.now();
+      try {
+        const result = await inferOne(client,candidate,sample,{timeoutMs,env,signal});
+        if (signal?.aborted) fail('CANCELLED');
+        rows.push({ ...identity, status: result.refused ? 'unsupported_input' : 'ok', probabilities: result.probabilities,
+          ...(result.refusal_code ? { error: result.refusal_code } : {}), elapsedMs: performance.now() - started });
+      } catch (e) {
+        if (signal?.aborted || e.code === 'CANCELLED') fail('CANCELLED');
+        if (!(e instanceof ControlError)) throw e;
+        const status = /(?:TIMEOUT|DEADLINE)/.test(e.code) ? 'timeout' :
+          ['INPUT_TRUNCATED','INPUT_REWRITE_REFUSED'].includes(e.code) ? 'unsupported_input' :
+          /(?:REJECT|REFUS)/.test(e.code) ? 'rejected' : 'error';
+        rows.push({ ...identity, status, probabilities: null, error: e.code, elapsedMs: performance.now() - started });
+      }
+    }
+    return { manifest: { schema_version: 1, dataset_version: datasetVersion, source_data_sha256: manifest.data_sha256,
+      split, split_hash: digest(selected.map(s => s.sample_id).sort()), ...(manifest.split_version === 2 ? splitIdentity(samples) : {}),
+      model_id: candidate.model, checkpoint: candidateHash, runtime_version: candidate.runtimeVersion, device: candidate.device,
+      precision: candidate.precision, input_fit: candidate.inputFit, training_identity: trainingIdentity, sealed_spec_sha256: sealedSpec ?? null,
+      sample_count: rows.length, predictions_sha256: digest(rows), training_executed: false }, rows };
+  } finally {
+    if (!layaClient) client.close();
+  }
 }

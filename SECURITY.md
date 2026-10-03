@@ -2,7 +2,7 @@
 
 ## Trust boundaries
 
-pointsman is an advisory local tool, NOT a sandbox, authorization system, secret vault, or security classifier. A pointsman result never grants permission to execute code, bypass approvals, merge, deploy, migrate data, or trade. Low confidence, malformed responses and service failure delegate to the original host workflow WITH its existing checks. A caller-supplied `risk` flag is a hint, not trustworthy proof that an action is safe.
+pointsman provides advisory decisions and explicitly enabled bounded evidence workflows. It is NOT a sandbox, authorization system, secret vault, or security classifier. A pointsman result never grants permission to execute code, bypass approvals, merge, deploy, migrate data, or trade. Low confidence, malformed responses and service failure delegate to the original host workflow WITH its existing checks. A caller-supplied `risk` flag is a hint, not trustworthy proof that an action is safe.
 
 The supported threat model covers accidental disclosure, untrusted state, malformed upstream output, unsafe filesystem links, config collisions and ordinary network failures. It does not defend against a compromised OS, root, malicious software running as the same account, a compromised Node runtime, arbitrary hostile modifications of trusted local code/config, or all concurrent filesystem races. Host policies must still limit agent filesystem access and outbound data.
 
@@ -19,6 +19,12 @@ A same-user coding agent can potentially read a file that its OS account can rea
 Only the caller-supplied minimal `state`, question instructions/criteria, and model name are sent to TypeSafe. Authorization contains the API key. There is no automatic repository scan, conversation upload, environment dump, file attachment, or analytics service. TypeSafe receives whatever permitted state is sent; provider retention, training and residency terms must be checked independently before sending proprietary or regulated data. No zero-retention guarantee is made.
 
 Before sending, the implementation checks all request fields for the exact active key, common token/private-key formats, password assignments, URL credentials and sensitive object keys. This is best-effort secret screening, NOT comprehensive DLP. Unknown formats, encoded secrets, private business data and personal data may evade it. Minimize data BEFORE constructing the request. Prompt-injection instructions tell pointsman to treat state as data but are not a security guarantee.
+
+## Bounded workflow execution
+
+The optional `run` entrypoint reads source/report files beneath a root fixed by its trusted CLI/MCP/JS caller. Request JSON cannot change that root or supply commands. Repository inventory respects Git ignore rules and refuses nested repositories, links and private paths. Evidence packets include source text, so they belong to the requesting host context, not content-free telemetry. The current three recipes make no provider calls.
+
+JS integrations may inject named, already authorized test callbacks; the workflow cannot authorize those callbacks. OFF/SHADOW performs no source collection. Policy/provider changes, cancellation, source changes and exhausted limits prevent completed results. Original files remain intact. Native adapters can synthesize a completed segment only through a supported host contract and a separate explicit gate; normal permissions and continuation remain with the host. Generic decision qualification does not establish qualification for a new workflow family.
 
 ## Transport and output validation
 

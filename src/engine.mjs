@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import { DEFAULTS, VERSION, MODES, ControlError, errorCode, fail, isObject } from './constants.mjs';
 import { resolveHome, loadConfig, getCredential, appendEvent } from './storage.mjs';
-import { validateRequest, containsSensitiveData, wireRequest } from './contracts.mjs';
+import { validateRequest, providerRequestLimits, containsSensitiveData, wireRequest } from './contracts.mjs';
 import { callTypeSafe } from './provider.mjs';
 import { loadProviderConfig, layaReady, createLayaClient, normalizeInference, layaSocketExists, layaSocketPath, createLayaSocketClient } from './inference.mjs';
 import { createTrainingStore } from './training/store.mjs';
@@ -43,7 +43,7 @@ export function createDecisionEngine({ home = resolveHome(), env = process.env, 
       checkpoint: settings.provider === 'laya' ? settings.laya?.checkpoint : null,
       home, telemetry: config.telemetry, inFlight, circuitOpen: now() < (circuit?.until ?? 0),
       limits: { timeoutMs: config.timeoutMs, maxCallsPerMinute: config.maxCallsPerMinute, maxInFlight: config.maxInFlight, scope: 'per-process' },
-      requestLimits: { maxInputBytes: config.maxInputBytes, maxQuestions: config.maxQuestions },
+      requestLimits: providerRequestLimits(config, settings.provider),
       policyRevision: revision(config, settings), trainingCapture: training.status().trainingCapture,
       localWorker: layaClient.status(), authorizesExecution: false };
   }
@@ -76,7 +76,8 @@ export function createDecisionEngine({ home = resolveHome(), env = process.env, 
       result.provider = selected;
       trace = validateTrace(suppliedTrace ?? (isObject(input) ? input.trace : undefined) ?? {});
       const rawInput = isObject(input) ? Object.fromEntries(Object.entries(input).filter(([name]) => name !== 'trace')) : input;
-      request = validateRequest(rawInput, config);
+      const requestLimits = providerRequestLimits(config, selected);
+      request = validateRequest(rawInput, requestLimits);
       if (request.risk === 'sensitive') fail('SENSITIVE_SCOPE');
       if (selected === 'jev') {
         if (env.NODE_TLS_REJECT_UNAUTHORIZED === '0') fail('INSECURE_TLS_REFUSED');
@@ -89,7 +90,7 @@ export function createDecisionEngine({ home = resolveHome(), env = process.env, 
       if (containsSensitiveData(request, key)) fail('SENSITIVE_INPUT');
       const payload = wireRequest(request, selected === 'jev' ? modelOverride ?? config.model : settings.laya.model);
       inputBytes = Buffer.byteLength(JSON.stringify(payload));
-      if (inputBytes > config.maxInputBytes) fail('INPUT_TOO_LARGE');
+      if (inputBytes > requestLimits.maxInputBytes) fail('INPUT_TOO_LARGE');
       if (!circuits.has(selected)) circuits.set(selected, { failures: 0, until: 0 });
       circuit = circuits.get(selected);
       if (now() < circuit.until) fail('CIRCUIT_OPEN');

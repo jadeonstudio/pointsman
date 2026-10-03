@@ -14,50 +14,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""train_from_export.py -- Laya RLCD+GRPO fine-tuning kit driven by a pointsman export.
+"""Local/offline Laya training from pointsman exports.
 
-This file is a *preparation artifact*. It is NOT executed by the assistant
-that wrote it, does not download models, does not install packages, and does
-not read the real POINTSMAN_HOME / ~/.local/share/laya. It is meant to be uploaded
-to a Kaggle notebook (or an equivalent 2x NVIDIA T4 DDP machine) by a human
-operator and run there, following training/laya-kit/README.md.
+Ship check_export.py beside this script. Version 3 exports isolate train/dev/
+calibration/sealed test. Dev alone selects epochs and methods; calibration fits
+final temperatures. Test inference requires --evaluate-sealed-test after the
+saved candidate is frozen. Legacy v2 exports remain readable with fixed epochs
+and --no-select-best-epoch, without claiming independent dev evaluation.
 
-Upstream contract this file is pinned to (see the pointsman training-data spec's
-section on Laya exports, and src/training/dataset.mjs LAYA_UPSTREAM / LAYA_EXPORT_VERSION):
+The default --method supervised trains the full encoder and dynamic scoring
+parameters with masked distributional CE for Choice, Noul and Score. The
+explicit rlcd-grpo method retains the pinned official notebook experiment.
+--input-fit must match checkpoint registration and inference. No command here
+promotes a checkpoint. Imports/model loading occur only after export validation.
 
-    NandhaKishorM/laya@42626c348753fbb17572a813127df2278a1ec527
-    notebooks/laya_finetune_typed_decisions_2xT4_kaggle.ipynb
-
-Every training/eval section below is lifted from that notebook's cells with
-**minimal** changes. Each such section is marked:
-
-    # official-notebook-cell: <N> ("<markdown heading>")
-
-Every place this file diverges from the official notebook is marked:
-
-    # pointsman-change: <reason>
-
-The single structural difference from the official notebook is the data
-source: instead of the notebook's
-
-    load_dataset("LocalLLaMA/typed-decisions", "all", split="train")
-    load_dataset("LocalLLaMA/typed-decisions", "all", split="test")
-
-this script reads the pointsman export folder produced by
-`pointsman dataset export --format laya` (train.jsonl / calibration.jsonl /
-test.jsonl, per the pointsman training-data spec's Laya export section), via --export-dir, using the
-loader recorded in that export's own manifest.json:
-
-    datasets.load_dataset("json", data_files={
-        "train": "train.jsonl", "validation": "calibration.jsonl", "test": "test.jsonl",
-    })
-
-calibration.jsonl and test.jsonl are never merged into the training split.
-The official notebook's own gold-column shape (`gold[qid]["probabilities"]`)
-already matches the pointsman export contract exactly, so `build_training_item()`
-below is copied verbatim from the notebook.
+Pinned upstream: NandhaKishorM/laya@42626c348753fbb17572a813127df2278a1ec527
+notebooks/laya_finetune_typed_decisions_2xT4_kaggle.ipynb
 """
 import argparse
+import importlib.util
+import platform
 import hashlib
 import json
 import math
@@ -73,7 +49,8 @@ from pathlib import Path
 # manifest.json disagrees, this is either a stale export or a contract that
 # has moved since this kit was written -- abort rather than guess.
 # ---------------------------------------------------------------------------
-EXPECTED_EXPORTER_VERSION = "laya-typed-decisions-json-v2"
+EXPECTED_EXPORTER_VERSION = "laya-typed-decisions-json-v3"
+LEGACY_EXPORTER_VERSION = "laya-typed-decisions-json-v2"
 EXPECTED_UPSTREAM_CONTRACT = (
     "NandhaKishorM/laya@42626c348753fbb17572a813127df2278a1ec527:"
     "notebooks/laya_finetune_typed_decisions_2xT4_kaggle.ipynb"
@@ -101,41 +78,29 @@ def die(message):
 # local pointsman dataset makes this check load-bearing.
 # ---------------------------------------------------------------------------
 def verify_export_manifest(export_dir: Path) -> dict:
-    manifest_path = export_dir / "manifest.json"
-    if not manifest_path.exists():
-        die(f"{manifest_path} not found -- run `pointsman dataset export --format laya` first")
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-
-    if manifest.get("exporter_version") != EXPECTED_EXPORTER_VERSION:
-        die(
-            f"export manifest exporter_version={manifest.get('exporter_version')!r} "
-            f"!= expected {EXPECTED_EXPORTER_VERSION!r} -- this kit is pinned to a "
-            "specific export contract; re-check src/training/dataset.mjs before proceeding"
-        )
-    if manifest.get("upstream_contract") != EXPECTED_UPSTREAM_CONTRACT:
-        die(
-            f"export manifest upstream_contract={manifest.get('upstream_contract')!r} "
-            f"!= expected {EXPECTED_UPSTREAM_CONTRACT!r}"
-        )
-    if manifest.get("loader") != EXPECTED_LOADER:
-        die(
-            f"export manifest loader={manifest.get('loader')!r} "
-            f"!= expected {EXPECTED_LOADER!r} -- the loader contract changed; "
-            "update this script's data loading to match before proceeding"
-        )
-    if not manifest.get("source_data_sha256"):
-        die("export manifest is missing source_data_sha256")
-    if manifest.get("training_executed") is not False:
-        die("export manifest.training_executed must be false for an unconsumed export")
-
-    for split in ("train", "calibration", "test"):
-        split_path = export_dir / f"{split}.jsonl"
-        if not split_path.exists() or split_path.stat().st_size == 0:
-            die(f"{split_path} missing or empty (EMPTY_SPLIT) -- calibration/test are never merged into train")
-
-    print(f"[verify] export manifest OK: dataset_version={manifest.get('dataset_version')} "
-          f"sample_count={manifest.get('sample_count')} source_data_sha256={manifest.get('source_data_sha256')}")
+    if not (export_dir / "manifest.json").is_file():
+        die(f"{export_dir}/manifest.json not found -- run `pointsman dataset export --format laya` first")
+    # One offline validator owns the exporter contract; ship check_export.py with this kit.
+    spec = importlib.util.spec_from_file_location("pointsman_check_export", Path(__file__).with_name("check_export.py"))
+    checker = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(checker)
+    try:
+        manifest = checker.verify_export(export_dir)
+    except ValueError as exc:
+        die(f"invalid export: {exc}")
+    expected_loader = EXPECTED_LOADER if manifest["exporter_version"] == LEGACY_EXPORTER_VERSION else (
+        'datasets.load_dataset("json", data_files={"train": "train.jsonl", "validation": "dev.jsonl", "calibration": "calibration.jsonl", "test": "test.jsonl"})')
+    if manifest.get("loader") != expected_loader:
+        die("export loader contract mismatch")
     return manifest
+
+
+def selection_split(manifest, select_best_epoch):
+    if manifest.get("exporter_version") == EXPECTED_EXPORTER_VERSION:
+        return "dev"
+    if select_best_epoch:
+        die("legacy three-way exports have no independent dev split; re-export four-way data or use --no-select-best-epoch with fixed hyperparameters")
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -344,9 +309,15 @@ def items_digest(items):
     return h.hexdigest()
 
 
+def directory_sha256(root):
+    root = Path(root)
+    files = sorted(p for p in root.rglob("*") if p.is_file())
+    return hashlib.sha256(json.dumps([[p.relative_to(root).as_posix(), file_sha256(p)] for p in files], separators=(",", ":")).encode()).hexdigest()
+
+
 def build_resume_match_config(*, export_dir, manifest, resolved_model_dir, derived_model_name, epochs,
                               micro_batch, grad_accum, device, mps_autocast, dropout, rdrop_alpha,
-                              select_best_epoch, cfg):
+                              select_best_epoch, cfg, method="rlcd-grpo", input_fit="task-head"):
     """Everything that must be identical for a resumed run to continue the SAME run.
     --max-steps, --keep-resume and the admission-check flags are deliberately
     excluded (they bound or gate a run without changing its math)."""
@@ -358,6 +329,12 @@ def build_resume_match_config(*, export_dir, manifest, resolved_model_dir, deriv
         "export_manifest_sha256": file_sha256(export_dir / "manifest.json"),
         "export_train_sha256": file_sha256(export_dir / "train.jsonl"),
         "export_calibration_sha256": file_sha256(export_dir / "calibration.jsonl"),
+        "export_dev_sha256": file_sha256(export_dir / "dev.jsonl") if (export_dir / "dev.jsonl").is_file() else None,
+        "export_split_hashes": manifest.get("split_hashes"),
+        "export_provenance_sha256": manifest.get("provenance_sha256"),
+        "tokenizer_sha256": directory_sha256(resolved_model_dir / "tokenizer"),
+        "model_config_sha256": file_sha256(resolved_model_dir / "rl_agent_config.json") if (resolved_model_dir / "rl_agent_config.json").is_file() else None,
+        "runtime": {"python": platform.python_version(), "torch": getattr(sys.modules.get("torch"), "__version__", None), "laya": LAYA_VERSION_PINNED},
         "exporter_version": manifest.get("exporter_version"),
         "export_dataset_version": manifest.get("dataset_version"),
         "export_source_data_sha256": manifest.get("source_data_sha256"),
@@ -372,6 +349,7 @@ def build_resume_match_config(*, export_dir, manifest, resolved_model_dir, deriv
         "dropout": dropout,
         "rdrop_alpha": rdrop_alpha,
         "select_best_epoch": select_best_epoch,
+        "method": method, "input_fit": input_fit,
         "max_len": cfg.get("max_len"),
         "head_max_len": cfg.get("head_max_len"),
     }
@@ -604,7 +582,7 @@ def build_training_item(tok, cfg, state, q, gold_q, render_options, build_sequen
     }, False
 
 
-def preprocess_split(rows, tok, cfg, render_options, build_sequence, QTYPES, agent):
+def preprocess_split(rows, tok, cfg, render_options, build_sequence, QTYPES, agent, input_fit="task-head"):
     """official-notebook-cell: 3 inner loop, generalized to any split's rows.
 
     pointsman-change: before building any question's training item for a row, the row's state is passed
@@ -624,7 +602,11 @@ def preprocess_split(rows, tok, cfg, render_options, build_sequence, QTYPES, age
         questions = json.loads(row["questions"])
         gold = json.loads(row["gold"])
         try:
-            fitted_state, fit_info = fit_task_head(agent, state, questions)
+            if input_fit == "lossless":
+                assert_lossless(agent, state, questions)
+                fitted_state, fit_info = state, {"truncated": False}
+            else:
+                fitted_state, fit_info = fit_task_head(agent, state, questions)
         except ValueError:
             # Neither the raw state nor any task prefix fits (e.g. context/questions alone
             # overflow): every question of this row is dropped the same way a marker-loss would be.
@@ -699,6 +681,7 @@ from laya.common import build_model, proper_reward, QTYPES
 EPOCHS = 4
 MICRO_BATCH = 8       # 8 sequences per forward pass per GPU/process
 GROUP_SIZE = 4         # GRPO baseline samples
+TRAIN_METHOD = "rlcd-grpo"  # outer CLI chooses supervised by default; legacy embedded callers preserved
 LR_ENCODER = 2.5e-5    # Encoder adaptation rate
 LR_HEAD = 1.0e-4       # Head adaptation rate
 SIGMA_START = 0.4      # Exploration noise
@@ -876,6 +859,13 @@ def rl_ce_loss_terms(logits, batch, device, group_size, sigma):
     k = mask.sum(-1, keepdim=True).float()
     target = batch["target"].to(device)
 
+    if TRAIN_METHOD == "supervised":
+        log_probs = torch.log_softmax(logits.masked_fill(~mask, -1e4), -1)
+        loss_ce = -(target * log_probs).sum(-1).mean()
+        with torch.no_grad():
+            reward = proper_reward(log_probs.exp(), target, batch["qtype"].to(device), mask, w_sph=0.75, w_rps=1.0)
+        return loss_ce, reward
+
     eps = torch.randn((group_size,) + logits.shape, device=device) * sigma * mask
     eps = (eps - eps.sum(-1, keepdim=True) / k) * mask
     z = logits.detach().unsqueeze(0) + eps
@@ -985,13 +975,13 @@ def collect_calib_logits(model, calib_items, tok, device, autocast_device, autoc
     return calib_preds
 
 
-def make_epoch_end_fn(model, calib_items, tok, device, *, autocast_device, autocast_dtype, autocast_enabled,
+def make_epoch_end_fn(model, dev_items, tok, device, *, autocast_device, autocast_dtype, autocast_enabled,
                        rank, world_size, dist_module, select_best_epoch, best_state, epoch_agreements, log_prefix,
                        keep_best_in_memory=True):
     """Build the epoch_end_fn callback run_training_loop calls after every
     epoch (DDP: only rank 0 evaluates, then all ranks barrier so training
     stays in lockstep). Logs "[select] epoch N calib_agreement ..." and, when
-    the mean calibration agreement improves, keeps a CPU copy of the model's
+    the mean development agreement improves, keeps a CPU copy of the model's
     state_dict in best_state (freed/loaded back in main_ddp()/main_local()
     after training finishes).
 
@@ -1000,7 +990,7 @@ def make_epoch_end_fn(model, calib_items, tok, device, *, autocast_device, autoc
     best_model.pt (write_resume_checkpoint()) instead of a ~1.3GB CPU copy."""
     def epoch_end_fn(epoch):
         if select_best_epoch and rank == 0:
-            calib_preds = collect_calib_logits(model, calib_items, tok, device,
+            calib_preds = collect_calib_logits(model, dev_items, tok, device,
                                                 autocast_device, autocast_dtype, autocast_enabled)
             agreement = compute_calib_agreement(calib_preds)
             epoch_agreements.append({"epoch": epoch + 1, **agreement})
@@ -1008,7 +998,7 @@ def make_epoch_end_fn(model, calib_items, tok, device, *, autocast_device, autoc
             def fmt(v):
                 return "n/a" if v is None else f"{v:.4f}"
 
-            print(f"{log_prefix} [select] epoch {epoch + 1} calib_agreement "
+            print(f"{log_prefix} [select] epoch {epoch + 1} dev_agreement "
                   f"choice={fmt(agreement['choice'])} score={fmt(agreement['score'])} "
                   f"noul={fmt(agreement['noul'])} mean={fmt(agreement['mean'])}")
             mean_score = agreement["mean"]
@@ -1150,9 +1140,7 @@ def finalize_and_save(model, tok, calib_items, output_dir, model_name, base_mode
     (model.safetensors fp16, encoder/, tokenizer/, rl_agent_config.json).
 
     pointsman-change: calib_items is now the already-loaded list (not a path) so the
-    caller can load calibration.jsonl's preprocessed items once and reuse them
-    for both epoch_end_fn's per-epoch selection and this final temperature
-    fit, via the shared collect_calib_logits() helper.
+    caller fits temperatures on calibration only after selecting weights on dev.
 
     pointsman-change: encoder_config_restore (from build_model_with_encoder_dropout()
     under --dropout) holds the base checkpoint's own encoder config values; they
@@ -1205,6 +1193,7 @@ def write_epoch_selection_metadata(output_dir, select_best_epoch, selected_epoch
             "select_best_epoch": select_best_epoch,
             "selected_epoch": selected_epoch,
             "epoch_agreements": epoch_agreements,
+            "selection_split": "dev" if select_best_epoch else None,
         }, f, indent=2)
     print(f"wrote {path}")
     return path
@@ -1395,10 +1384,9 @@ def main_ddp():
 
     all_items = torch.load(train_items_path, weights_only=False)
     my_items = all_items[rank::world_size]
-    # pointsman-change: best-epoch selection (make_epoch_end_fn()) evaluates the
-    # SAME calib_items.pt finalize_and_save() later fits temperatures on --
-    # loaded once here and reused for both.
+    # pointsman-change: independent dev items choose epochs; calibration items fit final temperatures.
     calib_items = torch.load(calib_items_path, weights_only=False)
+    dev_items = torch.load(os.path.join(output_dir, "dev_items.pt"), weights_only=False) if select_best_epoch else []
 
     GRAD_ACCUM = 4  # Effective batch across 2 GPUs = 64 sequences (8 * 2 * 4)
 
@@ -1409,13 +1397,13 @@ def main_ddp():
     if rank == 0:
         print(f"Starting 2xT4 DDP training: {len(all_items)} total items | {len(my_items)} per rank | {EPOCHS} epochs")
 
-    # pointsman-change: per-epoch calibration-agreement checkpoint selection. Only
+    # pointsman-change: per-epoch development-agreement checkpoint selection. Only
     # rank 0 evaluates/keeps the CPU state_dict copy; epoch_end_fn barriers
     # all ranks afterward so training stays in lockstep.
     best_state = {"score": None, "epoch": None, "state_dict": None}
     epoch_agreements = []
     epoch_end_fn = make_epoch_end_fn(
-        model, calib_items, tok, device, autocast_device="cuda", autocast_dtype=torch.float16,
+        model, dev_items, tok, device, autocast_device="cuda", autocast_dtype=torch.float16,
         autocast_enabled=True, rank=rank, world_size=world_size, dist_module=dist,
         select_best_epoch=select_best_epoch, best_state=best_state, epoch_agreements=epoch_agreements,
         log_prefix="[ddp]")
@@ -1513,10 +1501,9 @@ def main_local():
 
     all_items = torch.load(train_items_path, weights_only=False)
     my_items = list(all_items)  # world_size=1: no DDP rank split, every item is "mine"
-    # pointsman-change: best-epoch selection (make_epoch_end_fn()) evaluates the
-    # SAME calib_items.pt finalize_and_save() later fits temperatures on --
-    # loaded once here and reused for both.
+    # pointsman-change: independent dev items choose epochs; calibration items fit final temperatures.
     calib_items = torch.load(calib_items_path, weights_only=False)
+    dev_items = torch.load(os.path.join(output_dir, "dev_items.pt"), weights_only=False) if select_best_epoch else []
 
     optimizer, scheduler = build_optimizer_and_scheduler(
         list(model.named_parameters()), len(my_items), micro_batch, grad_accum, epochs)
@@ -1547,7 +1534,7 @@ def main_local():
             except Exception as e:
                 print(f"[mem] epoch {epoch+1} mps memory read failed: {e}")
 
-    # pointsman-change: per-epoch calibration-agreement checkpoint selection --
+    # pointsman-change: per-epoch development-agreement checkpoint selection --
     # world_size=1 here, so epoch_end_fn never barriers. With resume
     # checkpoints on (run_config given) the best weights live on disk in the
     # checkpoint's best_model.pt instead of a ~1.3GB CPU copy.
@@ -1567,7 +1554,7 @@ def main_local():
         print(f"[resume] restored {resume_from}: epochs_completed={start_epoch}/{epochs} "
               f"global_step={start_global_step} best_epoch={best_state['epoch']}")
     epoch_end_fn = make_epoch_end_fn(
-        model, calib_items, tok, device, autocast_device=autocast_device, autocast_dtype=autocast_dtype,
+        model, dev_items, tok, device, autocast_device=autocast_device, autocast_dtype=autocast_dtype,
         autocast_enabled=autocast_enabled, rank=0, world_size=1, dist_module=None,
         select_best_epoch=select_best_epoch, best_state=best_state, epoch_agreements=epoch_agreements,
         log_prefix="[local]", keep_best_in_memory=not checkpointing)
@@ -1862,7 +1849,7 @@ def main():
     parser.add_argument("--mps-autocast", choices=["bf16", "off"], default="off", help="--local only: MPS autocast dtype during the forward pass. Default off (fp32) -- MPS fp16 autocast is unreliable for training; bf16 is opt-in.")
     parser.add_argument("--max-steps", type=int, default=None, help="--local only, for smoke validation: stop after this many optimizer micro-steps total instead of running full EPOCHS. Omit for a real training run.")
     parser.add_argument("--select-best-epoch", action=argparse.BooleanOptionalAction, default=True,
-                         help="After each epoch, evaluate calibration.jsonl argmax agreement and keep the "
+                         help="After each epoch, evaluate dev.jsonl argmax agreement and keep the "
                               "best epoch's checkpoint instead of always the last one (default: on). A real "
                               "local run (2026-09-23) overfit badly by the final epoch -- train agreement "
                               "~0.99/0.92/0.95 (intent/difficulty/risk) vs held-out test ~0.72/0.58/0.60. "
@@ -1887,6 +1874,9 @@ def main():
                               "resume state.")
     parser.add_argument("--keep-resume", action="store_true",
                          help="--local only: keep <output-dir>/resume/ after the final save (default: removed).")
+    parser.add_argument("--method", choices=["supervised", "rlcd-grpo"], default="supervised", help="Supervised CE baseline by default; RLCD/GRPO is an explicit experiment")
+    parser.add_argument("--input-fit", choices=["lossless", "task-head"], default="lossless", help="Must match checkpoint registration/inference inputFit")
+    parser.add_argument("--evaluate-sealed-test", action="store_true", help="Evaluate the frozen saved candidate once after training/calibration; test is otherwise not loaded")
     args = parser.parse_args()
     validate_regularization_args(args.dropout, args.rdrop_alpha, args.local)
     resolved_epochs = validate_epochs_and_resume_args(args.epochs, args.resume, args.keep_resume, args.local)
@@ -1901,6 +1891,7 @@ def main():
     started_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
     manifest = verify_export_manifest(export_dir)
+    dev_split = selection_split(manifest, args.select_best_epoch)
 
     if args.skip_admission_check and not args.dry_run:
         print("[WARN] --skip-admission-check set: proceeding without verifying tokenizer truncation")
@@ -1954,42 +1945,41 @@ def main():
 
     # official-notebook-cell: 3, pointsman-change described at module top: read the
     # export split files via the manifest's own recorded loader instead of
-    # the public HF dataset. pointsman-change: --local reads the same three JSONL
+    # the public HF dataset. pointsman-change: --local reads the selected JSONL
     # files with the stdlib json module (load_jsonl_rows) instead of
     # datasets.load_dataset("json", ...), since `datasets` is not installed
     # in the local laya venv -- the resulting row shape (dict with
     # state/questions/gold string keys) is identical either way.
-    if args.local:
-        dataset = {
-            "train": load_jsonl_rows(export_dir / "train.jsonl"),
-            "validation": load_jsonl_rows(export_dir / "calibration.jsonl"),
-            "test": load_jsonl_rows(export_dir / "test.jsonl"),
-        }
-    else:
-        dataset = load_dataset(
-            "json",
-            data_files={
-                "train": str(export_dir / "train.jsonl"),
-                "validation": str(export_dir / "calibration.jsonl"),
-                "test": str(export_dir / "test.jsonl"),
-            },
-        )
+    # Test labels are never loaded during candidate selection or calibration.
+    data_files = {"train": str(export_dir / "train.jsonl"), "validation": str(export_dir / "calibration.jsonl")}
+    if dev_split:
+        data_files["dev"] = str(export_dir / "dev.jsonl")
+    dataset = {key: load_jsonl_rows(Path(value)) for key, value in data_files.items()} if args.local else load_dataset("json", data_files=data_files)
 
     # pointsman-change: --local resume (2026-09-25). The run configuration is checked
     # BEFORE preprocessing so a mismatched --resume fails fast; a fresh --local
     # run refuses to start over an existing resume state.
     train_items_path = output_dir / "train_items.pt"
     calib_items_path = output_dir / "calib_items.pt"
+    dev_items_path = output_dir / "dev_items.pt"
     run_match, resume_state, cached_items = None, None, None
     if args.local:
         run_match = build_resume_match_config(
             export_dir=export_dir, manifest=manifest, resolved_model_dir=resolved_model_dir,
             derived_model_name=derived_model_name, epochs=resolved_epochs, micro_batch=resolved_batch_size,
             grad_accum=resolved_grad_accum, device=args.device, mps_autocast=args.mps_autocast,
-            dropout=args.dropout, rdrop_alpha=args.rdrop_alpha, select_best_epoch=args.select_best_epoch, cfg=cfg)
+            dropout=args.dropout, rdrop_alpha=args.rdrop_alpha, select_best_epoch=args.select_best_epoch, cfg=cfg, method=args.method, input_fit=args.input_fit)
         resume_state = check_resume_request(output_dir, run_match, args.resume)
     if resume_state is not None:
         cached_items = load_cached_items_for_resume(train_items_path, calib_items_path, resume_state["info"], torch)
+    dev_items, dev_truncated, dev_total = [], 0, 0
+    if cached_items is not None and dev_split:
+        if dev_items_path.is_file():
+            dev_items = torch.load(dev_items_path, weights_only=False)
+        if not dev_items or items_digest(dev_items) != resume_state["info"].get("dev_items_digest"):
+            cached_items = None
+        else:
+            dev_truncated, dev_total = resume_state["info"]["dev_truncated"], resume_state["info"]["dev_total"]
     if cached_items is not None:
         train_items, calib_items = cached_items
         info = resume_state["info"]
@@ -1997,23 +1987,27 @@ def main():
         calib_truncated, calib_total = info["calib_truncated"], info["calib_total"]
         print("[resume] reusing cached train_items.pt/calib_items.pt (export and item digests match)")
     else:
-        train_items, train_truncated, train_total = preprocess_split(dataset["train"], tok, cfg, render_options, build_sequence, QTYPES, agent_shim)
-        calib_items, calib_truncated, calib_total = preprocess_split(dataset["validation"], tok, cfg, render_options, build_sequence, QTYPES, agent_shim)
+        train_items, train_truncated, train_total = preprocess_split(dataset["train"], tok, cfg, render_options, build_sequence, QTYPES, agent_shim, input_fit=args.input_fit)
+        calib_items, calib_truncated, calib_total = preprocess_split(dataset["validation"], tok, cfg, render_options, build_sequence, QTYPES, agent_shim, input_fit=args.input_fit)
+        if dev_split:
+            dev_items, dev_truncated, dev_total = preprocess_split(dataset["dev"], tok, cfg, render_options, build_sequence, QTYPES, agent_shim, input_fit=args.input_fit)
     run_info = None
     if args.local:
         run_info = {
             "train_items_digest": items_digest(train_items), "calib_items_digest": items_digest(calib_items),
             "train_truncated": train_truncated, "train_total": train_total,
             "calib_truncated": calib_truncated, "calib_total": calib_total,
+            "dev_items_digest": items_digest(dev_items), "dev_truncated": dev_truncated, "dev_total": dev_total,
             "started_at": resume_state["info"]["started_at"] if resume_state else started_at,
         }
         if resume_state is not None and (run_info["train_items_digest"] != resume_state["info"]["train_items_digest"]
-                                         or run_info["calib_items_digest"] != resume_state["info"]["calib_items_digest"]):
+                                         or run_info["calib_items_digest"] != resume_state["info"]["calib_items_digest"]
+                                         or run_info["dev_items_digest"] != resume_state["info"].get("dev_items_digest", items_digest([]))):
             die("refusing to resume: re-preprocessed train/calibration items differ from the ones the interrupted "
                 "run trained on (preprocessing code or tokenizer changed)")
 
     if not args.skip_admission_check:
-        check_tokenizer_admission(train_truncated + calib_truncated, train_total + calib_total, args.max_truncated_fraction, args.allow_truncation)
+        check_tokenizer_admission(train_truncated + calib_truncated + dev_truncated, train_total + calib_total + dev_total, args.max_truncated_fraction, args.allow_truncation)
 
     print(f"[preprocess] train: {len(train_items)} sequences ({train_truncated} truncated of {train_total})")
     print(f"[preprocess] calibration: {len(calib_items)} sequences ({calib_truncated} truncated of {calib_total})")
@@ -2023,17 +2017,21 @@ def main():
     if not calib_items:
         die("no usable calibration sequences after preprocessing")
 
+    if dev_split and not dev_items:
+        die("no usable dev sequences after preprocessing")
     output_dir.mkdir(parents=True, exist_ok=True)
     if cached_items is None:
         torch.save(train_items, train_items_path)
         torch.save(calib_items, calib_items_path)
+        if dev_split:
+            torch.save(dev_items, dev_items_path)
 
     if args.dry_run:
         print("[dry-run] export + tokenizer admission verified. Stopping before torchrun/local training.")
         return 0
 
     ddp_script_path = output_dir / "train_ddp.py"
-    ddp_script_path.write_text(TRAIN_DDP_SCRIPT, encoding="utf-8")
+    ddp_script_path.write_text(TRAIN_DDP_SCRIPT.replace('TRAIN_METHOD = "rlcd-grpo"', f'TRAIN_METHOD = "{args.method}"'), encoding="utf-8")
 
     select_best_epoch_flag = "1" if args.select_best_epoch else "0"
     if args.local:
@@ -2072,11 +2070,9 @@ def main():
     finished_training_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
     metrics = None
-    try:
+    if args.evaluate_sealed_test:
         metrics = evaluate_checkpoint(str(output_dir), str(export_dir), laya_module,
-                                       device=args.device if args.local else "cuda")
-    except Exception as exc:  # pragma: no cover - depends on GPU runtime
-        print(f"[eval] evaluation step failed or was skipped: {exc}")
+                                      device=args.device if args.local else "cuda")
 
     finished_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
@@ -2090,6 +2086,19 @@ def main():
         "export_dataset_version": manifest.get("dataset_version"),
         "export_source_data_sha256": manifest.get("source_data_sha256"),
         "export_sample_count": manifest.get("sample_count"),
+        "exporter_version": manifest.get("exporter_version"),
+        "split_hashes": manifest.get("split_hashes"),
+        "provenance_sha256": manifest.get("provenance_sha256"),
+        "group_sha256": manifest.get("group_sha256"),
+        "selection_split": dev_split if args.select_best_epoch else None,
+        "method": args.method, "input_fit": args.input_fit,
+        "calibration_split": "calibration",
+        "sealed_test_evaluated": args.evaluate_sealed_test,
+        "output_weights_sha256": file_sha256(output_dir / "model.safetensors"),
+        "tokenizer_sha256": directory_sha256(output_dir / "tokenizer"),
+        "model_config_sha256": file_sha256(output_dir / "rl_agent_config.json"),
+        "runtime": {"python": platform.python_version(), "torch": torch.__version__, "laya": getattr(laya_module, "__version__", LAYA_VERSION_PINNED)},
+        "precision": "bf16" if args.local and args.mps_autocast == "bf16" else "fp32" if args.local else "fp16",
         "base_model_dir_name": base_model_dir_name,
         "model_subdir": args.model_subdir,
         "derived_model_name": derived_model_name,
@@ -2104,6 +2113,8 @@ def main():
             "select_best_epoch": args.select_best_epoch,
             "dropout": args.dropout, "rdrop_alpha": args.rdrop_alpha if args.rdrop_alpha > 0 else None,
         },
+        "dev_sequences": len(dev_items),
+        "dev_truncated": dev_truncated,
         "train_sequences": len(train_items),
         "train_truncated": train_truncated,
         "calibration_sequences": len(calib_items),

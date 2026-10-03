@@ -1,14 +1,12 @@
-# training/laya-kit -- Laya Kaggle T4x2 training preparation kit
+# training/laya-kit -- local Laya training and evaluation
 
-The `pointsman` repository does not do online learning or automatic
-fine-tuning/checkpoint promotion (this is a hard project policy). The official
-2xT4 DDP path (`train_from_export.py`, torchrun+NCCL) is **prep material** a
-human must upload to Kaggle (or an equivalent 2x NVIDIA T4 DDP machine) and run
-by hand. With the `--local` flag (see "Can this run locally on a Mac (MPS)?"
-below), the same script **actually runs training** as a single process on
-Apple Silicon MPS (or CPU), without torchrun/NCCL/DDP -- even in that case,
-checkpoint registration (`laya register`) and promotion are still explicitly
-approved by a human.
+The kit runs explicitly authorized local training on Apple Silicon MPS or CPU.
+It never starts online learning, automatically promotes a checkpoint, or enables
+provider modes. The current execution scope uses existing local hardware and
+subscriptions; the optional CUDA/Kaggle path is not part of that local run.
+Registration, evaluation and promotion remain separate operator actions within
+the owner's approved scope. Preserve the historical d6 route baseline and its
+provenance; write every new candidate to a separate output directory.
 
 Pinned official reference:
 - Repository commit: `NandhaKishorM/laya@42626c348753fbb17572a813127df2278a1ec527`
@@ -21,213 +19,140 @@ Pinned official reference:
 
 | File | Role |
 |---|---|
-| `check_export.py` | standard-library-only script that inspects an export folder (`train/calibration/test.jsonl` + `manifest.json`) without training |
-| `train_from_export.py` | the official notebook's DDP training/eval procedure, adapted to take an export folder as input. A human runs it on Kaggle T4x2 |
+| `check_export.py` | standard-library-only script that inspects an export folder (`train/dev/calibration/test.jsonl`, metadata and manifest; legacy three-way exports also accepted) without training |
+| `train_from_export.py` | local or DDP full-encoder training from an export; supervised CE by default |
 | `requirements.lock` | the package list the notebook installs, pinned to the extent verifiable |
 | `NOTICE` | upstream Apache-2.0 notice |
 
-## Full flow
+## Local runbook
 
-```
-pointsman dataset export --version <hash> --format laya
-        |  (exports/<hash>/laya/{train,calibration,test}.jsonl + manifest.json)
-        v
-   check_export.py --export-dir exports/<hash>/laya   <- local, no training
-        |  (only proceed to the next step if this passes)
-        v
-   upload the export folder to a Kaggle Notebook (GPU T4 x2, Internet On)
-        |
-        v
-   train_from_export.py --export-dir <uploaded export path> \
-       --output-dir /kaggle/working/laya_finetuned_typed_decisions
-        |  (torchrun --nproc_per_node=2 DDP training + calibration + evaluation)
-        v
-   download the checkpoint (model.safetensors, encoder/, tokenizer/,
-              rl_agent_config.json, training_metadata.json)
-        |
-        v
-   pointsman laya register   <- register the checkpoint in providers.json (operator)
-        v
-   pointsman holdout freeze  <- freeze the fixed holdout set (operator)
-        v
-   pointsman ... qualify     <- generate qualification results
-        v
-   pointsman ... compare     <- shadow-compare against the current active checkpoint
-        v
-   pointsman ... promote     <- run only **after explicit owner approval**
-```
+Version 3 exports (`laya-typed-decisions-json-v3`) contain four disjoint roles:
 
-The exact subcommand arguments for `pointsman laya register`/`holdout
-freeze`/`qualify`/`compare`/`promote` follow whatever the CLI looked like when
-this kit was built -- this README only guarantees the order; check each
-command's flags with `pointsman --help` at the time you run it (do not guess
-and write them down here).
+| Split | Allowed use |
+|---|---|
+| `train.jsonl` | Train encoder and dynamic scoring parameters |
+| `dev.jsonl` | Select epochs, methods and hyperparameters |
+| `calibration.jsonl` | Fit final temperatures and qualification gates |
+| `test.jsonl` | Evaluate a frozen candidate under the sealed evaluation specification |
 
-## Step-by-step (human-run) -- full runbook for the multilingual checkpoint
+`metadata.jsonl` binds each exported row to its sample/group/source, rights and
+oracle/provenance identities without adding those labels to the model input.
+`manifest.json` binds per-file counts/hashes, split roles and group/provenance
+fingerprints. Keep both files with the data. Source/template/semantic families,
+translations, paraphrases and counterfactual siblings stay together. Unknown
+rights in historical captures do not become permitted independent gold just
+because they are re-exported.
 
-Owner decision (2026-09-23): the fine-tuning baseline checkpoint is
-**multilingual** (mmBERT, `max_len=1024` / `head_max_len=256`). The HF repo
-`convaiinnovations/laya` splits checkpoints into subfolders -- confirmed
-locally by checking that every file path under
-`~/.local/share/laya/models/multilingual/.cache/huggingface/download/` starts
-with `multilingual/` (whereas the same path for the english checkpoint has no
-subfolder and sits directly at the root). This kit could not browse the HF
-repo's file tree directly, so the subfolder name is given explicitly by a
-human via `--model-subdir`, as shown below.
-
-0. **(local) build the distillation dataset**
+1. **Prepare and validate the export.** Independent corpus generation returns a
+   dataset version. Existing captured datasets may request
+   `pointsman dataset build --split-version 2`; old default builds and distillation
+   datasets retain their legacy format. Export the chosen immutable version:
    ```sh
-   pointsman laya distill build --run d3k
    pointsman dataset export --version <hash> --format laya
+   python3 training/laya-kit/check_export.py --export-dir <export-directory> \
+       --dataset-manifest <dataset-manifest.json>
    ```
-   `<hash>` is the `dataset_version` printed by `laya distill build`. The
-   exact subcommand arguments follow whatever the CLI looked like when this
-   kit was built (see the note above); check the current flags with
-   `pointsman training --help` (`TRAINING_HELP`, `src/training/cli.mjs`) at
-   the time you run it.
+   Stop on invalid split, lineage, source rights or hash identity. Legacy v2
+   exports (`train/calibration/test`) remain readable, but have no independent
+   dev set: use fixed hyperparameters and `--no-select-best-epoch`, or prepare
+   genuinely four-way data. Do not use calibration to choose epochs.
 
-1. **validate the export (local, no GPU needed)**
+2. **Check local token admission before training.** Use the installed local
+   runtime and an existing permitted multilingual checkpoint. Supply the actual
+   checkpoint directory containing `rl_agent_config.json`, `model.safetensors`,
+   `encoder/` and `tokenizer/`; add `--model-subdir multilingual` only when
+   `--model-dir` names a snapshot root above that directory.
    ```sh
-   python3 training/laya-kit/check_export.py --export-dir exports/<hash>/laya
+   /Users/jangjiyong/.local/share/laya/.venv/bin/python training/laya-kit/train_from_export.py \
+       --export-dir <export-directory> \
+       --model-dir /Users/jangjiyong/.local/share/laya/models/multilingual/multilingual \
+       --output-dir <new-output-directory> \
+       --local --device mps --epochs 1 --batch-size 2 --grad-accum 16 \
+       --method supervised --input-fit lossless --dry-run
    ```
-   If this fails, do not proceed to the next step.
+   Local mode reads JSONL with the standard library and does not require
+   `datasets`; dry-run works with the installed torch/Laya/tokenizer stack.
+   It validates the export and actual tokenizer admission, writes preparation
+   caches, then stops before training. It needs the model/tokenizer runtime even
+   though `check_export.py` alone is standard-library-only. Omitted `--model-dir`
+   triggers a download; use the existing local path for the authorized local run.
+   `--input-fit lossless` is the default and rejects required-evidence loss.
+   Explicit `--input-fit task-head` uses the inference worker's task-prefix fit
+   and must match registration's `--input-fit task-head`. Admission uses the
+   effective saved model lengths (the notebook-derived kit uses 1024/256), not
+   an assumed text length. The default maximum dropped fraction is 2%; correct
+   the source/serialization when admission fails rather than silently dropping
+   evidence, increasing heads or forcing `--allow-truncation`.
 
-2. **set up the Kaggle Notebook**
-   - Kaggle -> Datasets -> New Dataset: upload the whole `exports/<hash>/laya/`
-     folder as a **private** Kaggle Dataset (keep it private; do not make it
-     public).
-   - Notebook options -> Accelerator: `GPU T4 x2`
-   - Notebook options -> Internet: `On` (needed to download the model/packages)
-   - Attach all of `training/laya-kit/` and the private Dataset you just
-     created to the Kaggle Notebook's Input/Working directory (Add Input).
+3. **Run the fixed local candidate.** After admission passes, rerun the same
+   command without `--dry-run`; keep the data, model and arguments fixed.
+   `--method supervised` is the default masked distributional cross-entropy
+   objective for Choice, two-option Noul and Score. It trains the full encoder
+   and scoring parameters. `--method rlcd-grpo` explicitly selects the preserved
+   notebook RLCD/GRPO+CE experiment; it is not the supervised baseline.
+   Dev chooses the best epoch (`--select-best-epoch`, default on), then
+   calibration fits temperatures on those selected weights. Test inference is
+   skipped by default. `--evaluate-sealed-test` explicitly evaluates the final
+   saved candidate; freeze the evaluation specification first and keep test
+   results out of candidate selection and failure mining. `--max-steps N`
+   limits micro-batches, not optimizer updates or full epochs; a bounded smoke
+   run is not evidence for full-epoch quality. Resume details are below.
 
-3. **install dependencies** (in a Kaggle Notebook cell, not locally)
+4. **Register and collect predictions.** Registration copies and fingerprints
+   the candidate; it does not activate or promote it. Match the training fit:
    ```sh
-   pip install -q -U laya==0.3.4 transformers datasets safetensors huggingface_hub pyarrow pandas scipy accelerate tabulate
-   ```
-   For the packages without a pinned version, see the reason marked "cannot
-   confirm" in `requirements.lock`.
-
-4. **download the model and run training**
-   ```sh
-   python3 -c "from huggingface_hub import snapshot_download; print(snapshot_download('convaiinnovations/laya'))"
-   python3 training/laya-kit/train_from_export.py \
-       --export-dir /kaggle/input/<uploaded-export>/laya \
-       --model-dir <snapshot path printed above> \
-       --model-subdir multilingual \
-       --output-dir /kaggle/working/laya_finetuned_multilingual
-   ```
-   - If `--model-dir` is omitted, the script calls
-     `snapshot_download("convaiinnovations/laya")` itself (needs network, so
-     Kaggle only). `--model-subdir multilingual` uses the `multilingual/`
-     subfolder under that snapshot root as the actual checkpoint directory --
-     if that subfolder is missing `rl_agent_config.json`/`tokenizer/`/`encoder/`,
-     the script aborts with a clear error before training starts
-     (`validate_resolved_model_dir`). For checkpoints like english that sit
-     directly at the root with no subfolder, omit `--model-subdir` (existing
-     behavior is unchanged).
-   - If the export manifest's `exporter_version`/`upstream_contract`/`loader`/
-     `source_data_sha256` do not match what this script expects, it aborts
-     before training.
-   - Before preprocessing each row, `fit_task_head()` -- copied byte-for-byte
-     from `workers/laya_worker.py` -- shrinks that row's `state.task` to the
-     longest prefix that fits, appending a `" ...[truncated]"` marker (every
-     other state key and every question is left untouched), so training sees
-     the same input shape that inference actually receives under
-     `laya.inputFit:'task-head'`. The `[input-fit] N states task-head
-     truncated` log line is the number of states that were shortened this way.
-   - Even if the base checkpoint's own `rl_agent_config.json` has
-     `max_len`/`head_max_len` different from the final values used at training
-     time (1024/256, the override from official notebook cell 4) -- e.g. the
-     english checkpoint has 512/192 -- preprocessing (`fit_task_head`/
-     `build_training_item`) always judges admission against the final values
-     actually used for training (`resolve_effective_cfg`). For the
-     multilingual/typed-decisions checkpoint this correction is a no-op, since
-     it is already 1024/256.
-   - The tokenizer admission (truncation) check runs first, and if the
-     fraction of truncated rows exceeds `--max-truncated-fraction` (default
-     2%), it aborts. Pass `--allow-truncation` to force it through. (This
-     check still catches the remaining truncation cases `fit_task_head`
-     cannot fix -- rows where the questions/options alone are too large, or no
-     prefix fits at all.)
-   - To check only the manifest/tokenizer admission without training, use
-     `--dry-run` (does not run torchrun). Locally, even this check cannot pass
-     because the `datasets` package is not installed (the local laya `.venv`
-     is inference-only -- confirmed with `pip list`); it is only meaningful
-     after the Kaggle `pip install` in step 3.
-   - Internally, the script runs a `torchrun` invocation of this shape (you do
-     not need to type this yourself -- shown here for debugging reference):
-     ```sh
-     torchrun --standalone --nproc_per_node=2 <output-dir>/train_ddp.py \
-         <resolved-model-dir> <output-dir> <output-dir>/train_items.pt <output-dir>/calib_items.pt \
-         <derived-model-name> <base-model-dir-name> <exporter_version from the export manifest>
-     ```
-     `<derived-model-name>` becomes the saved checkpoint's `model_name`: it is
-     the base checkpoint's own `rl_agent_config.json.model_name` (or, if
-     absent, `--model-subdir` or the model folder name) with `-pointsman-ft`
-     appended (`derive_model_name`) -- e.g. if multilingual's base
-     `model_name` is `"rl-agent"`, the result is `"rl-agent-pointsman-ft"`. It
-     is no longer hard-coded to `"laya-typed-decisions"` as before.
-   - **Expected time**: the official notebook's cell 9 markdown states "~4 to
-     6 minutes total" for just the `torchrun` training loop (cell 10) alone,
-     in minutes. The total GPU-time for the whole notebook (install,
-     download, preprocessing, evaluation included) is not documented
-     officially -- left as **cannot confirm**. Check your Kaggle account's
-     current GPU quota directly before running.
-
-5. **download the outputs**
-   Download the following from under `output-dir` to your local machine:
-   `model.safetensors`, `encoder/`, `tokenizer/`, `rl_agent_config.json` (now
-   also recording `model_name`/`base_model_dir_name`/`exporter_version`),
-   `benchmark_report.json` (if evaluation succeeded), and
-   `training_metadata.json` (notebook commit, laya version, export hash,
-   `base_model_dir_name`, `derived_model_name`, hyperparameters, start/end
-   time).
-
-6. **(local) register the checkpoint -> freeze holdout -> qualify -> compare -> promote**
-   The exact subcommand flags are copied verbatim from `TRAINING_HELP` in
-   `src/training/cli.mjs` (also viewable with `pointsman training --help`). Do
-   not invent them.
-   ```sh
-   pointsman laya register --checkpoint <downloaded absolute path> \
+   pointsman laya register --checkpoint <absolute-output-directory> \
        --python /Users/jangjiyong/.local/share/laya/.venv/bin/python \
-       --device mps --precision fp16 --input-fit task-head
-   pointsman laya holdout freeze --dataset <hash>
+       --device mps --precision fp32 --input-fit lossless
+   pointsman laya predictions --candidate <candidate-hash> --dataset <hash> --split dev
+   pointsman laya predictions --candidate <candidate-hash> --dataset <hash> \
+       --split test --sealed-spec <frozen-specification-sha256>
+   ```
+   `predictions` defaults to dev and emits a JSON packet with sample/model/
+   checkpoint IDs, probabilities, actual elapsed milliseconds, status accounting
+   and dataset/split/provenance/runtime/fit fingerprints. Test requires the
+   frozen specification hash. Timeout, rejection, unsupported input and ordinary
+   runtime errors remain in the envelope; cancellation ends the run.
+
+5. **Qualify, compare and explicitly promote within the approved scope.** A
+   copied test holdout is a regression floor, not independent confirmation.
+   Prospective confirmation must use a separate disjoint dataset:
+   ```sh
+   pointsman laya holdout freeze --dataset <hash> --name <regression-id> --role regression_copy
+   pointsman laya holdout freeze --dataset <fresh-hash> --name <prospective-id> \
+       --role prospective --training-dataset <hash>
    pointsman laya qualify --candidate <candidate-hash> --dataset <hash> --holdout <holdout-id>
    pointsman laya compare --candidate <candidate-hash> --holdout <holdout-id>
    pointsman laya promote --candidate <candidate-hash> --holdout <holdout-id>
    ```
-   **Do not run promote without the owner's explicit approval.** Automatic
-   promotion is not implemented in this repository.
-   - If `laya register` is not given `--model NAME`, the name defaults to
-     `laya/<first 12 chars of the checkpoint hash>`
-     (`src/training/laya-lifecycle.mjs` `registerCheckpoint`). The stored
-     `rl_agent_config.json.model_name` (the value `derive_model_name` produced)
-     is only a record inside the checkpoint -- it is not used as the
-     registered name.
-   - **Restarting the resident server is not required.** In `src/inference.mjs`,
-     `createLayaClient().start()` compares the providers.json laya block's
-     hash (`digest(l)`) against the previous child's identity on every infer
-     call, and when `promote` changes the checkpoint, it automatically brings
-     down the old worker and restarts with the new checkpoint
-     (`LAYA_CONFIG_CHANGED`) -- `src/laya-server.mjs`'s `handleInfer`/
-     `handlePrepare` also re-read providers.json on every request. This was
-     confirmed by reading the code directly. However this automatic pickup
-     only holds **while the resident server process is running code that
-     knows about `inputFit` (after commit 30aeab4)**. A server started before
-     that commit does not send `inputFit` to the worker, so task-head is not
-     applied -- restart it once the first time you use a task-head checkpoint.
-     After that, restarting is optional:
-     ```sh
-     launchctl kickstart -k gui/$(id -u)/com.pointsman.laya
-     ```
+   Qualification validates training, preprocessing and split identity, fits
+   gates on calibration and checks frozen evaluation evidence. It does not
+   promote automatically. Version 3 qualification refuses repeated sealed-test
+   consumption for the same candidate; a newly selected candidate needs the
+   applicable fresh-test policy. A candidate is ready only when the required
+   generated qualification, active-checkpoint comparison and fixed-regression/
+   prospective non-regression gates pass. Failed or missing gates remain
+   failed/UNKNOWN. Promotion reuses an existing authorization when it covers
+   the action; otherwise that separate operator decision remains pending.
 
-## Expected time (with sources)
+## Optional CUDA/Kaggle path
+
+The pinned notebook reference supports `torchrun`/NCCL on two NVIDIA T4 GPUs.
+For a separately authorized run, transfer the whole private export plus
+`check_export.py`, `train_from_export.py`, `requirements.lock` and `NOTICE`;
+install the pinned requirements on that machine. Supply a permitted model
+snapshot and run the trainer without `--local` (use `--model-subdir multilingual`
+when the snapshot stores that variant below its root). The same split, method,
+fit and sealed-test rules apply. This path can download packages/models and
+consume cloud compute, so it is separate from the existing local-hardware scope.
+There is no automatic public dataset or checkpoint upload.
+
+## Historical notebook timing (not current pilot estimates)
 
 - The official notebook's cell 9 markdown states "~4 to 6 minutes total" for
   just the `torchrun` DDP training step (cell 10) -- **in minutes**. This
-  kit's training code carries that loop over unchanged, so the training loop
-  itself is expected to take a similar order of magnitude.
+  is historical notebook evidence, not a runtime estimate for this kit's
+  current supervised objective, corpus or hardware.
 - The total time for the whole notebook (package install, model/data
   download, preprocessing, evaluation, saving outputs included) is not
   separately documented officially -- left as **cannot confirm**. Kaggle's
@@ -241,21 +166,22 @@ human via `--model-subdir`, as shown below.
   Kaggle Pro or extra compute is a matter of the user's own account policy;
   this kit does not require it.
 
-## Can this run locally on a Mac (MPS)? -- `--local` mode (implemented and measured 2026-09-23)
+## Local mode and historical MPS measurements (2026-09-23)
 
 - The official procedure is **CUDA DDP only**, using the `torch.distributed`
   NCCL backend and `torchrun --nproc_per_node=2`. NCCL is only for
   communication between NVIDIA GPUs, so this path does not run as-is on
   Apple Silicon's MPS device.
 - `train_from_export.py --local` works around this: it reuses the **exact
-  same** loss (RLCD+GRPO), optimizer (AdamW with separate encoder/head LR),
+  same** selected objective (supervised CE by default; RLCD+GRPO+CE only
+  with `--method rlcd-grpo`), optimizer (AdamW with separate encoder/head LR),
   cosine LR schedule, epoch count (default 4, changeable via `--epochs` only
   under `--local` -- see the section below), per-device batch size, and seed,
   as a single process without `torchrun`/NCCL/DDP (`TRAIN_DDP_SCRIPT` was
   refactored internally into `run_training_loop()`/`finalize_and_save()` so
-  the DDP path (`main_ddp`, unchanged) and the local path (`main_local`,
+  the DDP path (`main_ddp`) and the local path (`main_local`,
   world_size=1/rank=0) call the same functions). It reads the export's
-  train/calibration/test.jsonl using only the standard-library `json` module
+  train/dev/calibration JSONL using only the standard-library `json` module
   (`load_jsonl_rows`), without the `datasets` package (not installed in the
   local laya venv).
 - **Example invocation** (multilingual base checkpoint, as used in this repo):
@@ -264,7 +190,7 @@ human via `--model-subdir`, as shown below.
       --export-dir exports/<hash>/laya \
       --model-dir /Users/jangjiyong/.local/share/laya/models/multilingual/multilingual \
       --output-dir <output-directory> \
-      --local --device mps
+      --local --device mps --method supervised --input-fit lossless
   ```
   - `--device mps|cpu` (default mps); `--grad-accum N` (default: computed
     automatically from `--batch-size` to keep the DDP recipe's effective
@@ -275,9 +201,8 @@ human via `--model-subdir`, as shown below.
     fp16 autocast was measured to be unstable for training, see the
     regularization-flags section below; bf16 is opt-in); `--max-steps N`
     (smoke-test only, runs exactly that many micro-steps and stops).
-  - `fit_task_head()`/`resolve_effective_cfg()` (input-budget fitting /
-    admission criteria) apply exactly the same way as on the DDP path (no
-    branching).
+  - Lossless admission is the default; task-head fitting is explicit.
+    Both paths use the same effective model configuration and tokenizer.
   - Memory safety: logs `torch.mps.driver_allocated_memory()` every epoch
     (`[mem] epoch N mps_driver_allocated_mib=...`; MPS has no real peak
     counter, so this is a best-effort approximation). On OOM (a
@@ -313,8 +238,8 @@ human via `--model-subdir`, as shown below.
     process RSS).
   - `--batch-size 4` (grad-accum 16, same effective batch of 64): **about
     0.72-0.88 seconds/micro-step**, about 26 minutes for 1 epoch's 1,915
-    steps, projected about 1 hour 45 minutes for 4 epochs. **On a 24GB
-    machine, batch-size 4 is recommended.**
+    steps, projected about 1 hour 45 minutes for 4 epochs. This historical
+    run used batch-size 4 to avoid the batch-size-8 swap bottleneck.
   - Swap usage was checked with `sysctl vm.swapusage`; speed was checked from
     the timestamps on the log's every-50-steps lines.
 - **Projected time for the owner's target data scale (a projection -- superseded
@@ -325,8 +250,8 @@ human via `--model-subdir`, as shown below.
   micro-batch count is `ceil(9000/8) * 4 = 4,500`. Multiplying by the smoke
   test's steady-state 0.60 seconds/step gives `4,500 * 0.60s ~= 2,700 seconds
   ~= 45 minutes` (**a projection for the training loop alone** -- model
-  loading (~26 seconds), calibration temperature fitting, and test evaluation
-  (about 0.6 seconds per case) must be added separately, and MPS throttling
+  loading (~26 seconds), calibration temperature fitting and, when explicitly
+  requested, test evaluation (historically about 0.6 seconds per case) add time, and MPS throttling
   or thermal effects at the real 9,000-sequence scale were not observed, so
   the actual number may differ). Compared to the official notebook's "~4 to 6
   minutes" (2xT4 DDP, world_size=2), a single local MPS process takes about
@@ -337,48 +262,25 @@ human via `--model-subdir`, as shown below.
   training path (though they use the same physical device). Do not confuse
   the two.
 
-## Selecting the best checkpoint per epoch (`--select-best-epoch`, default ON, implemented 2026-09-23)
+## Selecting the best checkpoint per epoch (`--select-best-epoch`, default ON)
 
-- **Problem (measured)**: the real training run measured on 2026-09-23 (M4
-  Pro, multilingual base, real distilled data with 7,659 train rows, 4
-  epochs, batch 4 x grad-accum 16) overfit badly by the last epoch -- train
-  argmax agreement (intent/difficulty/risk) was about 0.99/0.92/0.95, but
-  held-out test was about 0.72/0.58/0.60. The old behavior of always saving
-  the last epoch's weights risks passing a suboptimal checkpoint on to
-  promotion.
-- **Behavior**: at the end of every epoch (shared between DDP and `--local`,
-  via `run_training_loop()`'s `epoch_end_fn` callback), `train_from_export.py`
-  puts the model in eval mode and computes per-question-type
-  (choice/score/noul) argmax agreement (`compute_calib_agreement()`) against
-  `calib_items.pt` (the same real held-out `calibration.jsonl` from the export
-  that `finalize_and_save()` uses for temperature fitting), logging
-  `[select] epoch N calib_agreement choice=.. score=.. noul=.. mean=..`. If
-  the mean (`mean`) across the three types improves on the previous best, that
-  epoch's state_dict is copied to and held on CPU (about 1.3GB fp32 for 322M
-  parameters, released right after being loaded when training ends). After
-  training finishes, the best epoch's state_dict is loaded into the model
-  before running `finalize_and_save()` (temperature fitting + saving) -- so
-  the saved checkpoint is always "the epoch with the best calibration
-  agreement." Under DDP, only rank 0 evaluates, and all ranks synchronize with
-  a barrier at the end of every epoch.
-- **Flags**: `--select-best-epoch` (default ON) / `--no-select-best-epoch`
-  (always keep the last epoch, as before). Both `--local` and DDP are
-  supported (passed identically to both paths via `load_common_argv()`'s
-  shared argv slots).
-- **Metadata**: the training script writes
-  `<output-dir>/epoch_selection.json` (`select_best_epoch`, `selected_epoch`,
-  and the per-epoch agreement table `epoch_agreements`), and the outer
-  `train_from_export.py`'s `main()` reads it and folds it into
-  `training_metadata.json`'s `epoch_selection`/`selected_epoch` fields.
-- **Verification**: covered by
-  `tests/test_laya_kit_eval_and_epoch_select.py`'s `ComputeCalibAgreement`
-  (pure aggregation logic) and `TrainDdpScriptEpochSelectionStructure` (a
-  static check of the `epoch_end_fn`/best-state logic embedded in
-  `TRAIN_DDP_SCRIPT`, plus parity with the outer module). The 2026-09-23 M4
-  Pro `--local --max-steps` smoke test confirmed the
-  `[select] epoch 1 calib_agreement choice=... score=... noul=... mean=...`
-  log line and the `selected_epoch` record in `epoch_selection.json`/
-  `training_metadata.json`.
+At each epoch end, the shared local/DDP callback evaluates only `dev_items.pt`
+and logs `[select] epoch N dev_agreement choice=.. score=.. noul=.. mean=..`.
+It selects the weights with the best mean per-type argmax agreement. Final
+calibration temperature fitting happens after loading those selected weights,
+using `calib_items.pt` separately. DDP evaluates on rank 0 and synchronizes all
+ranks. Local resumable runs retain the best snapshot on disk.
+`--no-select-best-epoch` uses the final epoch; it is required for legacy v2
+exports without independent dev. `epoch_selection.json` and
+`training_metadata.json` record the selected epoch, per-epoch table and dev role.
+
+Historical 2026-09-23 route/distillation work selected epochs on calibration:
+train agreement about 0.99/0.92/0.95 versus held-out test 0.72/0.58/0.60
+motivated checkpoint selection. Those measurements describe the old procedure;
+they are not independent dev evidence or current supervised-corpus quality.
+Current separation/CE/resume fixture checks live in
+[`test_laya_kit_splits.py`](../../tests/test_laya_kit_splits.py) and
+[`test_laya_kit_resume.py`](../../tests/test_laya_kit_resume.py).
 
 ## Regularization flags to mitigate overfitting (`--dropout`, `--rdrop-alpha`, default OFF, `--local` only, 2026-09-24)
 
@@ -407,7 +309,7 @@ human via `--model-subdir`, as shown below.
 - **`--rdrop-alpha A`** (A >= 0, default 0 = off, requires `--dropout`):
   R-Drop (Liang et al., NeurIPS 2021). Runs two train-mode forward passes per
   micro-batch (each with a different dropout mask), uses the average of the
-  existing loss (RL + CE) across both passes, and adds `A x symmetric KL`
+  selected loss (CE by default; RL + CE for `--method rlcd-grpo`) across both passes, and adds `A x symmetric KL`
   (0.5*(KL(p1||p2)+KL(p2||p1)), computed only over each question's valid
   options, averaged across questions). The grad-accum division, gradient
   clipping, and the per-optimizer-step `torch.mps.empty_cache()` are
@@ -424,7 +326,7 @@ human via `--model-subdir`, as shown below.
   (`dropout`, `rdrop_alpha`) and in `training_metadata.json`'s
   `hyperparameters` (`null` when off), and are also printed on the
   `[local] device=...` startup line. With both flags off, the default path is
-  bit-for-bit identical to before in loss and weight updates
+  keeps the single-forward path for the selected objective
   (`tests/test_laya_kit_regularization.py`).
 - **Caution (MPS)**: running an encoder with attention dropout enabled in
   **train mode plus `torch.no_grad()`** makes PyTorch's MPS SDPA raise
@@ -448,7 +350,7 @@ human via `--model-subdir`, as shown below.
   epoch's `[select]` decision): under `<output-dir>/resume/epoch-000N/`,
   `training_state.pt` (model state_dict, AdamW state, scheduler state,
   Python/NumPy/torch CPU/MPS RNG state), `best_model.pt` (the weights of the
-  epoch with the best calibration agreement so far -- now kept on disk instead
+  epoch with the best dev agreement so far -- now kept on disk instead
   of RAM; if the current epoch is not a new best, the previous epoch's file is
   hard-linked forward), and `state.json` (number of completed epochs,
   global_step, per-epoch agreement, the best epoch/score, cumulative training
@@ -457,16 +359,17 @@ human via `--model-subdir`, as shown below.
   interrupted, LATEST always points at a fully intact previous epoch. Only the
   most recent epoch's files are kept; the rest are deleted.
 - **Run-configuration consistency check**: if any value in `state.json`'s
-  configuration (export `manifest.json`/`train.jsonl`/`calibration.jsonl`
-  sha256, exporter/dataset version, base model path and `model.safetensors`
-  sha256, training script sha256, epochs, batch/grad-accum, device,
-  mps-autocast, dropout, rdrop-alpha, select-best-epoch, max_len/head_max_len)
+  configuration (export manifest/train/dev/calibration file hashes, split and
+  provenance fingerprints, exporter/dataset version, base model weights/config
+  and tokenizer hashes, Python/torch/Laya runtime identity, method/input-fit,
+  training script hash, epochs, batch/grad-accum, device/precision, dropout,
+  rdrop-alpha, select-best-epoch and model lengths)
   differs from the current arguments, `--resume` prints the list of
   mismatches and stops. `--max-steps`, `--keep-resume`, and the admission-check
   options are not compared. Changing the kit's code also breaks resumability
   (the script sha256 changes) -- do not modify the kit while a run is paused.
 - **Preprocessing cache**: with `--resume`, if
-  `<output-dir>/train_items.pt`/`calib_items.pt` exist and their content
+  `<output-dir>/train_items.pt`/`dev_items.pt`/`calib_items.pt` exist and their content
   digest matches what the interrupted run recorded, preprocessing is skipped
   (export consistency was already confirmed by the check above). If they
   differ or are missing, preprocessing runs again, and if the resulting
@@ -504,7 +407,8 @@ human via `--model-subdir`, as shown below.
   # Use an array (zsh does not word-split an unquoted "$ARGS" string).
   ARGS=(--export-dir exports/<hash>/laya
         --model-dir /Users/jangjiyong/.local/share/laya/models/multilingual/multilingual
-        --output-dir <output-directory> --local --device mps --batch-size 4 --epochs 6 --dropout 0.1)
+        --output-dir <output-directory> --local --device mps --batch-size 4 --epochs 6
+        --method supervised --input-fit lossless --dropout 0.1)
   # Day 1: start. In the evening, after seeing "[resume] saved epoch N/6 checkpoint"
   # (or <output-directory>/resume/LATEST updating), press Ctrl-C in the terminal.
   PYTHONUNBUFFERED=1 $PY training/laya-kit/train_from_export.py "${ARGS[@]}" 2>&1 | tee -a train.log
@@ -531,7 +435,7 @@ human via `--model-subdir`, as shown below.
   without `--resume` while resume state existed were correctly refused
   without touching the existing state.
 
-## `evaluate_checkpoint` post-training evaluation bug fix (2026-09-23)
+## Historical `evaluate_checkpoint` bug fix (2026-09-23)
 
 - **Symptom (measured)**: the post-training evaluation step of the run
   measured above failed with
@@ -572,8 +476,8 @@ human via `--model-subdir`, as shown below.
 
 ## Catastrophic forgetting risk from repeated fine-tuning, and the holdout gate
 
-- Every fine-tune run overwrites the previous checkpoint's weights with a new
-  training run. Repeatedly fine-tuning on new exports can silently degrade
+- Each fine-tune changes the candidate weights. Reusing successive candidates
+  as the base for new exports can silently degrade
   quality on purposes/workflows the model previously handled well
   (catastrophic forgetting) -- this cannot be detected just by looking at
   training loss or accuracy on the new dataset.
@@ -588,7 +492,7 @@ human via `--model-subdir`, as shown below.
   the ability to solve problems it used to solve." Redrawing the holdout every
   time would make this comparison meaningless.
 
-## Data rights/license review checklist (owner must confirm before promote)
+## Data rights and evidence requirements
 
 - [ ] Upstream `laya` runtime/model: Apache-2.0 (see NOTICE above). Re-confirm
       commercial use/redistribution terms.
@@ -604,14 +508,17 @@ human via `--model-subdir`, as shown below.
 - [ ] Does using outputs (probabilities, labels) from a provider that acted as
       teacher (e.g. the TypeSafe Jev API) to fine-tune another model (Laya)
       violate that provider's terms of use -- if this is a cannot-confirm
-      item, it must be confirmed before promote.
-- [ ] Has a human reviewed the export for personal/sensitive information (the
-      project's pattern-based checks are not a complete DLP solution).
+      item, those provider comparisons/distillation remain unexecuted until
+      permitted; do not defer the boundary until promotion.
+- [ ] Has the source/export been checked for personal/sensitive information?
+      Pattern checks are best-effort; preserve independent synthetic-source
+      provenance and do not read raw private captures by default.
 
 ## What this kit does not do
 
-- It does not perform the actual model download, pip install, GPU training,
-  or checkpoint registration/promotion for you.
+- Training runs only through the explicit trainer invocation; registration,
+  prediction collection, qualification, comparison and promotion use their
+  separate CLI commands. No action starts automatically.
 - The official notebook's 8th cell (optional), which publicly uploads a
   checkpoint to the Hugging Face Hub, is not included in this kit -- pointsman's
   checkpoint promotion path is the local `laya register`, not public Hub

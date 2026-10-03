@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { randomUUID } from 'node:crypto';
-import { DEFAULTS, MODES, MODEL_ID, fail, isObject } from './constants.mjs';
+import { DEFAULTS, CAPABILITY_PROFILES, MODES, MODEL_ID, fail, isObject } from './constants.mjs';
 
 export function resolveHome(env = process.env) {
   const home = env.POINTSMAN_HOME || path.join(env.HOME || os.homedir(), '.local/share/pointsman');
@@ -66,9 +66,11 @@ export function atomicWrite(file, text, { expected, mode = 0o600 } = {}) {
 export function validateConfig(raw) {
   if (!isObject(raw) || Object.keys(raw).some(k => !Object.hasOwn(DEFAULTS, k))) fail('INVALID_CONFIG');
   const c = { ...DEFAULTS, ...raw };
-  if (c.version !== 1 || !MODES.includes(c.mode) || typeof c.model !== 'string' || !MODEL_ID.test(c.model) || typeof c.telemetry !== 'boolean') fail('INVALID_CONFIG');
+  if (![1, 2].includes(c.version) || !MODES.includes(c.mode) || typeof c.model !== 'string' || !MODEL_ID.test(c.model) || typeof c.telemetry !== 'boolean') fail('INVALID_CONFIG');
+  const profile = CAPABILITY_PROFILES[c.capabilityProfile];
+  if (!Object.hasOwn(CAPABILITY_PROFILES, c.capabilityProfile) || (c.version === 1 && c.capabilityProfile !== 'portable')) fail('INVALID_CONFIG');
   const ranges = {
-    timeoutMs: [100, 10000], maxInputBytes: [512, 48000], maxQuestions: [1, 8],
+    timeoutMs: [100, 10000], maxInputBytes: [512, profile.maxInputBytes], maxQuestions: [1, profile.maxQuestions], maxChoiceOptions: [2, profile.maxChoiceOptions],
     maxCallsPerMinute: [1, 600], maxInFlight: [1, 8], circuitFailureThreshold: [1, 10], circuitCooldownMs: [1000, 300000],
   };
   for (const [k, [min, max]] of Object.entries(ranges)) if (!Number.isInteger(c[k]) || c[k] < min || c[k] > max) fail('INVALID_CONFIG');

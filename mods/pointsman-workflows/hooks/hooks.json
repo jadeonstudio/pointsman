@@ -1,0 +1,4 @@
+{
+  "description": "Explicit /pointsman-workflow request synthesis; normal tool and permission paths stay with the host.",
+  "modules": ["./pointsman-workflows.ts"]
+}

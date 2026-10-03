@@ -605,18 +605,19 @@ async function readHookInput({ stdin, maxBytes }) {
  * stdout output, matching the host contract that a hook must never be visible as a failure.
  */
 export async function runHookCli({ host, event, home: homeOverride, env = process.env, now = () => Date.now(),
-  stdin = process.stdin, write = text => process.stdout.write(text), timeoutMs = HOOK_TIMEOUT_MS } = {}) {
+  stdin = process.stdin, write = text => process.stdout.write(text), timeoutMs = HOOK_TIMEOUT_MS,
+  engineFactory = createDecisionEngine } = {}) {
   try {
     if (!HOSTS.includes(host) || !HOOK_EVENTS.includes(event)) return;
     const home = resolveHome({ ...env, ...(homeOverride ? { POINTSMAN_HOME: homeOverride } : {}) });
     let engine, layer;
     // L3 (2026-09-23): a hook never spawns its own worker and never waits for a resident server's
     // worker to finish loading; a socket that exists but is still loading returns LAYA_NOT_READY at once.
-    try { engine = createDecisionEngine({ home, env, layaSpawn: false, layaWait: false }); layer = createControlLayer({ home, env, engine }); }
+    try { engine = engineFactory({ home, env, layaSpawn: false, layaWait: false }); layer = createControlLayer({ home, env, engine }); }
     catch { return; }
     try {
       const status = layer.status();
-      if (status.features.router.mode === 'off') return;
+      if (gateModeFor(status, event) === 'off') return;
       const start = performance.now();
       let settledReason = null;
       const result = await withTimeout((async () => {

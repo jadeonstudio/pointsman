@@ -13,6 +13,12 @@
       "version": "0.1.0",
       "source": "./pointsman-effort",
       "description": "Phase 1 (shadow): attaches pointsman's existing route judgment to Claude Code's reasoning effort. OFF by default; needs CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1 and `pointsman effort shadow|on`."
+    },
+    {
+      "name": "pointsman-workflows",
+      "version": "0.1.0",
+      "source": "./pointsman-workflows",
+      "description": "OFF-by-default explicit bounded workflow completion through turn.step synthetic text on verified Claude Code 2.1.287+. Requires workflow/native modes ON; ordinary prompts preserve the native path."
     }
   ]
 }

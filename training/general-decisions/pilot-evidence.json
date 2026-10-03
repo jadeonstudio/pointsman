@@ -1,0 +1,71 @@
+{
+  "export_dataset_version": "ba27f11ee6e5bf296c536db112db6ecafa961b686c05edcc3d02ea13a728c070",
+  "export_source_data_sha256": "f21206b5a6d02baf650a63f0f5ca0c44860090d411172d6351af2993ede4f27d",
+  "split_hashes": {
+    "calibration": "06a790da003f9a04981ca07125712ad0286569d686c4b302536cd685c2acc17d",
+    "dev": "56e451193cd2074453008ec19430a24870cba8603dde83f3541db5597ab4776d",
+    "test": "756d41871a98f03e785c3f324e1307ab6978aaa816401f21968b8644001ef7fe",
+    "train": "1ec43709c0eee40449f168d3aad9aeb9c304a6f93cd2142b60cffda7198d60d5"
+  },
+  "provenance_sha256": "cf5978988908e6f672bd8ccf02052f26a3fe7d69cfb1c1fe24d957e1b9a90b48",
+  "group_sha256": "94d43a0d877405e7af96e63b1486251d7cfd8dee9c99d76d61898252a04f8815",
+  "method": "supervised",
+  "input_fit": "lossless",
+  "selection_split": "dev",
+  "calibration_split": "calibration",
+  "sealed_test_evaluated": false,
+  "output_weights_sha256": "27ef4d0d71d20868b1d95e446f98f99d2422603448cf2c62c3964c249765c416",
+  "tokenizer_sha256": "bcd635dcf56578f05640d43e086f762d26935b63297b8e6b305db6ef2cb5d95e",
+  "model_config_sha256": "5f2143b28b2f1063983a0ca37edb944f530ae3ce522b7970b57086f819daf7bf",
+  "runtime": {
+    "python": "3.12.8",
+    "torch": "2.14.0",
+    "laya": "0.3.4"
+  },
+  "precision": "fp32",
+  "dev_sequences": 125,
+  "train_sequences": 1375,
+  "calibration_sequences": 125,
+  "started_at": "2026-10-03T03:00:03Z",
+  "finished_at": "2026-10-03T03:04:13Z",
+  "local_run": {
+    "device": "mps",
+    "mode": "local",
+    "grad_accum": 16,
+    "micro_batch": 2,
+    "effective_global_batch": 32,
+    "mps_autocast": "off",
+    "epochs": 1,
+    "epochs_completed": 1,
+    "global_step": 688,
+    "stopped_early": false,
+    "wall_time_s": 218.661,
+    "resumed_from_epoch": null,
+    "dropout": null,
+    "rdrop_alpha": null,
+    "encoder_dropout_check": null
+  },
+  "epoch_selection": {
+    "select_best_epoch": true,
+    "selected_epoch": 1,
+    "epoch_agreements": [
+      {
+        "epoch": 1,
+        "choice": 0.6428571428571429,
+        "score": null,
+        "noul": 0.6097560975609756,
+        "mean": 0.6263066202090593
+      }
+    ],
+    "selection_split": "dev"
+  },
+  "scope": "One independent synthetic-rule pilot; no operational adoption or Jev comparison.",
+  "dev_comparison": "PENDING",
+  "upstream_model": "convaiinnovations/laya-multilingual",
+  "base_checkpoint": "2d115cbafc7a79194d6958794408e727b933887dcd03241d590824c58de67aed",
+  "end_epoch_mps_driver_allocated_mib": 4607.7,
+  "peak_memory": "UNKNOWN",
+  "training_sequences_per_second": 6.288,
+  "token_throughput": "UNKNOWN",
+  "paid_calls": 0
+}

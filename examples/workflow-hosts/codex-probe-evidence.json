@@ -1,0 +1,40 @@
+{
+  "observedAt": "2026-10-03T02:50:07.198Z",
+  "host": "codex",
+  "version": "0.154.0",
+  "contractRevision": "codex-app-server-0.154.0",
+  "evidence": "installed_direct_command_probe",
+  "schemaHashes": {
+    "v2/McpServerToolCallParams.json": "7039a7583a1cbf38e9e0f5fe6398ff3711acd4d654b81b0be562514087fce6ba",
+    "v2/McpServerToolCallResponse.json": "04a59b2064922c37b0c49bdb2470b8fff08d943e56dba4f7280a6b34bfa52c68",
+    "v2/CommandExecParams.json": "fd034b4c85d7b6f466e30a3cbb73db86be1263aca3f81b89b547f14817dfb62e",
+    "v1/InitializeParams.json": "6f0094be9a65242ec779a40794cbd4fdfa32fca1e45084a16adfb50501d33ea2"
+  },
+  "methodsSent": [
+    "initialize",
+    "initialized",
+    "command/exec"
+  ],
+  "command": [
+    "node",
+    "--version"
+  ],
+  "sandboxPolicy": {
+    "type": "readOnly"
+  },
+  "result": {
+    "exitCode": 0,
+    "stdout": "v26.5.0\n",
+    "stderr": ""
+  },
+  "notifications": [
+    "remoteControl/status/changed"
+  ],
+  "turnStartRequests": 0,
+  "providerRequests": "UNKNOWN",
+  "workflowMcpExecution": "UNVERIFIED",
+  "visibleHistoryContinuation": "UNVERIFIED",
+  "approvalRequests": "none observed",
+  "initialAttempt": "workspace sandbox blocked normal Codex sqlite state initialization before handshake",
+  "successfulAttempt": "same identity-only probe after sandbox escalation; no installation/config edits"
+}

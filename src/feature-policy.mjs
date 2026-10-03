@@ -53,6 +53,8 @@ export const FEATURE_DEFAULTS = Object.freeze({
     // cache penalty; 'on' allows applying it (only meaningful once `mode` is 'on' -- SHADOW always
     // records regardless of this setting; never changes a subagent's model or role).
     subagents: 'off' },
+  workflow: { mode: 'off', nativeMode: 'off', maxActions: 128, maxMs: 10000,
+    maxDecisionCalls: 2, maxOutputBytes: 24000 },
 });
 function fields(value, allowed) {
   if (!isObject(value) || ![Object.prototype, null].includes(Object.getPrototypeOf(value)) ||
@@ -117,7 +119,7 @@ function migrateProfileV1(value, host) {
   return migrated;
 }
 export function validateFeaturePolicy(raw) {
-  fields(raw, ['version', 'router', 'bulk', 'effort']);
+  fields(raw, ['version', 'router', 'bulk', 'effort', 'workflow']);
   if (Object.hasOwn(raw, 'version') && raw.version !== 1 && raw.version !== 2) fail('INVALID_FEATURE_POLICY');
   const version = raw.version ?? 1;
   fields(Object.hasOwn(raw, 'router') ? raw.router : {}, Object.keys(FEATURE_DEFAULTS.router));
@@ -125,12 +127,14 @@ export function validateFeaturePolicy(raw) {
   // An existing features.json written before `effort` existed has no `effort` key at all; it must
   // keep loading with the OFF defaults below rather than failing INVALID_FEATURE_POLICY.
   fields(Object.hasOwn(raw, 'effort') ? raw.effort : {}, Object.keys(FEATURE_DEFAULTS.effort));
+  fields(Object.hasOwn(raw, 'workflow') ? raw.workflow : {}, Object.keys(FEATURE_DEFAULTS.workflow));
   // The in-memory result is always current-schema v2, even when `raw` was v1; the file itself is
   // rewritten as v2 only the next time a write path (setFeatureMode, presetHostRoles, ...) saves it.
   const policy = { version: 2,
     router: { ...structuredClone(FEATURE_DEFAULTS.router), ...raw.router },
     bulk: { ...FEATURE_DEFAULTS.bulk, ...raw.bulk },
-    effort: { ...FEATURE_DEFAULTS.effort, ...raw.effort } };
+    effort: { ...FEATURE_DEFAULTS.effort, ...raw.effort },
+    workflow: { ...FEATURE_DEFAULTS.workflow, ...raw.workflow } };
   for (const feature of [policy.router, policy.bulk]) {
     if (!MODES.includes(feature.mode) || !/^jev-\d+\.\d+\.\d+$/.test(feature.expectedModel)) fail('INVALID_FEATURE_POLICY');
   }
@@ -160,6 +164,12 @@ export function validateFeaturePolicy(raw) {
   if (!['off', 'cold-only'].includes(ef.mainLoop)) fail('INVALID_FEATURE_POLICY');
   if (!Number.isInteger(ef.coldAfterSeconds) || ef.coldAfterSeconds < 300 || ef.coldAfterSeconds > 86400) fail('INVALID_FEATURE_POLICY');
   if (!['off', 'on'].includes(ef.subagents)) fail('INVALID_FEATURE_POLICY');
+  const wf = policy.workflow;
+  if (!MODES.includes(wf.mode) || !MODES.includes(wf.nativeMode)) fail('INVALID_FEATURE_POLICY');
+  for (const [key, min, max] of [['maxActions', 1, 1024], ['maxMs', 100, 120000],
+    ['maxDecisionCalls', 0, 16], ['maxOutputBytes', 1024, 49152]]) {
+    if (!Number.isSafeInteger(wf[key]) || wf[key] < min || wf[key] > max) fail('INVALID_FEATURE_POLICY');
+  }
   if (containsSensitiveData(policy)) fail('SENSITIVE_FEATURE_POLICY');
   return structuredClone(policy);
 }
@@ -170,7 +180,7 @@ export function loadFeaturePolicy(home) {
 }
 export function policyFingerprint(policy) { return createHash('sha256').update(JSON.stringify(policy)).digest('hex'); }
 export function setFeatureMode(home, feature, mode) {
-  if (!['router', 'bulk', 'effort'].includes(feature) || !MODES.includes(mode)) fail('INVALID_FEATURE_MODE');
+  if (!['router', 'bulk', 'effort', 'workflow'].includes(feature) || !MODES.includes(mode)) fail('INVALID_FEATURE_MODE');
   ensureDir(home, true);
   const file = path.join(home, 'features.json');
   const previous = readText(file, { optional: true, privateFile: true });
@@ -180,6 +190,23 @@ export function setFeatureMode(home, feature, mode) {
   policy[feature].mode = mode;
   atomicWrite(file, JSON.stringify(policy, null, 2) + '\n', { expected: previous });
   return policy;
+}
+export function setWorkflowNativeMode(home, mode) {
+  if (!MODES.includes(mode)) fail('INVALID_FEATURE_MODE');
+  ensureDir(home, true);
+  const file = path.join(home, 'features.json');
+  const previous = readText(file, { optional: true, privateFile: true });
+  const policy = loadFeaturePolicy(home);
+  policy.workflow.nativeMode = mode;
+  atomicWrite(file, JSON.stringify(validateFeaturePolicy(policy), null, 2) + '\n', { expected: previous });
+  return policy;
+}
+export function workflowPolicy(home, globalMode) {
+  const policy = loadFeaturePolicy(home);
+  const workflow = policy.workflow;
+  const mode = effectiveMode(globalMode, workflow.mode);
+  return { ...workflow, mode, nativeMode: effectiveMode(mode, workflow.nativeMode),
+    revision: policyFingerprint(policy) };
 }
 /** `pointsman router ab <share>|off` / `pointsman effort ab <share>|off`: writes only that feature's
  * abControlShare; every other field (including the other feature's) is preserved. */

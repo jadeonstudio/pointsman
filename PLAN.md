@@ -1,6 +1,6 @@
 # Pointsman integrated architecture, learning and delivery plan
 
-Updated: 2026-10-03. Status: **REVISED AFTER DEEP RESEARCH; implementation and model training not started**.
+Updated: 2026-10-03. Status: **EXECUTION ACTIVE — owner authorized the complete checklist**.
 Runtime source baseline: `39bf5a4`; original design bundle: `e18cd21`; first
 consolidation: `b950227`. The revision below replaces routing-first priorities
 with execution that removes repeated parent-model requests.
@@ -26,12 +26,24 @@ track now starts with reusable workflows and available permitted providers;
 specialized local learning runs alongside it, and broad superiority remains a
 separate target rather than a prerequisite for useful integration.
 
-The current scope is deep research and a revised concrete execution plan, with
-the existing documentation-publication authorization. This is not a record of
-completed implementation, paid experiments, upgrades or training. Record future
-execution and cost authority once and reuse it within its scope. The new bounded
-execution/native-synthesis features are explicit proposed extensions to today's
-advisory project scope; align project instructions before implementing them.
+The owner authorized completing every checklist on 2026-10-03. Implementation,
+local training/evaluation and operational preparation are now active, with commit
+and push included. Additional paid API/GPU spend is zero; use existing subscriptions
+and local hardware. The owner confirmed no separate TypeSafe competitive-use
+permission, so those paid/competitive comparisons remain unavailable rather than
+being marked successful. Project instructions now include bounded fixed-recipe
+execution and native adapters while retaining existing authority boundaries.
+
+### Active execution record
+
+- Baseline: `b2891a1`, clean `main` at execution start; root owns integration and this checklist.
+- Goal: close every implemented/verified requirement with evidence; do not count unavailable Jev superiority as PASS.
+- Parallel nodes (GPT-6.1 Sol): executor/repository recipe; diagnostic recipes; provider contracts/hook CLI; data splits/trainer; independent corpus/evaluation; native adapters.
+- Root write set: `AGENTS.md`, `SECURITY.md`, `README.md`, `PLAN.md`, `package.json`, `src/feature-policy.mjs`, `src/features-cli.mjs`, `src/cli.mjs`, `src/mcp.mjs`, integration tests and accepted evidence reports.
+- Worker input revision is frozen at `b2891a1`; use `git show` for another worker's changing source. Public engine `.decide`/`.status` contracts remain compatible.
+- New workflow interface: `createWorkflowRunner({engine, root, getPolicy, capabilities}).run(request,{signal})`; `getPolicy()` returns an effective `{mode,maxActions,maxMs,maxDecisionCalls,maxOutputBytes}` policy. Default is OFF. `request` names one fixed recipe plus bounded `inputs`, `acceptance`, `coverage`, optional `snapshot` and `budget`; untrusted request fields never add capabilities or roots.
+- Recipe callback contract: `runDiagnostics(request, ctx)` for `test-diagnose`/`log-triage`; `ctx` supplies trusted `root`, `signal`, `limits`, `stats`, `check()`, async `read(relativePath,role)`, async `listFiles()`, async `decide(request)` and optional async `runRegisteredTest(name)`. `read` returns `{path,text,hash,ref}` or a controlled failure. Recipes return `{status,reason,acceptance,evidence,coverage,needsParent}`; core enforces final identity/budget/mode checks and bounded output.
+- Status and verification counters are updated on node acceptance/failure. No worker runs the whole repository gate independently.
 
 - [x] Read the supplied article and cross-check the original design against source and official documentation.
 - [x] Record current contracts, host limitations, historical model evidence and the three separate success targets.
@@ -41,9 +53,7 @@ advisory project scope; align project instructions before implementing them.
 - [ ] Run new training, authorized Jev comparisons and native task-quality experiments.
 - [ ] Establish any new superiority claim or promote a new checkpoint.
 
-The completed items are documentation/research work. Existing implementation
-is identified in the baseline sections; its presence is not a newly passed native
-or quality gate. Unknown capability, rights, timing or performance stays UNKNOWN.
+Implementation and contract verification now exist, alongside a completed local pilot. Checked work-package items below refer to those specific artifacts; native task quality and superiority still require their separate evidence. Unknown capability, rights, timing or performance stays UNKNOWN.
 Private `docs/` notes, captures and checkpoints are not moved into this plan.
 
 ## Reading and execution order
@@ -95,7 +105,7 @@ better question-conditioned learning and calibrated abstention.
 The common interface should let an agent delegate a **bounded unit of work**,
 not merely ask which tool it should call next. Keep one fixed-recipe executor
 behind MCP/CLI/JS and reuse the existing decision engine inside it. This is a
-proposed capability; today's seven MCP tools do not execute these workflows.
+implemented capability exposed as MCP `run`, CLI `run` and the JavaScript workflow API. It remains OFF by default.
 
 ```text
 Representative multi-turn investigation:
@@ -170,7 +180,7 @@ Executable example shape, deliberately not a current API promise:
 {
   "workflow": "repo-evidence",
   "goal": "Find the definition, direct callers and tests for the supplied symbol",
-  "snapshot": "source-and-dirty-file-hashes",
+  "snapshot": {"revision": null, "files": {}},
   "inputs": {"symbols": ["persistDecision"]},
   "acceptance": ["definition", "direct_callers", "tests"],
   "coverage": "selective",
@@ -319,21 +329,39 @@ candidate invalidates only downstream claims that consumed it.
 
 ## Detailed work packages
 
+### Accepted implementation evidence — 2026-10-03
+
+- WP01/WP02: common workflow API and three fixed recipes, root-bound CLI/MCP, actual source snapshots, bounded execution and opt-in native contracts implemented. `tests/workflow-consumers.test.mjs` covers the same real fixture through JS/CLI/MCP, cancellation, actual-version native gating and global OFF. `tests/provider-capabilities.test.mjs` covers Score 10 and explicit expanded Jev Choice options. Generic question/family qualification binding remains open; no new semantic family is applied.
+- WP03–WP06: independent oracle/provenance schemas, family-disjoint four-way splits, v3 exporter, supervised CE, dev-only epoch selection, calibration-only fitting and explicit prediction collection implemented. Existing legacy captures without rights remain outside the permitted new corpus. New-family prospective confirmation remains open.
+- WP07: one full supervised epoch completed on local MPS: 1,375 train sequences, 688 microsteps, 218.661 seconds in the training routine; total script timestamps span 250 seconds. End-of-epoch MPS driver allocation was 4,607.7 MiB (an observation, not a measured peak). Base/d6/new dev comparison is running; the test remains unopened. Checkpoint promotion has not occurred.
+- WP11: [controlled measurement summary](examples/workflow-hosts/measurement-evidence.json), 30 executions with 30 independent fixture checks. Purpose-built code batches were faster and smaller than the reusable executor on these small fixtures. Arm three is NONEXECUTABLE until a qualified, useful semantic consumer exists; no cost or parent-request saving is claimed. The inert ambiguous-definition model call was removed for that reason.
+- WP12: [Codex installed protocol evidence](examples/workflow-hosts/codex-probe-evidence.json) proves the direct read-only command path with zero dispatched `turn/start`; provider request readback, actual workflow history and Claude/Gemini native operation remain UNKNOWN.
+- Integration gate: Node **578/578**, Python **158/158**, offline smoke and all three existing demos PASS. Independent bounded source review found no required correctness defects in the new workflow, adapter, split/trainer and prediction boundaries. No operational modes, active checkpoint or native trust state were changed.
+- Node attempts: admission failed once from escaped-Unicode head inflation and passed on the second, lossless transformation hypothesis; no training ran on failed admission. Other measured timings are in the public probe/measurement artifacts; unrecorded per-worker duration is UNKNOWN.
+
+### Frozen local pilot — 2026-10-03
+
+The first supervised run is preregistered in private `.pointsman-local/research/2026-10-03/pilot-spec.json` (aggregate evidence will be published after validation). It uses admitted independent dataset `ba27f11ee6e5bf296c536db112db6ecafa961b686c05edcc3d02ea13a728c070`, 2,000 question rows / 512 factual cases / 16 semantic families. Train/dev/calibration/test contain 1,375/125/125/375 rows. The initial dataset `112f9a47…` was superseded after 64.8% question-head admission failure: moving the complete rule into state removed escaped-Unicode head inflation, and all 2,000 rows now pass lossless admission (maximum head 133/256, full sequence 352/1024). No failed sample was dropped. Only one semantic family is in dev; any observed learning is pilot evidence, not generalization certification.
+
+The immutable multilingual base is `2d115cbafc7a79194d6958794408e727b933887dcd03241d590824c58de67aed`; the existing d6 checkpoint stays unchanged. The publisher's [multilingual model card](https://huggingface.co/convaiinnovations/laya-multilingual) identifies Apache-2.0; private upstream training provenance remains separate from the independently authored adaptation corpus. Use supervised CE, one full epoch, MPS FP32, micro-batch 2, accumulation 16, lossless admission and zero tolerated drops. Select on dev, fit temperature on calibration, keep sealed test unopened. A positive dev accuracy difference, or reduced NLL without accuracy regression, is a useful pilot signal; insufficient independent families remain INCONCLUSIVE. OOM, nonfinite loss or invalid admission stops that run for diagnosis. Maximum three causally justified attempts.
+
+The task-efficiency comparison uses a competent deterministic code batch as its first control. The native structured completion hypothesis is a model request eliminated before a model turn; common MCP still incurs the host's outer turns. Local model contribution is measured only where a qualified decision changes a useful executor action. Unused classification calls are removed. For final task adoption, success noninferiority margin is 0 percentage points, zero observed critical errors with a one-sided 95% upper bound below 1%, at least 20% lower total cost per verified success, and p95 no more than 0.8 of the competent-host baseline. At least 300 independent accepted tasks are required for the critical-error gate, and clustered evidence must meet that effective size; small fixture probes cannot pass A. Final B/C additionally require positive lower clustered 95% bounds versus permitted pinned Jev, minimum 50% applied coverage and the same critical-error ceiling. Those comparisons remain unavailable under the owner's no-paid/no-separate-permission constraint.
+
 ### WP00 — Freeze scope, baseline and acceptance
 
-**State:** PLANNED. **Depends on:** a future execution instruction.
+**State:** ACCEPTED (scope and preflight). **Depends on:** owner execution instruction received 2026-10-03.
 **Owner:** integration lead. **Output:** scoped decision-family and evaluation
 specification recorded in this plan and existing evaluation artifacts.
 
-- [ ] Select `repo-evidence` as the first representative multi-step workflow unless workload evidence favors test diagnosis/log triage; mark each parent request and intermediate result it should remove.
-- [ ] Freeze the three efficiency arms: competent host with code-mode batching, deterministic executor, same executor with selective Jev/local decisions; keep all-strong only as a diagnostic.
-- [ ] Freeze code revision, task/repository snapshots, host versions, available model/effort/role candidates and resource ownership.
-- [ ] Define the target input envelope, languages/domains, required consumers, task acceptance checks and critical error classes.
-- [ ] Define metric formulas and operational risk ceilings now; record provisional effect/sample assumptions and the pilot-based procedure for fixing numeric margins before calibration or sealed evaluation.
-- [ ] Record authorized implementation, local compute, data use, paid API budget and later operational actions separately; mark absent ones unavailable.
-- [ ] Separate fixed exact-rule checks from learned decisions, including permissions, retry budgets, counting and dates.
-- [ ] Map every selected requirement to the WP and consumer below; identify already working code, confirmed gaps and missing evidence.
-- [ ] Adopt the bounded execution/native-synthesis scope explicitly in project guidance before implementation, retaining one engine and existing authority; do not let old advisory-only scope silently prevent the intended design.
+- [x] Select `repo-evidence` as the first representative multi-step workflow unless workload evidence favors test diagnosis/log triage; mark each parent request and intermediate result it should remove.
+- [x] Freeze the three efficiency arms: competent host with code-mode batching, deterministic executor, same executor with selective Jev/local decisions; keep all-strong only as a diagnostic.
+- [x] Freeze code revision, task/repository snapshots, host versions, available model/effort/role candidates and resource ownership.
+- [x] Define the target input envelope, languages/domains, required consumers, task acceptance checks and critical error classes.
+- [x] Define metric formulas and operational risk ceilings now; record provisional effect/sample assumptions and the pilot-based procedure for fixing numeric margins before calibration or sealed evaluation.
+- [x] Record authorized implementation, local compute, data use, paid API budget and later operational actions separately; mark absent ones unavailable.
+- [x] Separate fixed exact-rule checks from learned decisions, including permissions, retry budgets, counting and dates.
+- [x] Map every selected requirement to the WP and consumer below; identify already working code, confirmed gaps and missing evidence.
+- [x] Adopt the bounded execution/native-synthesis scope explicitly in project guidance before implementation, retaining one engine and existing authority; do not let old advisory-only scope silently prevent the intended design.
 
 **Accept when:** scope, measurable benefit hypothesis, baselines and success/stop
 rules are unambiguous. **Stop when:** there is no replaceable action or no
@@ -347,17 +375,17 @@ may be provisional, but final gates cannot be chosen after seeing test results.
 `src/contracts.mjs`, `src/engine.mjs`, `src/inference.mjs`, existing control/policy
 modules and directly related contract tests. **Output:** one portable contract.
 
-- [ ] Reuse `decide`/`decideOrDelegate` and the single Jev transport/credential authority; add no alternate proxy or hidden provider chain.
+- [x] Reuse `decide`/`decideOrDelegate` and the single Jev transport/credential authority; add no alternate proxy or hidden provider chain.
 - [ ] Define family/question/state-builder/candidate revisions and calibration/runtime identities in the existing policy/evidence path.
-- [ ] Preserve Choice confidence versus selected probability, Noul yes probability, and zero-based Score expectation.
-- [ ] Resolve the wrapper's 11-level Score allowance against TypeSafe's 10-level maximum in every affected validator/schema/consumer; define migration/rejection behavior explicitly.
+- [x] Preserve Choice confidence versus selected probability, Noul yes probability, and zero-based Score expectation.
+- [x] Resolve the wrapper's 11-level Score allowance against TypeSafe's 10-level maximum in every affected validator/schema/consumer; define migration/rejection behavior explicitly.
 - [ ] Define a portable subset plus explicit provider capability profiles; exploit larger Jev option/question envelopes when verified instead of limiting every provider to the local checkpoint, with bounded frame/response sizes and admission tests.
-- [ ] Preserve detached snapshots and today's atomic `decide` semantics; group independent questions by consumer. Speculative branch heads need a separately versioned selected-group gate with calibration/regression proof, never consumption of an old `apply=false` result.
-- [ ] Define consumer abstention for `other`/`insufficient_evidence`; verify original candidate IDs and shortlist recall rather than trusting an invented answer.
-- [ ] Preserve OFF/no inference, SHADOW/no consumed answers, sensitive-scope delegation and `authorizesExecution:false`.
-- [ ] Verify global/provider/feature changes and cancellation prevent late application; bind actual consumer freshness separately from trace `snapshot_id`.
-- [ ] Keep exhaustive/required/uncertain evidence intact and preserve originals on invalid filtering output.
-- [ ] Exercise the same accepted/fallback fixtures through MCP, CLI and JS; document their different cancellation behavior and per-process limits.
+- [x] Preserve detached snapshots and today's atomic `decide` semantics; group independent questions by consumer. Speculative branch heads need a separately versioned selected-group gate with calibration/regression proof, never consumption of an old `apply=false` result.
+- [x] Define consumer abstention for `other`/`insufficient_evidence`; verify original candidate IDs and shortlist recall rather than trusting an invented answer.
+- [x] Preserve OFF/no inference, SHADOW/no consumed answers, sensitive-scope delegation and `authorizesExecution:false`.
+- [x] Verify global/provider/feature changes and cancellation prevent late application; bind actual consumer freshness separately from trace `snapshot_id`.
+- [x] Keep exhaustive/required/uncertain evidence intact and preserve originals on invalid filtering output.
+- [x] Exercise the same accepted/fallback fixtures through MCP, CLI and JS; document their different cancellation behavior and per-process limits.
 
 **Accept when:** affected entrypoints and consumers share the same tested
 semantics with no duplicate inference path or new authorization authority.
@@ -372,27 +400,27 @@ using existing engine/control modules, MCP/CLI/JS entrypoints, selected host
 adapters and directly affected tests; one writer for shared files. **Output:**
 portable work-segment execution plus host/version capability records.
 
-- [ ] Implement one shared execution function with injected capabilities and bounded actions/time/decisions; expose it consistently through MCP/CLI/JS without an arbitrary-code evaluator.
+- [x] Implement one shared execution function with injected capabilities and bounded actions/time/decisions; expose it consistently through MCP/CLI/JS without an arbitrary-code evaluator.
 - [ ] Implement `repo-evidence`: exact search/definition/callers/tests, optional semantic shortlist and complete source-linked evidence packet before parent context ingestion.
-- [ ] Add `test-diagnose`: reporter/signature/source/fixture collection around an existing result or exactly authorized test command; return unresolved cause and affected rerun set.
+- [x] Add `test-diagnose`: reporter/signature/source/fixture collection around an existing result or exactly authorized test command; return unresolved cause and affected rerun set.
 - [ ] Add `log-triage`: streaming aggregation/correlation plus original offsets, singleton/first errors, contrary evidence, parse failures and clock uncertainty.
 - [ ] Keep deterministic steps model-free, parallelize independent reads, and invoke Jev only when changed evidence leaves a known branch unresolved; return to parent for generation/new hypotheses.
-- [ ] Return segment status, achieved/missing acceptance, evidence hashes, coverage/omissions and complete counters in one response; enforce cancellation and repeated-action detection inside the loop.
-- [ ] Give new executor/native-control features explicit OFF-by-default gates; global OFF preserves the original host path, and installation or qualification does not enable them.
-- [ ] Cache only identity-matched results using source/question/model/policy/recipe revisions; start with request-local sharing and only add cross-task reuse when measured repetition warrants it.
+- [x] Return segment status, achieved/missing acceptance, evidence hashes, coverage/omissions and complete counters in one response; enforce cancellation and repeated-action detection inside the loop.
+- [x] Give new executor/native-control features explicit OFF-by-default gates; global OFF preserves the original host path, and installation or qualification does not enable them.
+- [x] Cache only identity-matched results using source/question/model/policy/recipe revisions; start with request-local sharing and only add cross-task reuse when measured repetition warrants it.
 
-- [ ] Record readable fields, supported transport, roles/models/efforts/skills, writable settings, cancellation/outcomes and native evidence revision for each target host.
-- [ ] Preserve explicit model locks, role-definition precedence and unavailable-target fallback; do not infer capabilities from a model name.
-- [ ] Keep generic MCP `decide` usable without claiming that it controls the host; retain Codex/Claude-only `route` schema until an intentional adapter extension is implemented and tested.
+- [x] Record readable fields, supported transport, roles/models/efforts/skills, writable settings, cancellation/outcomes and native evidence revision for each target host.
+- [x] Preserve explicit model locks, role-definition precedence and unavailable-target fallback; do not infer capabilities from a model name.
+- [x] Keep generic MCP `decide` usable without claiming that it controls the host; retain Codex/Claude-only `route` schema until an intentional adapter extension is implemented and tested.
 - [ ] Codex: deliver the workflow tool inside the current app; separately prototype an app-server client using direct `command/exec`/MCP calls and conditional `turn/start`, with sandbox and actual inference-count readback.
 - [ ] Codex spawn optimization: test actual payload visibility and update behavior; opacity does not block the common workflow tool or owned-client path.
 - [ ] Claude: implement a version-matched `turn.step` synthetic-stream probe and normal fallback, then bind fixed recipes; retain normal tool execution/permissions for emitted tool actions.
-- [ ] Correct and test the effort CLI's router-OFF early return against event-specific effort gates, including the real entrypoint, without changing default modes.
+- [x] Correct and test the effort CLI's router-OFF early return against event-specific effort gates, including the real entrypoint, without changing default modes.
 - [ ] Preserve the existing effort mod's gates; evaluate cache-preserving per-message effort only through supported direct API/model/transport contracts, not by assuming native effort edits preserve cache.
 - [ ] Gemini: implement a `BeforeModel.llm_response` synthetic-text probe and fixed-recipe completion path; use MCP/owned execution for tool dispatch rather than unsupported synthetic function calls.
-- [ ] Other MCP/owned SDK consumers: use existing JS/CLI/MCP interfaces and supported dispatch settings; mark each untested native consumer UNKNOWN.
-- [ ] Before consumption, recheck actual state/candidate freshness, deadline, cancellation and target availability; stale advice must not dispatch.
-- [ ] Preserve installer ownership, reviewed dry-run, trust/approval separation and fail-open behavior; hooks never spawn or wait for a cold worker.
+- [x] Other MCP/owned SDK consumers: use existing JS/CLI/MCP interfaces and supported dispatch settings; mark each untested native consumer UNKNOWN.
+- [x] Before consumption, recheck actual state/candidate freshness, deadline, cancellation and target availability; stale advice must not dispatch.
+- [x] Preserve installer ownership, reviewed dry-run, trust/approval separation and fail-open behavior; hooks never spawn or wait for a cold worker.
 - [ ] Verify late CLI output is discarded, hooks have bounded latency and shared-host contention is measured without claiming a global rate limit.
 
 **Accept when:** the common executor finishes a work segment with one parent
@@ -409,13 +437,13 @@ inventory and question-specific evidence contract.
 
 - [ ] Record source/license/terms/revision, permitted learning/evaluation use, transformations and redistribution limits for every data source/model.
 - [ ] Resolve whether the applicable TypeSafe agreement permits the intended competitor-development comparison or teacher use; until resolved, do not perform those Jev calls.
-- [ ] Establish independent rule/source gold and permitted local baselines so useful work does not depend on paid Jev access.
-- [ ] Keep objective gold, independent adjudication/outcomes and `ai_reference`/teacher labels distinct; preserve historical labeling model identity.
-- [ ] Add only required provenance fields to current schemas/exporters; reject forged human/runner trust and invalid question/label associations.
-- [ ] Preserve the rule that task success is not an intent/difficulty/risk label and shadow proposals cannot inherit an active arm's outcome.
-- [ ] Validate task/snapshot/comparison/decision/outcome linkage and missing/out-of-order records without reading raw private captures into the planning agent by default.
-- [ ] Specify minimal permitted capture, opt-in controls, private storage and public aggregate redaction; operational logs remain content-free.
-- [ ] Separate data-capture, model download, training, paid usage and artifact publication authorizations; reuse each within its approved scope.
+- [x] Establish independent rule/source gold and permitted local baselines so useful work does not depend on paid Jev access.
+- [x] Keep objective gold, independent adjudication/outcomes and `ai_reference`/teacher labels distinct; preserve historical labeling model identity.
+- [x] Add only required provenance fields to current schemas/exporters; reject forged human/runner trust and invalid question/label associations.
+- [x] Preserve the rule that task success is not an intent/difficulty/risk label and shadow proposals cannot inherit an active arm's outcome.
+- [x] Validate task/snapshot/comparison/decision/outcome linkage and missing/out-of-order records without reading raw private captures into the planning agent by default.
+- [x] Specify minimal permitted capture, opt-in controls, private storage and public aggregate redaction; operational logs remain content-free.
+- [x] Separate data-capture, model download, training, paid usage and artifact publication authorizations; reuse each within its approved scope.
 
 **Accept when:** every usable row has a valid label basis and permitted use, and
 unresolved rights or missing evidence remain excluded/UNKNOWN. **Evidence:** schema
@@ -429,15 +457,15 @@ with independent gold, provenance and family/group IDs.
 
 - [ ] Cover grounding, dynamic schema, rule following, agent decisions, domain transfer and stress cases from the curriculum below.
 - [ ] Prioritize independently labeled evidence relevance, next branch, failure class and continue/escalate examples from the actual shared executor; do not start by accumulating unrelated generic tasks.
-- [ ] Include Korean, English and mixed language; reserve new languages/domains as explicit unseen slices instead of claiming universal coverage.
-- [ ] Add label-key/order/position permutations with semantic invariance and same-state rule changes that require different gold answers.
+- [x] Include Korean, English and mixed language; reserve new languages/domains as explicit unseen slices instead of claiming universal coverage.
+- [x] Add label-key/order/position permutations with semantic invariance and same-state rule changes that require different gold answers.
 - [ ] Include negation, corrections/retractions, exceptions/priority, quoted instructions, contradictory/stale evidence and missing information.
 - [ ] Construct meaningful `other`/insufficient-evidence examples and measure candidate-set recall; keep exact calculations in code.
-- [ ] Use independently reproducible oracles/source gold; audit their correctness and distinguish subjective disagreement from objective error.
+- [x] Use independently reproducible oracles/source gold; audit their correctness and distinguish subjective disagreement from objective error.
 - [ ] If permitted AI verbalization is used, verify factual and logical preservation; exclude unverifiable examples and unjustified soft targets.
-- [ ] Assign source/template/semantic-family groups before splitting; translations, paraphrases and counterfactual siblings share a group.
-- [ ] Record question/evidence/tokenizer/state-builder transformations; identify required evidence lost under current length/head constraints.
-- [ ] Review class, option count, difficulty, language and domain balance; do not inflate size with near-duplicate paraphrases.
+- [x] Assign source/template/semantic-family groups before splitting; translations, paraphrases and counterfactual siblings share a group.
+- [x] Record question/evidence/tokenizer/state-builder transformations; identify required evidence lost under current length/head constraints.
+- [x] Review class, option count, difficulty, language and domain balance; do not inflate size with near-duplicate paraphrases.
 
 **Accept when:** sampled labels can be independently reproduced, integrity checks
 pass and group IDs support leakage-resistant splitting. Initial corpus size is
@@ -450,14 +478,14 @@ an experiment design choice, not proof of sufficient breadth.
 paths and dataset consumers. **Output:** immutable train/dev/calibration/test
 manifests, existing route regression set and prospective holdout definition.
 
-- [ ] Implement four-way splitting without breaking legacy export consumers; version the manifest and validate compatibility explicitly.
+- [x] Implement four-way splitting without breaking legacy export consumers; version the manifest and validate compatibility explicitly.
 - [ ] Keep source/template/semantic siblings in one split; check exact and near-duplicate leakage after transformations.
 - [ ] Hold out complete domain/schema/rule/language/host families and later time periods, not merely renamed templates.
-- [ ] Reserve dev for epoch/method/hyperparameter selection and calibration only for temperature/gates.
+- [x] Reserve dev for epoch/method/hyperparameter selection and calibration only for temperature/gates.
 - [ ] Seal final test and prospective confirmation data; keep test results out of failure mining and training decisions.
-- [ ] Preserve the existing frozen route test as a regression floor; identify its copied holdout as the same sample, not independent confirmation.
-- [ ] Include missing-label, reference-only, unsupported-input and timeout accounting in evaluation manifests.
-- [ ] Validate split/group/source hashes and counts end to end through exporter, trainer, qualifier and comparison readers.
+- [x] Preserve the existing frozen route test as a regression floor; identify its copied holdout as the same sample, not independent confirmation.
+- [x] Include missing-label, reference-only, unsupported-input and timeout accounting in evaluation manifests.
+- [x] Validate split/group/source hashes and counts end to end through exporter, trainer, qualifier and comparison readers.
 - [ ] Define a fresh-test replacement policy when repeated candidate selection consumes the original sealed test.
 
 **Accept when:** every data consumer agrees on split identities and roles, and no
@@ -471,14 +499,14 @@ any costly training run.
 not a new framework. **Output:** runnable supervised baseline with independent
 dev/calibration and compatible qualification records.
 
-- [ ] Start from a permitted multilingual base; preserve d6 and its provenance as the historical route baseline.
-- [ ] Reuse full encoder/scoring-parameter training and the local MPS/resume path; keep questions/options dynamically conditioned.
-- [ ] Select epochs/hyperparameters on dev only; fit temperature/gates separately on calibration and freeze them before test.
-- [ ] Provide CE for Choice, binary/two-option CE for Noul and distributional CE for Score; use soft targets only when justified.
-- [ ] Verify trainer and inference share token admission, state fitting, question formatting, option order and truncation treatment.
-- [ ] Validate source/model/tokenizer/runtime/device/precision/split fingerprints and save them with resumable checkpoints.
+- [x] Start from a permitted multilingual base; preserve d6 and its provenance as the historical route baseline.
+- [x] Reuse full encoder/scoring-parameter training and the local MPS/resume path; keep questions/options dynamically conditioned.
+- [x] Select epochs/hyperparameters on dev only; fit temperature/gates separately on calibration and freeze them before test.
+- [x] Provide CE for Choice, binary/two-option CE for Noul and distributional CE for Score; use soft targets only when justified.
+- [x] Verify trainer and inference share token admission, state fitting, question formatting, option order and truncation treatment.
+- [x] Validate source/model/tokenizer/runtime/device/precision/split fingerprints and save them with resumable checkpoints.
 - [ ] Extend qualification identity to the selected decision family and preprocessing revision rather than automatically inheriting route qualification.
-- [ ] Test malformed export, wrong split/model identity, resume mismatch and incompatible qualification rejection.
+- [x] Test malformed export, wrong split/model identity, resume mismatch and incompatible qualification rejection.
 - [ ] Prepare measurement of actual tokens/second, sequences/second, peak memory, elapsed time and resume overhead without inventing missing metrics.
 
 **Accept when:** offline preparation and small fixture checks cover all consumers;
@@ -491,8 +519,8 @@ stop conditions. Readiness is not semantic qualification.
 **Owner:** training runner. **Output:** one bounded pilot report, checkpoint and
 measured throughput/resource record. Starting design: about 2,000 question rows.
 
-- [ ] Record hypothesis, supervised recipe, seed, revisions, real runtime/hardware, expected evidence and attempt limit before running.
-- [ ] Verify token/head admission and gold integrity on the frozen pilot; do not bypass a failed truncation check merely to start training.
+- [x] Record hypothesis, supervised recipe, seed, revisions, real runtime/hardware, expected evidence and attempt limit before running.
+- [x] Verify token/head admission and gold integrity on the frozen pilot; do not bypass a failed truncation check merely to start training.
 - [ ] Run the smallest useful supervised experiment; measure memory, throughput, total time and resume behavior.
 - [ ] Confirm learning on dev, including unseen-rule response, label permutation and rule-swap tests, not only familiar route questions.
 - [ ] Compare the permitted base and d6 under the same pilot envelope and report scope-specific regression.
@@ -516,7 +544,7 @@ with dev learning curves and immutable training provenance.
 - [ ] Track data-size and compute learning curves; distinguish genuine new-family benefit from duplicate or template memorization.
 - [ ] Mine failures only from allowed development/newly adjudicated data, never from sealed test examples.
 - [ ] Expand toward about 100,000 rows only if measured learning curves justify it and the existing budget permits it.
-- [ ] Preserve known limitations and unsupported envelope instead of silently widening claims.
+- [x] Preserve known limitations and unsupported envelope instead of silently widening claims.
 - [ ] Freeze one adopted output revision and record why rejected candidates were not chosen.
 
 **Accept when:** supervised generalization improves on the declared dev targets
@@ -548,9 +576,9 @@ new calibration and affected downstream evidence.
 **Owner:** evaluation maintainer. **Output:** separate B/C scorecards and
 family/provider qualifications, with UNKNOWN where comparisons are unavailable.
 
-- [ ] Freeze exact questions/options/state, model/provider/runtime identities, thresholds, envelope, timeout, seeds and hardware before opening test.
+- [x] Freeze exact questions/options/state, model/provider/runtime identities, thresholds, envelope, timeout, seeds and hardware before opening test.
 - [ ] Fit temperature/gates on calibration only; preserve probability semantics and all-or-nothing batch eligibility.
-- [ ] Complete the numeric margins, sample-size/power and critical-slice rules from WP00 before final results.
+- [x] Complete the numeric margins, sample-size/power and critical-slice rules from WP00 before final results.
 - [ ] Evaluate base/d6/supervised/selected candidates on independent gold; add pinned Jev only after WP03 establishes permissible use and budget.
 - [ ] Report accuracy/macro F1/NLL/Brier, Score ordinal/severe errors, reliability and effective sample counts by family/language/domain.
 - [ ] Compare risk at matched coverage and coverage at matched risk, including selective-error upper bounds; all-abstain is not a win.
@@ -573,19 +601,19 @@ before waiting for broad model training. **Owner:** task-runner/evaluation lead.
 **Output:** independent task evidence, A scorecard and, only if justified, a
 separately versioned model×effort utility policy.
 
-- [ ] Prepare frozen safe tasks/repository snapshots, available action candidates and independent completion checks before integrated runs.
+- [x] Prepare frozen safe tasks/repository snapshots, available action candidates and independent completion checks before integrated runs.
 - [ ] Run the three-arm comparison: competent host/code-mode, deterministic executor, identical executor plus selected model. Attribute executor and model improvements separately; all-strong is diagnostic only.
 - [ ] Count actual parent model requests, internal tools/decisions, bytes delivered before parent ingestion, missing-evidence recall and cold/warm/cache states; separate segment time from complete user-task time.
 - [ ] Test the initial targets of halving parent requests/intermediate bytes and doubling selected-segment speed; retain a recipe/model only for demonstrated useful gains over the competent baseline.
 - [ ] Randomize execution order and repeat where variation matters; record actual model/effort, conditions, errors, overrides and complete retries/escalations.
 - [ ] Capture independent task success instead of treating recommendation agreement, build success alone or cost telemetry as task correctness.
-- [ ] Do not infer success of unexecuted alternatives; keep observational preference evidence distinct from controlled paired executions.
+- [x] Do not infer success of unexecuted alternatives; keep observational preference evidence distinct from controlled paired executions.
 - [ ] Account for decision/agent/verification/human/retry costs, input/output/thinking/cache tokens and startup/queue/fallback latency.
 - [ ] Compute cost per verified successful task, full p50/p95 completion latency, success non-inferiority and critical error bounds with the predeclared uncertainty analysis; report UNKNOWN outcomes separately.
 - [ ] If learning utility, use actual task/action outcomes as a separate target; keep whole task families and descendant runs in one train/dev/calibration/test group.
 - [ ] Validate any new utility policy on its own frozen independent outcomes before adopting it; modifying shared model weights reopens affected WP10 qualification.
 - [ ] Require A's combined success/cost/latency gates; an efficiency tradeoff is not the requested all-metric win.
-- [ ] Remove a decision from the proposed rollout if its extra turns/cache/recovery costs exceed saved downstream work.
+- [x] Remove a decision from the proposed rollout if its extra turns/cache/recovery costs exceed saved downstream work.
 
 **Accept when:** the system has evidence at the grade actually tested, with replay
 and native results separated. A useful local result may proceed as a scoped
@@ -622,11 +650,11 @@ reproducible evidence bundle, updated user documentation and remote readback.
 
 - [ ] Assemble permitted dataset/split hashes, source/model/runtime identities, metrics, gates, coverage, limitations and native evidence.
 - [ ] Generate required qualification, compare with the active checkpoint and verify fixed-regression/prospective-holdout non-regression.
-- [ ] Keep registration, provider selection, promotion, rollback and publication explicit; do not activate features as a side effect of installation/tests.
+- [x] Keep registration, provider selection, promotion, rollback and publication explicit; do not activate features as a side effect of installation/tests.
 - [ ] Verify promotion/rollback metadata and actual checkpoint identity; retain the previous checkpoint and recovery instructions.
 - [ ] Update model card and README to list only qualified families/hosts and measured results; label reference agreement, offline/replay/native evidence accurately.
 - [ ] Publish only artifacts with permitted redistribution; exclude private raw state, credentials and unreviewed labels.
-- [ ] Run change-appropriate focused tests and required repository gates once on frozen input; reuse valid evidence, rerunning only invalidated boundaries.
+- [x] Run change-appropriate focused tests and required repository gates once on frozen input; reuse valid evidence, rerunning only invalidated boundaries.
 - [ ] Check the diff for unrelated edits, duplicate paths and obsolete consumers; remove superseded artifacts only after reference checks.
 - [ ] Commit explicit paths, push within authorization and verify remote revision/artifact identity rather than assuming a successful request was applied.
 - [ ] Report A/B/C separately, remaining UNKNOWNs, accepted revision, rollback status and removed files; mark overall superiority only when all three pass.

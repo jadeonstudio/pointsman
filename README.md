@@ -1,19 +1,20 @@
 # Pointsman
 
-Pointsman is an optional typed decision layer for agents, with a paid **Jev/TypeSafe** provider and a local **Laya/pointsman-router** provider behind the same engine. It exposes bounded Choice, Noul and Score judgments through MCP, CLI and JavaScript. The host consumes eligible advice and retains its own permissions and execution controls. Everything ships OFF by default.
+Pointsman is an optional decision and workflow layer for agents, with a paid **Jev/TypeSafe** provider and a local **Laya/pointsman-router** provider behind the same engine. MCP, CLI and JavaScript expose bounded Choice, Noul and Score judgments plus fixed repository-evidence, test-diagnosis and log-triage recipes. The host retains its own permissions and execution controls. Everything ships OFF by default.
 
 The existing automatic integration routes Claude Code subagents to a lighter or stronger role/model, or keeps the host's choice. The local **pointsman-router** checkpoint was fine-tuned from Laya multilingual on Claude Opus reference labels; its measured scope is coding-task routing, not general Jev replacement. Codex has explicit decision tools, with a more limited hook integration described below.
 
 ## Cross-agent design and learning roadmap
 
-The [integrated plan](PLAN.md) prioritizes a shared workflow executor that completes bounded search, diagnosis and log-analysis segments behind one call, plus native model-request bypass where supported. [Primary-source research](PLAN.md#high-leverage-design-and-research-findings) maps the concrete Codex, Claude and Gemini paths. Its [14 work packages](PLAN.md#detailed-work-packages) put workflow efficiency experiments before broad local training, while retaining task-efficiency, Jev-quality and generalization goals. These are plans, not shipped integrations or demonstrated superiority.
+The [integrated plan](PLAN.md) prioritizes bounded work completed behind one call. The shared executor and native adapter contracts are implemented; completed-task efficiency, live native bypass and broad model superiority remain unestablished. [Primary-source research](PLAN.md#high-leverage-design-and-research-findings) maps the Codex, Claude and Gemini paths, and [work packages](PLAN.md#detailed-work-packages) keep their evidence separate.
 
 | Surface | Current repository support | Application boundary |
 |---|---|---|
-| MCP / CLI / JavaScript | Shared typed decision engine | Caller must consume `apply=true`; no automatic host control |
+| MCP / CLI / JavaScript | Shared typed decision engine and fixed workflow runner | Decisions need `apply=true`; workflows return segment status and source evidence |
 | Claude Code | Owned spawn hooks; separate opt-in effort mod | Host/version and policy dependent; native behavior needs verification |
-| Codex | MCP decisions and spawn-recording hooks | Previously observed opaque spawn input prevents task-based hook routing |
-| Other MCP clients / owned SDK harnesses | Common engine is reusable; no host-specific installer | Proposed capability checks and adapters; native integration unverified |
+| Codex | MCP decisions/workflows and spawn-recording hooks; owned app-server client contract | MCP keeps outer parent turns; native bypass requires a separately owned client and live verification |
+| Claude / Gemini native adapters | Version-bound synthetic-response contracts | OFF by default; contract tests do not establish live bypass |
+| Other MCP clients / owned SDK harnesses | Common engine/runner are reusable; no host-specific installer | Root and capabilities are bound by the trusted caller |
 
 Jev is selected explicitly; a local failure never silently calls the paid provider. Likewise, an unqualified local checkpoint does not acquire general-purpose capabilities just because the request uses the same schema.
 
@@ -118,6 +119,62 @@ pointsman metrics --days 7
 ```
 
 The `[route scope=... complete=... failures=...]` line at the top of a routed prompt is how the hook decides whether it has enough context to route at all; leave it out or mark `scope=unknown`/`complete=no` when you're not sure, and the hook keeps the host's own choice.
+
+## Bounded workflows
+
+Use one `run` call to collect evidence, then let the parent interpret the packet and make the change. Internal search/read/parse/group steps reduce parent round trips. Compare against a competent host that batches tools; cost and latency savings remain unmeasured.
+
+| Recipe | `inputs` | Result details |
+|---|---|---|
+| `repo-evidence` | `symbols`, optional `paths`, `requiredPaths`, `uncertainPaths`, `counterevidencePaths` | Definitions, lexical direct callers, tests/contracts, contradictory sources; dynamic edges stay UNKNOWN |
+| `test-diagnose` | `resultPaths`; optionally `registeredTest` in a trusted JS integration | Deduplicated failure groups, passed/skipped evidence, possible flakes, source spans and affected rerun set; cause may remain unresolved |
+| `log-triage` | `paths`, optional `timeWindow: {from,to}` | Counts, first/last and singleton failures, correlations, success evidence, source offsets, parse failures and clock uncertainty |
+
+CLI and ordinary MCP consume existing test reports; they cannot accept a test command from request JSON. A JS caller can inject an already authorized `capabilities.registeredTests` map. Requests never add commands, permissions, filesystem roots or capabilities.
+
+Global and workflow modes must both be ON to execute. OFF/SHADOW reads no sources and calls no provider. Installation and updates leave workflow/native gates OFF. When activation is requested:
+
+```sh
+pointsman workflow on
+pointsman on
+pointsman workflow status
+pointsman run --root /absolute/path/to/project < request.json
+pointsman workflow off
+pointsman workflow native off
+```
+
+Example `request.json`:
+
+```json
+{
+  "workflow": "repo-evidence",
+  "goal": "Collect definition, callers and tests in the supplied scope",
+  "inputs": {"symbols": ["createWorkflowRunner"], "paths": ["src/workflows.mjs", "src/mcp.mjs", "tests/workflows.test.mjs"]},
+  "acceptance": ["definition", "direct_callers", "tests"],
+  "coverage": "selective",
+  "budget": {"maxActions": 24, "maxMs": 10000, "maxDecisionCalls": 0, "maxOutputBytes": 24000}
+}
+```
+
+Budgets are capped by private policy; a request cannot raise them. Supply `snapshot: {revision, files}` when binding to a prior source snapshot: `revision` is Git HEAD (or `null` without Git), and `files` maps relative paths to SHA-256 hashes (`null` means absent). The runner returns the actual snapshot and rechecks it before returning evidence. Changed sources, policy, cancellation or exhausted budgets prevent a completion claim; narrow the segment or resolve the reported boundary before retrying.
+
+For MCP, call tool **`run`** with the same JSON. Start the server with `pointsman mcp --root /absolute/path/to/project` or bind `root` in `startMcp`; an existing server's working directory is otherwise its root. A request cannot change it. For JavaScript:
+
+```js
+import { createWorkflowRunner } from 'pointsman/workflows';
+const runner = createWorkflowRunner({ engine, root: projectRoot, getPolicy });
+const result = await runner.run(request, { signal: abortController.signal });
+```
+
+Use the existing `engine`, trusted `projectRoot`, and effective `getPolicy()` (CLI/MCP use `workflowPolicy(home, globalMode)`). Cancellation uses JS `AbortSignal`, CLI SIGINT/SIGTERM or MCP `notifications/cancelled`.
+
+Consume `status`, `acceptance`, `coverage`, `needsParent`, source-linked `evidence` (refs, hashes, excerpts) and `stats` together. `done` completes only the delegated segment; it does not establish a fix, deployment, test quality or full audit. Preserve original sources and contrary evidence. For exhaustive work set `coverage: "exhaustive"`, retain the full required scope, and treat refused/unreadable paths, unsupported formats and unknown edges as coverage limits. Exhaustive mode disables semantic decisions and never permits classifier omission.
+
+The three recipes currently collect evidence deterministically with zero provider calls. A proposed ambiguous-definition classifier was removed because its answer did not eliminate any downstream action. Existing `decide`, `route` and `filter` remain available; no qualified semantic decision consumer is yet connected inside `run`.
+
+`node scripts/workflow-benchmark.mjs 5 17` compares actual purpose-built code batches and this executor on controlled fixtures. The first 30 executions passed their independent checks, but the small code batches were faster and returned fewer bytes; this executor has not demonstrated an efficiency win over that baseline. Parent requests, cache use, full task time and model contribution remain unmeasured. Use direct batching when it already finishes the segment; native completion and genuinely dependent segments require separate measured acceptance.
+
+`pointsman workflow native off|shadow|on` controls a separate adapter gate; ON also requires global/workflow ON and a supported host contract. The Codex owned-client, Claude `turn.step` and Gemini `BeforeModel` adapters retain normal continuation when a packet is incomplete or the host is unsupported. They are not installed automatically by the existing hooks or effort mod. Contract tests establish packet/version/fallback behavior; actual live model-request bypass remains UNKNOWN until verified on that host.
 
 ## Measuring cost and time
 

@@ -43,9 +43,11 @@ export function createControlLayer({ home = resolveHome(), env = process.env, en
         expectedModel: expected(base, p.router), configuredTargets: Object.fromEntries(Object.entries(p.router.profiles).map(([host, targets]) => [host, Object.keys(targets)])),
         abControlShare: p.router.abControlShare, warnings: routerWarnings(p, env) },
       bulk: { mode: effectiveMode(base.mode, p.bulk.mode), configuredMode: p.bulk.mode, expectedModel: expected(base, p.bulk) },
-      effort: { mode: effectiveMode(base.mode, p.effort.mode), configuredMode: p.effort.mode, input: p.effort.input, abControlShare: p.effort.abControlShare } },
+      effort: { mode: effectiveMode(base.mode, p.effort.mode), configuredMode: p.effort.mode, input: p.effort.input, abControlShare: p.effort.abControlShare },
+      workflow: { ...p.workflow, configuredMode: p.workflow.mode, mode: effectiveMode(base.mode, p.workflow.mode),
+        nativeMode: effectiveMode(effectiveMode(base.mode, p.workflow.mode), p.workflow.nativeMode) } },
       featurePolicyError: null };
-    } catch (error) { return { ...base, features: { router: { mode: 'off', warnings: [] }, bulk: { mode: 'off' }, effort: { mode: 'off' } }, featurePolicyError: errorCode(error) }; }
+    } catch (error) { return { ...base, features: { router: { mode: 'off', warnings: [] }, bulk: { mode: 'off' }, effort: { mode: 'off' }, workflow: { mode: 'off', nativeMode: 'off' } }, featurePolicyError: errorCode(error) }; }
   }
   function current(policy, feature, mode, revision) {
     const base = engine.status();

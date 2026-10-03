@@ -1,4 +1,4 @@
-import { PURPOSES, ID, RESERVED, MODEL_ID, isObject, fail } from './constants.mjs';
+import { PURPOSES, ID, RESERVED, MODEL_ID, CAPABILITY_PROFILES, MAX_RESPONSE_BYTES, isObject, fail } from './constants.mjs';
 const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 function keys(value, allowed) {
   if (!isObject(value) || Object.keys(value).some(k => !allowed.includes(k))) fail('INVALID_REQUEST');
@@ -15,6 +15,15 @@ function jsonValue(value, depth = 0, counter = { n: 0 }) {
     jsonValue(child, depth + 1, counter);
   }
 }
+/** Local/observer selection never inherits a Jev-only expansion. */
+export function providerRequestLimits(config, provider = 'jev') {
+  const capabilityProfile = provider === 'jev' ? config.capabilityProfile ?? 'portable' : 'portable';
+  const profile = CAPABILITY_PROFILES[capabilityProfile];
+  if (!Object.hasOwn(CAPABILITY_PROFILES, capabilityProfile)) fail('INVALID_CONFIG');
+  return { capabilityProfile, maxQuestions: Math.min(config.maxQuestions, profile.maxQuestions),
+    maxInputBytes: Math.min(config.maxInputBytes, profile.maxInputBytes),
+    maxChoiceOptions: Math.min(config.maxChoiceOptions ?? 16, profile.maxChoiceOptions), maxScoreLevels: profile.maxScoreLevels };
+}
 export function validateRequest(value, config) {
   keys(value, ['purpose', 'risk', 'state', 'questions']);
   if (!PURPOSES.includes(value.purpose) || !['routine', 'sensitive'].includes(value.risk) || !own(value, 'state')) fail('INVALID_REQUEST');
@@ -29,10 +38,11 @@ export function validateRequest(value, config) {
     if (q.type === 'choice') {
       if (!isObject(q.criteria)) fail('INVALID_REQUEST');
       const options = Object.entries(q.criteria);
-      if (options.length < 2 || options.length > 16) fail('INVALID_REQUEST');
+      if (options.length < 2 || options.length > (config.maxChoiceOptions ?? 16)) fail('INVALID_REQUEST');
       for (const [key, d] of options) { label(key); description(d); }
     } else if (q.type === 'score') {
-      if (!Array.isArray(q.criteria) || q.criteria.length < 2 || q.criteria.length > 11) fail('INVALID_REQUEST');
+      // Reject old 11-level requests; never silently remove/reindex an ordinal level.
+      if (!Array.isArray(q.criteria) || q.criteria.length < 2 || q.criteria.length > 10) fail('INVALID_REQUEST');
       q.criteria.forEach(description);
     } else if (q.type === 'noul') {
       if (q.criteria !== undefined && q.criteria !== null) {
@@ -75,6 +85,7 @@ function distribution(value, labels) {
   return out;
 }
 export function normalizeResponse(raw, request, config) {
+  if (Buffer.byteLength(JSON.stringify(raw) ?? '') > MAX_RESPONSE_BYTES) fail('RESPONSE_TOO_LARGE');
   if (!isObject(raw) || !isObject(raw.answers) || typeof raw.model !== 'string' || !MODEL_ID.test(raw.model)) fail('MALFORMED_RESPONSE');
   if (Object.keys(raw.answers).length !== Object.keys(request.questions).length) fail('MALFORMED_RESPONSE');
   let eligible = true;
@@ -96,6 +107,7 @@ export function normalizeResponse(raw, request, config) {
       answers[name] = { type: q.type, value: p >= 0.5, probabilityTrue: p, confidence: null };
       eligible &&= Math.max(p, 1 - p) >= config.noulCertainty;
     } else {
+      if (!Array.isArray(q.criteria) || q.criteria.length < 2 || q.criteria.length > 10) fail('MALFORMED_RESPONSE');
       const labels = q.criteria.map((_, i) => String(i));
       const probabilities = distribution(a.probabilities, labels);
       if (typeof a.score !== 'number' || !Number.isFinite(a.score) || a.score < 0 || a.score > labels.length - 1) fail('MALFORMED_RESPONSE');
@@ -126,7 +138,7 @@ export const decisionSchema = {
     questions: { type: 'object', minProperties: 1, maxProperties: 8, additionalProperties: {
       type: 'object', additionalProperties: false, required: ['type', 'instructions'], properties: {
         type: { type: 'string', enum: ['choice', 'noul', 'score'] }, instructions: { type: 'string', maxLength: 2048 },
-        criteria: { description: 'choice: 2-16 label-to-description entries; score: 2-11 ordered descriptions; noul: optional true/false descriptions', anyOf: [{ type: 'object' }, { type: 'array' }, { type: 'null' }] },
+        criteria: { description: 'choice: 2-16 entries by default; up to 255 only with explicit config v2 jev-expanded-v1 and maxChoiceOptions. Laya stays at 16. score: 2-10 ordered descriptions; noul: optional true/false descriptions. Runtime applies current provider and byte limits.', anyOf: [{ type: 'object', maxProperties: 255 }, { type: 'array', minItems: 2, maxItems: 10, items: { anyOf: [{ type: 'string', maxLength: 2048 }, { type: 'null' }] } }, { type: 'null' }] },
       },
     } },
   },

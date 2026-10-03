@@ -1,0 +1,153 @@
+{
+  "version": 1,
+  "scope": "offline controlled local segment mechanism comparison",
+  "node": "v26.5.0",
+  "seed": 17,
+  "rounds": 5,
+  "fixtureHashes": {
+    "src/math.mjs": "d5889be441f078a42bbc3cc5f1e7e556fae06b5011c7c52969bfb32b5b72ef79",
+    "src/use.mjs": "6cef05b21ebdc3b7e3bd42e680c1b20e042a539f70234b433c280cc4f8aa5601",
+    "tests/math.test.mjs": "c38dc5b7b2ad08756b2154fb0457e4b138b3c8cf17aed5b5918e2f97329151c4",
+    "log-fixture.mjs": "fd5cb05ae867ba1c47363745c63966df793f8e0bd0f66e5df9c1ea290c276009",
+    "run.ndjson": "e77145b918f057d624ffee73c07360c2b9077c1e1feb3fe3d0f159edf114f77b",
+    "test.tap": "1b6a6849e1e9f08c9682a8c26c26e00cd63bc29a825bf8b06cc354eac9899046"
+  },
+  "runtimeSourceHashes": {
+    "scripts/workflow-benchmark.mjs": "747577985da3a1f3cb0662b1195c74e56d213dcff04edbef982ebee62d59e49e",
+    "src/workflows.mjs": "a77c4d86f6ee7317ce5ba263c00a2f30605109782493a3b8e51850cae8a86e41",
+    "src/workflow-repo.mjs": "b35c114667aaf77888281d39fff2178be96c67db14806faa9ac95dcaad5539b1",
+    "src/workflow-diagnostics.mjs": "6c81693454db11e3faa539592c1a49330af84268b83175db089663a5be3770cd",
+    "src/contracts.mjs": "991fc309892cfafee6aa043cf7d910c2ba0739f9721f3543815e636add6d03b9"
+  },
+  "fixtureProvenance": "Frozen local repository plus real Node test/TAP and log-fixture execution; controlled fixtures, not natural workloads.",
+  "modelArm": {
+    "status": "NONEXECUTABLE",
+    "reason": "No qualified meaningful model decision consumer is connected."
+  },
+  "metricDefinitions": {
+    "elapsedMs": "Actual arm execution including returned packet, excluding fixture/hash/oracle checks.",
+    "actions": "Observed arm filesystem/executor action counters; implementation units differ.",
+    "outputBytes": "Actual serialized returned evidence packet bytes; packet schemas differ."
+  },
+  "parentModelRequests": "UNKNOWN",
+  "promptCache": "UNKNOWN",
+  "endUserE2E": "UNKNOWN",
+  "cost": "UNKNOWN",
+  "summary": [
+    {
+      "task": "repository",
+      "arm": "code_batch",
+      "runs": 5,
+      "passed": 5,
+      "elapsedMs": {
+        "p50": 0.19304199999999128,
+        "p95": 0.449292000000014
+      },
+      "actions": [
+        5
+      ],
+      "outputBytes": {
+        "min": 819,
+        "max": 819
+      }
+    },
+    {
+      "task": "repository",
+      "arm": "deterministic_executor",
+      "runs": 5,
+      "passed": 5,
+      "elapsedMs": {
+        "p50": 46.734167000000014,
+        "p95": 55.094791999999984
+      },
+      "actions": [
+        4
+      ],
+      "outputBytes": {
+        "min": 4898,
+        "max": 4899
+      }
+    },
+    {
+      "task": "logs",
+      "arm": "code_batch",
+      "runs": 5,
+      "passed": 5,
+      "elapsedMs": {
+        "p50": 0.10620900000000688,
+        "p95": 0.35845800000001304
+      },
+      "actions": [
+        1
+      ],
+      "outputBytes": {
+        "min": 752,
+        "max": 752
+      }
+    },
+    {
+      "task": "logs",
+      "arm": "deterministic_executor",
+      "runs": 5,
+      "passed": 5,
+      "elapsedMs": {
+        "p50": 22.81845800000002,
+        "p95": 26.173333000000014
+      },
+      "actions": [
+        1
+      ],
+      "outputBytes": {
+        "min": 11372,
+        "max": 11372
+      }
+    },
+    {
+      "task": "tests",
+      "arm": "code_batch",
+      "runs": 5,
+      "passed": 5,
+      "elapsedMs": {
+        "p50": 0.22658300000000509,
+        "p95": 0.38479200000000446
+      },
+      "actions": [
+        2
+      ],
+      "outputBytes": {
+        "min": 1875,
+        "max": 1875
+      }
+    },
+    {
+      "task": "tests",
+      "arm": "deterministic_executor",
+      "runs": 5,
+      "passed": 5,
+      "elapsedMs": {
+        "p50": 22.701832999999965,
+        "p95": 23.883542000000006
+      },
+      "actions": [
+        2
+      ],
+      "outputBytes": {
+        "min": 7100,
+        "max": 7100
+      }
+    }
+  ],
+  "conclusion": "Prerequisite mechanism evidence only; no task-quality or A-win claim.",
+  "full_report_sha256": "95ef03d16d5fa3d7008b56af9cdd8fad966e24861251433ffd93218e8b1cffb7",
+  "verification": {
+    "node_tests": 578,
+    "python_tests": 158,
+    "smoke": "PASS_OFFLINE",
+    "demos": [
+      "fast-path",
+      "classifier-design",
+      "training-pipeline"
+    ],
+    "native_codex": "direct command probe only; provider count UNKNOWN"
+  }
+}

@@ -1,11 +1,27 @@
 ---
 name: pointsman-decisions
-description: Delegate bounded choices, optional model/skill routing and selective snippet filtering to enabled pointsman tools. Not for coding, permissions, main-model interception or exhaustive audit omission.
+description: Delegate bounded evidence/diagnosis segments, choices, optional routing and selective snippet filtering to enabled pointsman tools. Not for code generation, permissions or exhaustive audit omission.
 ---
 # Optional pointsman decision layer
-While global mode is OFF the tools return at once without calling a provider, so call them when they apply and follow `apply`; use `status` when you need to report modes or readiness. Router and bulk each have their own OFF/SHADOW/ON switch; global OFF always wins. Never enable a feature yourself or infer readiness from a previous turn.
+While global mode is OFF the tools return at once without calling a provider. Decision results require `apply`; workflow results use their segment status and evidence contract below. Use `status` when reporting modes or readiness. Router, bulk and workflow each have an OFF/SHADOW/ON switch; global OFF always wins. Never enable a feature yourself or infer readiness from a previous turn.
 
 Use deterministic code first. Explicit instructions, exit codes, exact paths and permissions need no classifier. `decide` replaces a genuine narrow choice using minimal `state` and finite `questions` (Choice/Noul/Score). Do not fully decide, call pointsman for confirmation, then decide again. Batch independent questions only. Consume a result only when `apply === true`; otherwise follow the original host path without retry loops.
+
+## Complete an evidence segment in one call
+
+Prefer MCP `run` when a fixed recipe can collect the evidence needed for the next parent decision. It keeps dependent search/read/parse/group steps inside one call rather than returning to the parent after each tool. Use ordinary direct tools for a single cheap action or work outside the recipes. Do not claim measured savings: compare the deterministic executor with competent host batching separately from optional selected-provider inference.
+
+Supply `workflow`, bounded `inputs`, optional `goal`, `acceptance`, `coverage`, `snapshot` and `budget`:
+
+- `repo-evidence`: `symbols`; optional scoped `paths`, `requiredPaths`, `uncertainPaths`, `counterevidencePaths`. Acceptance names include `definition`, `direct_callers`, `tests`, `contracts`, `counterevidence`. Callers are lexical candidates; dynamic edges remain UNKNOWN.
+- `test-diagnose`: `resultPaths` for existing reporters. A `registeredTest` name works only with a trusted injected runner; request JSON cannot grant test execution. Preserve passed evidence and possible flakes; an unresolved fixture/product/environment cause needs parent reasoning and a new rerun hypothesis.
+- `log-triage`: `paths`, optional `timeWindow: {from,to}`. Preserve singleton/first failures, success transitions, correlations, parse failures and uncertain clocks.
+
+Paths are relative to the server/caller's bound root, never a request-supplied root. `snapshot: {revision, files}` binds Git HEAD and per-path SHA-256 hashes (`null` for absent files); the runner checks actual freshness. Budget keys are `maxActions`, `maxMs`, `maxDecisionCalls`, `maxOutputBytes`, capped by policy. Use `maxDecisionCalls: 0` for deterministic collection. Current recipes make zero provider calls; an inert semantic branch was removed because it saved no downstream action. Do not claim model contribution inside `run`.
+
+Read `status`, achieved/missing `acceptance`, source refs/hashes/excerpts, `coverage`, `needsParent` and `stats` together. `done` concerns the delegated segment only. `needs_parent`, `budget_exhausted`, `cancelled`, stale snapshots and missing coverage retain the original host path; do not repeat an unchanged failed request. Keep sources recoverable and use their refs when further inspection is necessary.
+
+For exhaustive work use `coverage: exhaustive` and the complete required scope; never filter out required files or errors. Semantic inference is disabled in that mode. Refused/unreadable sources, unsupported records and unknown edges are explicit limits, not proof of full audit completion. Workflow OFF/SHADOW performs no source collection or inference. The separate native gate is OFF by default; contract adapters do not establish live model-request bypass and ordinary MCP still needs the parent's outer dispatch/interpretation.
 
 ## Role and skill routing
 When the owned host hooks are installed, subagent spawns are routed by the hook: on Claude Code it reads the `[route scope=… complete=… failures=…]` first line of a worker prompt; on Codex it only records, and no separate `route` call is made before spawning because that adds a main-model turn with no measured saving. Call `route` directly only when the user asks for a route recommendation, or when no hook is installed and a new, bounded, separately dispatchable task needs a role. Then supply the actual host, `availableRoles` (the host's actual `~/.codex/agents/*.toml` or `~/.claude/agents/*.md` names, never guessed), optional `availableModels`, verified skill IDs and honest context flags. The server classifies intent, difficulty and risk in one inference by the selected provider, then applies a private local policy keyed by role. It cannot discover installed roles/models or change the main model of Codex/Claude; for Codex, `model` is display metadata only since `spawn_agent` ignores it and the role TOML controls what actually runs. Do not invent role/model IDs, reasoning levels, performance evidence or a supported dispatch API.

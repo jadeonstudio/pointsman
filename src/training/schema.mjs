@@ -126,7 +126,7 @@ export function validateDecision(d) {
   if (!['active', 'shadow', 'host'].includes(d.arm) || !['shadow', 'on'].includes(d.mode) || typeof d.apply !== 'boolean') fail('INVALID_TRAINING_SCHEMA');
   if ((d.arm === 'shadow' || d.mode === 'shadow') && d.apply) fail('INVALID_TRAINING_SCHEMA');
   if ((d.arm === 'host') !== (d.provenance.provider === 'host')) fail('INVALID_TRAINING_SCHEMA');
-  const req = validateRequest(d.request, DEFAULTS);
+  const req = validateRequest(d.request, d.provenance.provider === 'jev' ? { ...DEFAULTS, capabilityProfile: 'jev-expanded-v1', maxChoiceOptions: 255, maxInputBytes: 48000 } : DEFAULTS);
   if (req.risk !== 'routine' || Buffer.byteLength(JSON.stringify(req.state)) > 4096 || d.request_hash !== digest(req)) fail('INVALID_TRAINING_SCHEMA');
   validatePrediction(req, d.answers, d.arm === 'host');
   if (!Number.isFinite(d.latency_ms) || d.latency_ms < 0) fail('INVALID_TRAINING_SCHEMA');
@@ -182,4 +182,29 @@ export function validateEvent(e) {
     if (!isObject(e.data.derived)) fail('INVALID_TRAINING_SCHEMA');
   }
   safeContent(e); return e;
+}
+
+// Independently authored rows carry rights and oracle identity outside the model input.
+export function validateLearningMetadata(sample) {
+  if (sample.lineage !== undefined) {
+    only(sample.lineage, ['source_id','template_id','semantic_family_id','sibling_ids'], ['source_id','template_id','semantic_family_id']);
+    for (const key of ['source_id','template_id','semantic_family_id']) text(sample.lineage[key], 200);
+    if (sample.lineage.sibling_ids !== undefined) {
+      if (!Array.isArray(sample.lineage.sibling_ids) || sample.lineage.sibling_ids.length > 64) fail('INVALID_TRAINING_SCHEMA');
+      sample.lineage.sibling_ids.forEach(x => text(x, 200));
+    }
+  }
+  if (sample.data_rights !== undefined) {
+    const r = sample.data_rights;
+    only(r, ['source','license','revision','permitted_use','redistribution','transformations'], ['source','license','revision','permitted_use','redistribution','transformations']);
+    for (const key of ['source','license','revision']) text(r[key], 200);
+    if (!Array.isArray(r.permitted_use) || !r.permitted_use.length || r.permitted_use.some(x => !['learning','evaluation'].includes(x)) || !['allowed','restricted'].includes(r.redistribution) || !Array.isArray(r.transformations)) fail('INVALID_TRAINING_SCHEMA');
+    r.transformations.forEach(x => text(x, 200));
+    if (!r.permitted_use.includes(sample.split === 'train' ? 'learning' : 'evaluation')) fail('DATASET_USE_NOT_PERMITTED');
+  }
+  if (sample.oracle !== undefined) {
+    only(sample.oracle, ['id','revision','evidence_sha256'], ['id','revision','evidence_sha256']);
+    text(sample.oracle.id, 200); text(sample.oracle.revision, 200);
+    if (!HASH.test(sample.oracle.evidence_sha256)) fail('INVALID_TRAINING_SCHEMA');
+  }
 }

@@ -4,10 +4,15 @@ import { decisionSchema } from './contracts.mjs';
 import { createControlLayer, observeSchema } from './control-layer.mjs';
 import { routeSchema } from './routing.mjs';
 import { filterSchema } from './filtering.mjs';
+import { createWorkflowRunner, workflowSchema } from './workflows.mjs';
+import { workflowPolicy } from './feature-policy.mjs';
 
 const withTrace = schema => ({ ...schema, properties: { ...schema.properties, trace: traceSchema } });
 const protocolVersions = ['2024-11-05', '2025-03-26', '2025-06-18'];
 export const TOOLS = [
+  { name: 'run', description: 'Run one bounded repo-evidence, test-diagnose or log-triage recipe within this server\'s configured root. Collect source-linked evidence behind one call. OFF/SHADOW retain the host path; requests cannot add roots, commands or capabilities. Completion applies only to the delegated recipe.',
+    inputSchema: workflowSchema,
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true } },
   { name: 'decide', description: 'One bounded batch of Choice/Noul/Score decisions. OFF never invokes a provider; SHADOW hides suggestions; only apply=true permits consuming an advisory result. Never grants execution permission.', inputSchema: withTrace(decisionSchema),
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: true } },
   { name: 'status', description: 'Report the global mode, the router and bulk feature modes, the selected provider (jev or laya) and whether it is ready, training-capture state and the local Laya worker status. Use it to answer questions about Jev configuration or before reporting modes to the user; decision tools already return without a provider call while OFF, so a status check is not needed before calling them. Never returns a key or credential value and makes no network call.',
@@ -32,7 +37,9 @@ export const TOOLS = [
 
 /** Minimal, version-negotiated MCP stdio tools server; no HTTP listener or sampling. */
 export function startMcp(engine, { input = process.stdin, output = process.stdout,
-  layer = createControlLayer({ engine, home: engine.status().home }) } = {}) {
+  layer = createControlLayer({ engine, home: engine.status().home }), root = process.cwd(),
+  workflowRunner = createWorkflowRunner({ engine, root,
+    getPolicy: () => workflowPolicy(engine.status().home, engine.status().mode) }) } = {}) {
   let buffer = Buffer.alloc(0), initialized = false, ready = false, closed = false;
   const pending = new Map();
   const write = object => { if (!closed && !output.destroyed) output.write(JSON.stringify(object) + '\n'); };
@@ -72,7 +79,8 @@ export function startMcp(engine, { input = process.stdin, output = process.stdou
     try {
       const args = message.params.arguments ?? {};
       let value;
-      if (message.params.name === 'decide') value = await engine.decide(args, { signal: controller.signal });
+      if (message.params.name === 'run') value = await workflowRunner.run(args, { signal: controller.signal });
+      else if (message.params.name === 'decide') value = await engine.decide(args, { signal: controller.signal });
       else if (message.params.name === 'route') { if (!isObject(args)) fail('INVALID_REQUEST'); const { trace, ...request } = args; value = await layer.route(request, { signal: controller.signal, trace }); }
       else if (message.params.name === 'filter') { if (!isObject(args)) fail('INVALID_REQUEST'); const { trace, ...request } = args; value = await layer.filter(request, { signal: controller.signal, trace }); }
       else if (message.params.name === 'record') {

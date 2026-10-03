@@ -3,9 +3,15 @@ export const SERVER_NAME = 'pointsman';
 export const API_URL = 'https://api.typesafe.ai/v1/systemone';
 export const PURPOSES = Object.freeze(['route', 'select', 'retry', 'review', 'judge', 'escalate']);
 export const MODES = Object.freeze(['off', 'shadow', 'on']);
+// Versioned admission profiles, not a claim that a checkpoint supports these heads.
+// TypeSafe /api verifies Choice 255 and Score 10; no verified question-count uplift.
+export const CAPABILITY_PROFILES = Object.freeze({
+  portable: Object.freeze({ maxChoiceOptions: 16, maxScoreLevels: 10, maxQuestions: 8, maxInputBytes: 48000 }),
+  'jev-expanded-v1': Object.freeze({ maxChoiceOptions: 255, maxScoreLevels: 10, maxQuestions: 8, maxInputBytes: 48000 }),
+});
 export const DEFAULTS = Object.freeze({
   version: 1, mode: 'off', model: 'jev-latest', timeoutMs: 2000,
-  maxInputBytes: 24000, maxQuestions: 8, minConfidence: 0.85,
+  maxInputBytes: 24000, maxQuestions: 8, capabilityProfile: 'portable', maxChoiceOptions: 16, minConfidence: 0.85,
   minChoiceProbability: 0.80, noulCertainty: 0.95,
   maxCallsPerMinute: 60, maxInFlight: 4,
   circuitFailureThreshold: 3, circuitCooldownMs: 30000, telemetry: true,
