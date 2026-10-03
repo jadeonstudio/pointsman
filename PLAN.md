@@ -289,6 +289,14 @@ not ON execution, task utility or zero model requests by the inspecting agent.
 This older root chat still has the seven-tool cache. Codex UI automation was refused
 by Computer Use's app policy; no alternate UI-control path or restart was attempted.
 
+The subsequent deadline fix was pushed and the clean stable checkout was
+fast-forwarded to `53fad15`; both the no-skills and Codex-skills installer dry-runs
+then reported no changes. Production hook/mod hashes match the validated source,
+and global/workflow/native OFF plus the existing d6 checkpoint remain unchanged.
+No reinstall, host reload, new hook trust or global-file write was needed. The
+[delivery receipt](examples/workflow-hosts/current-app-refresh-evidence.json)
+records this installed runtime identity separately from later evidence-only commits.
+
 Current Claude docs require `2.1.287+` for the documented default-enabled mods
 path and say the old function-hooks environment flag is ignored. A later readback
 found installed `2.1.288`; this work did not upgrade the host. The existing

@@ -140,5 +140,44 @@
     },
     "rootExistingCatalog": "Still cached at seven tools without run",
     "uiControl": "Computer Use refused com.openai.codex by app policy; no alternate UI control attempted"
+  },
+  "deadlineRuntimeDelivery": {
+    "observedAt": "2026-10-03T08:48:09.180Z",
+    "sourceCommit": "53fad15c001b250d7c31063c7145db9ef1650a10",
+    "installedCommit": "53fad15c001b250d7c31063c7145db9ef1650a10",
+    "previousInstalledCommit": "361146648d6bb3608403072ca27a3038118e6423",
+    "branch": "main",
+    "worktreeClean": true,
+    "update": "fast-forward only from accepted local source checkout",
+    "dryRuns": {
+      "bothNoSkills": {
+        "changes": []
+      },
+      "codexWithSkills": {
+        "changes": []
+      }
+    },
+    "reinstallPerformed": false,
+    "globalFilesWritten": false,
+    "nativeReloadPerformed": false,
+    "modes": {
+      "global": "off",
+      "workflow": "off",
+      "native": "off",
+      "routerEffective": "off",
+      "routerConfigured": "on",
+      "effortEffective": "off",
+      "effortConfigured": "shadow"
+    },
+    "provider": "laya",
+    "model": "multilingual-d6",
+    "checkpoint": "d145e848f7827fdd0a643b90727e65a8fe67d5637bf8c6c07ab3d26511edd434",
+    "sourceMatches": {
+      "src/hooks.mjs": "83f4c0532368c02df8799f1e0ff7d1020e3c0ff9137d4abc914813196e765ef1",
+      "mods/pointsman-workflows/hooks/pointsman-workflows.ts": "49dff1938e9cdaab285057d0344e423f48a1a5b26b920a853da18ace6b5b79c4",
+      "mods/pointsman-effort/hooks/pointsman-effort.ts": "a9d9f45e057c55a360f625078b4fbec5ed27258886ba3747d5514175b1e7767e"
+    },
+    "validation": "Accepted unchanged source evidence reused; no extra full gate, GPU or model calls",
+    "scope": "Installed checkout/source readback; not a native session reload or ON task-adoption claim"
   }
 }
