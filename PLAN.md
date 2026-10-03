@@ -515,6 +515,43 @@ independent human task-success evidence. The [public Decision Index methodology]
 also distinguishes local compute from hosted round-trip latency and lists excluded
 benchmarks; do not transfer one leaderboard's validity claims to another run.
 
+Further source readback pins the reference Decision Index kit at
+`87d4650b42b377c0291a89c1f1a879f9b31082bf` and its BFCL inputs at Gorilla
+`916260dfc116bf06793a1af79b4ec8195b0453b6`. The pinned [mechanical BFCL
+adapter](https://raw.githubusercontent.com/apolinario/decision-index/87d4650b42b377c0291a89c1f1a879f9b31082bf/decision_index/suite/build/adapters_mechanical.py)
+creates one yes/no Choice question per published function name, using the
+conversation and function schemas as state. Gold is membership in the independent
+`possible_answer.ground_truth` function-name set. Its [case
+scorer](https://raw.githubusercontent.com/apolinario/decision-index/87d4650b42b377c0291a89c1f1a879f9b31082bf/decision_index/scoring/report.py)
+requires every function decision in a case to match. This adaptation does not
+score generated arguments, invocation count/order or actual function execution;
+do not interpret its BFCL aggregate as full native function-calling correctness.
+The original [Berkeley AST
+checker](https://raw.githubusercontent.com/gorilla-llm/gorilla/916260dfc116bf06793a1af79b4ec8195b0453b6/berkeley-function-call-leaderboard/bfcl/eval_checker/ast_eval/ast_checker.py)
+supports a richer argument-level evaluation, which is a separate contract.
+
+The reference adapter excludes missing/empty gold and gold tools outside the
+candidate set, so it does not establish no-call/irrelevance quality. Any local
+admission must count those exclusions, distinguish one-candidate from multi-tool
+cases, check sanitized question-ID collisions, and report an always-invoke
+baseline. The pinned [Gorilla
+LICENSE](https://raw.githubusercontent.com/gorilla-llm/gorilla/916260dfc116bf06793a1af79b4ec8195b0453b6/LICENSE)
+is Apache-2.0 (SHA256 `c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4`).
+Source hashes: adapter `484651fc71306ac457961ce20153e29c53eb6d927e59e4f5b1faf2467b8bcfb2`,
+scorer `14279d8c10a83b0aab2edeaccf69110d3bd03719eb550ab8bcd0895b42fd1d42`,
+native AST checker `816eb08c03618985417065b0503e672b7d3fae3054dac4c97a6516a394a2182b`.
+The [hub 0.2.1 manifest](https://raw.githubusercontent.com/apolinario/decision-index/87d4650b42b377c0291a89c1f1a879f9b31082bf/hub/0.2.1/manifest.json)
+lists 1,694 BFCL cases / 4,768 fields; those counts have not been rebuilt locally.
+
+**Source-only result:** independently labeled local tool-selection research is
+feasible, but no BFCL case/gold rows or model predictions were downloaded and no
+new inference was run. Exact licensed public Jev per-case predictions and full
+request identities remain unavailable. This source pin neither recreates
+Cloudflare's exact execution revision nor establishes a paired Jev comparison,
+new family qualification or task savings. The 220,259-byte source/metadata
+inspection used only temporary files, which were removed. Existing invoice
+predictions, generalization gates and failed pilot results remain unchanged.
+
 [Cloudflare's current pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/)
 lists $0.24 per million input tokens for Clef and $0.09 for Flash. [TypeSafe](https://typesafe.ai/)
 lists $42 per billion input tokens ($0.042 per million) for Jev. Thus the hosted
