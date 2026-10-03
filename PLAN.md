@@ -1,7 +1,9 @@
 # Pointsman integrated architecture, learning and delivery plan
 
-Updated: 2026-10-03. Status: **PLAN READY; implementation and research work not started**.
-Runtime source baseline: `39bf5a4`; original design bundle: `e18cd21`.
+Updated: 2026-10-03. Status: **REVISED AFTER DEEP RESEARCH; implementation and model training not started**.
+Runtime source baseline: `39bf5a4`; original design bundle: `e18cd21`; first
+consolidation: `b950227`. The revision below replaces routing-first priorities
+with execution that removes repeated parent-model requests.
 This is the single canonical public plan replacing `ARCHITECTURE.md`,
 `TRAINING_PLAN.md` and `EVALUATION.md`. Their technical requirements, sources and
 evidence limitations are consolidated below; the work packages turn them into
@@ -9,27 +11,37 @@ executable checklists. It remains one file at the owner's explicit request.
 
 ## Scope and current state
 
-The goal is a shared Jev/local Pointsman decision layer for Codex, Claude Code
-and additional capable agent hosts, plus a defensible path to improving local
-decision quality, generalization and completed-task efficiency. The preferred
-approach inserts decisions only where they remove more downstream work than
-they add. It reuses the existing engine and separates host capabilities from
-model advice.
+The goal is substantial completed-task speed and cost improvement across agent
+hosts by using Jev's fast typed decisions where they replace expensive work.
+The shared engine remains the inference authority, but the proposed product
+also needs a bounded workflow executor: a parent delegates an entire evidence
+collection or diagnosis segment once; code and selected Jev/local decisions run
+that segment; the parent receives the evidence needed for the next creative step.
+Native adapters can remove additional model requests where supported.
 
-The current request authorizes this document consolidation and checklist, not
-execution of its implementation/training/deployment work packages. Existing
-authorization for publishing this documentation carries forward. A future work
-instruction should name the packages and any paid/operational scope; record that
-authorization once and reuse it within its scope. Do not repeatedly ask for it.
+The previous plan was insufficient for this goal. It emphasized advice and
+subagent routing, left the parent reasoning between most tools, and placed broad
+local training ahead of the first workflow-efficiency experiment. The execution
+track now starts with reusable workflows and available permitted providers;
+specialized local learning runs alongside it, and broad superiority remains a
+separate target rather than a prerequisite for useful integration.
+
+The current scope is deep research and a revised concrete execution plan, with
+the existing documentation-publication authorization. This is not a record of
+completed implementation, paid experiments, upgrades or training. Record future
+execution and cost authority once and reuse it within its scope. The new bounded
+execution/native-synthesis features are explicit proposed extensions to today's
+advisory project scope; align project instructions before implementing them.
 
 - [x] Read the supplied article and cross-check the original design against source and official documentation.
 - [x] Record current contracts, host limitations, historical model evidence and the three separate success targets.
 - [x] Consolidate the architecture, training and evaluation requirements into this plan.
+- [x] Inspect primary implementations and current host contracts; verify the installed Codex protocol exposes direct execution without starting a model turn.
 - [ ] Implement the planned contracts, adapters, data/evaluation and learning changes.
 - [ ] Run new training, authorized Jev comparisons and native task-quality experiments.
 - [ ] Establish any new superiority claim or promote a new checkpoint.
 
-The first three completed items are documentation work. Existing implementation
+The completed items are documentation/research work. Existing implementation
 is identified in the baseline sections; its presence is not a newly passed native
 or quality gate. Unknown capability, rights, timing or performance stays UNKNOWN.
 Private `docs/` notes, captures and checkpoints are not moved into this plan.
@@ -37,12 +49,13 @@ Private `docs/` notes, captures and checkpoints are not moved into this plan.
 ## Reading and execution order
 
 1. [Targets and feasibility](#three-independent-targets).
-2. [Work graph and completion rules](#work-graph-and-completion-rules).
-3. [Detailed work packages](#detailed-work-packages).
-4. [Architecture and host contracts](#decision-one-engine-thin-host-adapters).
-5. [Data and learning design](#what-the-model-must-learn).
-6. [Evaluation, economics and release](#metrics-and-explicit-gates).
-7. [Traceability and verification history](#source-to-work-package-traceability).
+2. [High-leverage design and research findings](#high-leverage-design-and-research-findings).
+3. [Work graph and completion rules](#work-graph-and-completion-rules).
+4. [Detailed work packages](#detailed-work-packages).
+5. [Architecture and host contracts](#decision-one-engine-thin-host-adapters).
+6. [Data and learning design](#what-the-model-must-learn).
+7. [Evaluation, economics and release](#metrics-and-explicit-gates).
+8. [Traceability and verification history](#source-to-work-package-traceability).
 
 ## Three independent targets
 
@@ -75,15 +88,186 @@ a universal impossibility nor a guaranteed consequence of distillation. Our
 route to improvement is independently justified labels, local task evidence,
 better question-conditioned learning and calibrated abstention.
 
+## High-leverage design and research findings
+
+### The execution boundary that changes the economics
+
+The common interface should let an agent delegate a **bounded unit of work**,
+not merely ask which tool it should call next. Keep one fixed-recipe executor
+behind MCP/CLI/JS and reuse the existing decision engine inside it. This is a
+proposed capability; today's seven MCP tools do not execute these workflows.
+
+```text
+Representative multi-turn investigation:
+parent -> search -> parent -> read -> parent -> find callers
+       -> parent -> read tests -> parent -> decide what to change
+
+Proposed common path:
+parent -> one workflow request
+          code: search/read/parse/group/collect references
+          Jev: choose among known unresolved branches, only when needed
+          code: gather chosen evidence, check completeness, continue or exit
+       -> evidence packet -> parent writes/reasons about the change
+```
+
+The exact number of removed turns must be measured against the competent host,
+which may already batch independent tools. The stronger opportunity is dependent
+but bounded investigation: choosing among known branches without returning to
+the parent after every observation. New code, novel hypotheses and open-ended
+reasoning remain parent work. Nothing replaces those with a classification label.
+
+**Recommended implementation order:** shared executor and repo evidence first;
+test diagnosis and log triage next; native request bypass and cache-aware
+execution after the shared contracts work; targeted local learning from these
+actual decision boundaries; broad generalization as a parallel research track.
+Spawn routing becomes an additional optimization, not the product's center.
+
+### Transferable mechanisms found in primary implementations
+
+| Priority | Mechanism and evidence | How Pointsman should use it |
+|---|---|---|
+| 1 | Browser-use's Jev loop constructs valid actions and selects operation/targets without a text-model planning step; a text model is used only when text must be generated. [Loop](https://github.com/browser-use/jev-ultrafast/blob/main/jev_ultrafast/agent.py), [decision code](https://github.com/browser-use/jev-ultrafast/blob/main/jev_ultrafast/model.py) | Move bounded search/read/diagnosis loops inside the shared executor; return to the parent only at a meaningful reasoning boundary. This transfers the loop pattern, not browser automation. |
+| 2 | The same implementation asks operation and speculative target heads together, then consumes only the selected branch. [Code](https://github.com/browser-use/jev-ultrafast/blob/main/jev_ultrafast/model.py), [fan-out](https://docs.typesafe.ai/patterns/fan-out) | Batch independent decisions and precomputable branch heads over one frozen state. Do not batch questions whose evidence has not yet been fetched. |
+| 3 | Official skill selection ranks 182 short descriptions, then examines only the top three in more detail. Its specific 488-request synthetic evaluation reduced wrong skill loads from 16.8% to 7.3%. [Recipe and harness](https://docs.typesafe.ai/cookbooks/skill_suggestion) | Use cheap deterministic candidate retrieval, semantic shortlist and narrow confirmation before the parent loads long skill/tool/source content. Keep catalog prefixes stable where cache matters. |
+| 4 | Programmatic tool calling and server-side Code Mode run loops, filtering and aggregation outside the parent model's context. [Anthropic](https://platform.claude.com/docs/en/agents-and-tools/tool-use/programmatic-tool-calling), [Cloudflare](https://blog.cloudflare.com/code-mode-mcp/), [executor interface](https://github.com/cloudflare/agents/tree/main/packages/codemode) | Provide the workflow as a portable tool. Implement fixed recipes first, not arbitrary generated-code execution or a second agent framework. |
+| 5 | The structured-extraction cascade checks individual fields with Jev and escalates only flagged outputs. [SDE cascade](https://docs.typesafe.ai/cookbooks/sde_cascade) | Check source support of an evidence packet or bounded worker output, then send only the failed boundary to stronger reasoning. Deterministic tests remain the authority for code behavior. |
+| 6 | `jev-opus` calls its semantic router on failures/unclear phases/proposed downshifts and uses local state reduction otherwise. [Router](https://github.com/WXK-AI/jev-opus/blob/main/src/router/router.ts), [policy](https://github.com/WXK-AI/jev-opus/blob/main/src/router/policy.ts) | Trigger decisions on changed evidence or unresolved branches; do not add one classifier call to every tool. Reuse exact results by full identity and retain failure IDs to prevent repeated attempts. |
+
+The browser implementation's published optimization comparison is between two
+versions using the **same Jev/helper models**: median 9.450 to 7.092 seconds,
+Jev requests 22 to 17 and browser-protocol calls 1,092 to 101. It demonstrates the
+importance of state collection and round trips, not a measured coding-agent
+speedup. [Performance record](https://github.com/browser-use/jev-ultrafast/blob/main/docs/performance.md)
+
+Context reduction is useful only before the parent consumes the large result.
+The incoming-log sieve and compaction examples motivate selection by evidence ID,
+but Pointsman will keep original history/source and build a smaller **new evidence
+packet**. Some published sieve experiments reduced returned tokens while adding
+calls and latency, so the runner must return enough decisive evidence in one
+response instead of forcing repeated recall.
+[Incoming-log implementation and results](https://github.com/Nyarlathoteppppp/pi-jev-context),
+[compaction implementation](https://github.com/tamaratran/fast-jev-compaction/blob/main/src/compact.ts).
+
+### Three first workflows and their exact outputs
+
+The following are proposed fixed recipes, not new commands already available.
+Common input: `workflow`, goal, source revision plus dirty-file hashes, bounded
+inputs, acceptance items, coverage and action/time/decision-call budgets. Inject
+real capability functions; caller-provided action names do not grant authority.
+Common result: `done | needs_parent | budget_exhausted | cancelled`, evidence
+references/excerpts/hashes, coverage and omissions, actions/decisions/time, and
+the exact unresolved parent question. `done` applies to the delegated segment.
+
+| Recipe | Internal sequence | Return to parent | Required counterexample checks |
+|---|---|---|---|
+| `repo-evidence` | Exact search; definition; existing graph edges or direct caller search; contract/test lookup; optional Jev shortlist; collect excerpts in parallel | Definition, callers, tests, relevant contracts, contradictory evidence and source hashes, with dynamic-edge/truncation limits | Dynamic registries, stale graph, generated code, cross-language edges; required caller/test recall; no second call needed for the normal case |
+| `test-diagnose` | Consume an existing result or run the already authorized exact test; parse reporter; deduplicate failure signatures; fetch assertion/stack/fixture/runtime evidence; optionally select next diagnosis branch | Failure groups, observed facts, relevant implementation/fixture spans, unchanged passing evidence, affected rerun set and unresolved cause | Flakes, time/session fixtures, wrapper stacks, side effects; never assume every test is read-only or rerun unchanged input without a new hypothesis |
+| `log-triage` | Parse permitted handles; count/group/correlate; preserve first/new/singleton failures and success transitions; optionally select ambiguous clusters; fetch source references | Incident timeline, counts, representative and contrary evidence, exact source offsets, parse failures and clock uncertainty | Rare causal events hidden by common errors, clock skew, failed parsing, lost correlation, repeated original-log requests |
+
+Executable example shape, deliberately not a current API promise:
+
+```json
+{
+  "workflow": "repo-evidence",
+  "goal": "Find the definition, direct callers and tests for the supplied symbol",
+  "snapshot": "source-and-dirty-file-hashes",
+  "inputs": {"symbols": ["persistDecision"]},
+  "acceptance": ["definition", "direct_callers", "tests"],
+  "coverage": "selective",
+  "budget": {"maxActions": 12, "maxMs": 5000, "maxDecisionCalls": 2}
+}
+```
+
+The budgets above are an example for a bounded experiment. Choose actual values
+from the workflow; do not truncate mandatory evidence to meet an arbitrary number.
+Exact search/count/join/cache hits need no Jev. Candidate uncertainty, novel
+evidence, a changed contract or required code generation returns `needs_parent`.
+Code checks acceptance and repeated action/evidence identities. A classifier's
+confidence never turns missing evidence into completion.
+
+### Host-specific acceleration beyond the common workflow tool
+
+| Surface | What can actually be removed | Implementation choice |
+|---|---|---|
+| Existing Codex desktop/CLI through MCP | Intermediate parent turns inside a delegated recipe; parent dispatch/final interpretation usually remain | First portable deployment. There is no documented transparent `BeforeModel` synthetic-answer hook to replace every internal Codex request. |
+| Owned Codex app-server client | Entire turns for work resolved before `turn/start` | Call `command/exec` or `mcpServer/tool/call` directly, then start a Codex turn only for unresolved reasoning. This needs a separate client entrypoint; it does not take over this desktop chat. |
+| Claude native mod | Pending model request at `turn.step`; supported tool execution can still use the normal native engine | Use a fixed-recipe controller and proper synthetic stream chunks, or invoke `next` for genuine reasoning. Return objects alone are not a substitute for streamed chunks. |
+| Claude ordinary hooks | An upcoming request after a completed tool batch, plus tool-output volume | `PostToolBatch` can stop before the next model call but shows stop/warning text; a mod is the cleaner response path. `updatedToolOutput` now applies to all tools. |
+| Gemini native hook | Model request replaced by synthetic text through `BeforeModel.llm_response` | Run the bounded workflow and return a verified formatted result. The current translator does not turn those string parts into arbitrary synthetic function calls. |
+
+Sources: [Codex app-server](https://learn.chatgpt.com/docs/app-server),
+[Codex hooks](https://learn.chatgpt.com/docs/hooks),
+[Claude mod events](https://code.claude.com/docs/en/plugins/mods/events),
+[Claude mod types](https://github.com/anthropics/claude-code/blob/main/mods/types/claude-code.d.ts),
+[Claude ordinary hooks](https://code.claude.com/docs/en/hooks),
+[Gemini hooks](https://geminicli.com/docs/hooks/reference/),
+[Gemini translator](https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/hooks/hookTranslator.ts).
+
+Local research readback on 2026-10-03: Codex CLI `0.154.0`, Claude Code `2.1.280`,
+Gemini CLI `0.42.0`. The generated experimental schema of this installed Codex
+contains `command/exec`, `mcpServer/tool/call`, `turn/start`, `item/tool/call`,
+`TurnStartParams.model/effort/toolOutput` and `ThreadStartParams.dynamicTools`.
+Reproduce with `codex app-server generate-json-schema --experimental --out DIR`.
+This is installed-protocol evidence, not a live execution/zero-inference test.
+Prefer sandboxed `command/exec`; experimental `process/spawn` is not its sandbox
+equivalent. A `toolOutput` on `turn/start` still starts a model turn.
+
+Current Claude docs require `2.1.287+` for the documented default-enabled mods
+path and say the old function-hooks environment flag is ignored. That is newer
+than the installed `2.1.280`; the existing effort-mod instructions describe the
+older path. Version/upgrade and native compatibility work belongs in WP02/WP12,
+not an assumption that the feature is already active.
+[Current mod availability](https://code.claude.com/docs/en/plugins/mods/overview)
+
+Cache-aware effort has a stronger supported route in an owned Claude API client:
+the model-specific per-message-effort beta can preserve the existing cached
+prefix, whereas top-level effort changes invalidate the messages cache. Do not
+assume a native mod's `e.effort` uses that API mechanism. Verify supported model,
+beta, effective turn and cache usage before adopting it.
+[Effort contract](https://platform.claude.com/docs/en/build-with-claude/effort),
+[cache behavior](https://platform.claude.com/docs/en/build-with-claude/prompt-caching).
+
+### Prove the mechanism early, then scale the model
+
+The first efficiency experiment has three required arms:
+
+1. **Current competent host**, including its existing shell/code-mode batching.
+2. **Same workflow executor with deterministic policy**, no semantic model.
+3. **Same executor with selective Jev or a qualified local model**, keeping the
+   same tasks, actions, output contract, hardware conditions and acceptance.
+
+Arm 1→2 measures reusable execution and aggregation; arm 2→3 isolates the model's
+additional value. Count actual parent inference requests, intermediate bytes,
+decision calls, cache writes/reads, recovery requests, total cost and critical-path
+p50/p95 time. A native-bypass probe must show zero corresponding provider request,
+correct visible/history output and correct cancellation; hook execution alone is
+not that proof. Request removal must survive comparison to competent code-mode.
+
+Initial engineering targets for selected multi-step evidence/diagnosis segments:
+**at least 50% fewer parent requests, 50% fewer parent-visible intermediate bytes,
+and 2× faster completion**, with required evidence/task quality retained. These
+are targets for choosing useful segments, not achieved measurements or promised
+whole-project savings. Final whole-task cost/time and quality margins are fixed
+from WP00/WP11 evidence. Keep Jev only where arm 3 improves over arm 2; this is
+how to maximize its useful contribution rather than maximize its call count.
+
+Do not wait for a universal local model. First establish the shared execution
+shape with deterministic code and any provider whose use is permitted. Collect
+independent labels for actual `evidence-relevance`, `next-branch`,
+`failure-class` and `continue-or-escalate` boundaries. Train/qualify these families
+first, then widen held-out repositories, domains, schemas and languages. This
+retains all three original A/B/C goals while allowing A to improve earlier.
+
 ## Work graph and completion rules
 
 ```mermaid
 flowchart TD
     W0[WP00 scope and acceptance] --> W1[WP01 shared decision contract]
     W0 --> W3[WP03 data rights and evidence]
-    W1 --> W2[WP02 host adapters]
+    W1 --> W2[WP02 shared executor and adapters]
     W1 --> W4[WP04 corpus and gold]
     W3 --> W4
+    W2 --> W4
     W4 --> W5[WP05 independent splits]
     W5 --> W6[WP06 trainer and qualification foundations]
     W6 --> W7[WP07 local pilot]
@@ -93,8 +277,8 @@ flowchart TD
     W9 --> W10
     W2 --> W11[WP11 task utility evidence]
     W3 --> W11
-    W10 --> W11
     W11 --> W12[WP12 native rollout]
+    W10 -. new local checkpoint only .-> W12
     W12 --> W13[WP13 release and handoff]
 ```
 
@@ -102,8 +286,11 @@ WP09 is conditional: a recorded, justified SKIPPED decision satisfies its edge
 when the supervised candidate is retained. Jev-dependent comparisons in WP10
 need an applicable permission and budget; unavailable comparisons leave B/C
 superiority UNKNOWN while independent local work may continue. No missing Jev
-result is relabeled PASS. WP12 begins with non-applying probes/shadow, and applied
-rollout waits for its own authorization and gates.
+result is relabeled PASS. **WP11 begins as soon as the executor, evidence and
+permitted provider are ready; WP07–WP10 model research does not block it.** WP12
+requires WP10 when deploying a newly trained local checkpoint, otherwise it uses
+the workflow/provider quality gates established in WP11. Native probes can be
+prepared independently; applying rollout remains tied to the accepted scope.
 
 Root owns integration and final acceptance. Assign one writer per shared file or
 resource; independent read-only work may proceed in parallel. Suggested lanes:
@@ -138,14 +325,15 @@ candidate invalidates only downstream claims that consumed it.
 **Owner:** integration lead. **Output:** scoped decision-family and evaluation
 specification recorded in this plan and existing evaluation artifacts.
 
-- [ ] Select one frequent first decision family from the family table; identify the exact expensive host step it can remove.
-- [ ] Record the competent normal-host baseline, rule-only baseline and diagnostic all-strong arm; do not use only an artificially expensive baseline.
+- [ ] Select `repo-evidence` as the first representative multi-step workflow unless workload evidence favors test diagnosis/log triage; mark each parent request and intermediate result it should remove.
+- [ ] Freeze the three efficiency arms: competent host with code-mode batching, deterministic executor, same executor with selective Jev/local decisions; keep all-strong only as a diagnostic.
 - [ ] Freeze code revision, task/repository snapshots, host versions, available model/effort/role candidates and resource ownership.
 - [ ] Define the target input envelope, languages/domains, required consumers, task acceptance checks and critical error classes.
 - [ ] Define metric formulas and operational risk ceilings now; record provisional effect/sample assumptions and the pilot-based procedure for fixing numeric margins before calibration or sealed evaluation.
 - [ ] Record authorized implementation, local compute, data use, paid API budget and later operational actions separately; mark absent ones unavailable.
 - [ ] Separate fixed exact-rule checks from learned decisions, including permissions, retry budgets, counting and dates.
 - [ ] Map every selected requirement to the WP and consumer below; identify already working code, confirmed gaps and missing evidence.
+- [ ] Adopt the bounded execution/native-synthesis scope explicitly in project guidance before implementation, retaining one engine and existing authority; do not let old advisory-only scope silently prevent the intended design.
 
 **Accept when:** scope, measurable benefit hypothesis, baselines and success/stop
 rules are unambiguous. **Stop when:** there is no replaceable action or no
@@ -163,8 +351,8 @@ modules and directly related contract tests. **Output:** one portable contract.
 - [ ] Define family/question/state-builder/candidate revisions and calibration/runtime identities in the existing policy/evidence path.
 - [ ] Preserve Choice confidence versus selected probability, Noul yes probability, and zero-based Score expectation.
 - [ ] Resolve the wrapper's 11-level Score allowance against TypeSafe's 10-level maximum in every affected validator/schema/consumer; define migration/rejection behavior explicitly.
-- [ ] Test smaller common provider limits, local token/head admission, malformed distributions, unsupported purpose and checkpoint identity mismatch.
-- [ ] Preserve detached input snapshots and all-or-nothing eligibility for a batch; group only independent questions sharing evidence and acceptance boundaries.
+- [ ] Define a portable subset plus explicit provider capability profiles; exploit larger Jev option/question envelopes when verified instead of limiting every provider to the local checkpoint, with bounded frame/response sizes and admission tests.
+- [ ] Preserve detached snapshots and today's atomic `decide` semantics; group independent questions by consumer. Speculative branch heads need a separately versioned selected-group gate with calibration/regression proof, never consumption of an old `apply=false` result.
 - [ ] Define consumer abstention for `other`/`insufficient_evidence`; verify original candidate IDs and shortlist recall rather than trusting an invented answer.
 - [ ] Preserve OFF/no inference, SHADOW/no consumed answers, sensitive-scope delegation and `authorizesExecution:false`.
 - [ ] Verify global/provider/feature changes and cancellation prevent late application; bind actual consumer freshness separately from trace `snapshot_id`.
@@ -176,29 +364,41 @@ semantics with no duplicate inference path or new authorization authority.
 **Evidence:** focused engine/MCP/control/contract regressions and accepted source
 revision. Existing behavior need not be rewritten to satisfy this checklist.
 
-### WP02 — Bind host capabilities and thin adapters
+### WP02 — Build the shared workflow executor and bind host adapters
 
 **State:** PLANNED. **Depends on:** WP01.
-**Owner:** host-integration maintainer. **Scope:** existing hooks/installer and
-adapter consumers, with one writer for shared files. **Output:** host/version
-capability records and only the adapter code needed by the selected consumers.
+**Owner:** executor/integration maintainer. **Scope:** one fixed-recipe executor
+using existing engine/control modules, MCP/CLI/JS entrypoints, selected host
+adapters and directly affected tests; one writer for shared files. **Output:**
+portable work-segment execution plus host/version capability records.
+
+- [ ] Implement one shared execution function with injected capabilities and bounded actions/time/decisions; expose it consistently through MCP/CLI/JS without an arbitrary-code evaluator.
+- [ ] Implement `repo-evidence`: exact search/definition/callers/tests, optional semantic shortlist and complete source-linked evidence packet before parent context ingestion.
+- [ ] Add `test-diagnose`: reporter/signature/source/fixture collection around an existing result or exactly authorized test command; return unresolved cause and affected rerun set.
+- [ ] Add `log-triage`: streaming aggregation/correlation plus original offsets, singleton/first errors, contrary evidence, parse failures and clock uncertainty.
+- [ ] Keep deterministic steps model-free, parallelize independent reads, and invoke Jev only when changed evidence leaves a known branch unresolved; return to parent for generation/new hypotheses.
+- [ ] Return segment status, achieved/missing acceptance, evidence hashes, coverage/omissions and complete counters in one response; enforce cancellation and repeated-action detection inside the loop.
+- [ ] Give new executor/native-control features explicit OFF-by-default gates; global OFF preserves the original host path, and installation or qualification does not enable them.
+- [ ] Cache only identity-matched results using source/question/model/policy/recipe revisions; start with request-local sharing and only add cross-task reuse when measured repetition warrants it.
 
 - [ ] Record readable fields, supported transport, roles/models/efforts/skills, writable settings, cancellation/outcomes and native evidence revision for each target host.
 - [ ] Preserve explicit model locks, role-definition precedence and unavailable-target fallback; do not infer capabilities from a model name.
 - [ ] Keep generic MCP `decide` usable without claiming that it controls the host; retain Codex/Claude-only `route` schema until an intentional adapter extension is implemented and tested.
-- [ ] Codex: test the target version's actual spawn payload visibility and input-update behavior; retain recording/advice only if input is opaque or rewriting is unsupported.
-- [ ] Claude: exercise actual `Agent` input rewrite and model lock; read back the model/role that ran.
+- [ ] Codex: deliver the workflow tool inside the current app; separately prototype an app-server client using direct `command/exec`/MCP calls and conditional `turn/start`, with sandbox and actual inference-count readback.
+- [ ] Codex spawn optimization: test actual payload visibility and update behavior; opacity does not block the common workflow tool or owned-client path.
+- [ ] Claude: implement a version-matched `turn.step` synthetic-stream probe and normal fallback, then bind fixed recipes; retain normal tool execution/permissions for emitted tool actions.
 - [ ] Correct and test the effort CLI's router-OFF early return against event-specific effort gates, including the real entrypoint, without changing default modes.
-- [ ] Verify effort main-loop cold-only and first-subagent-step restrictions; test no prompt/model/role rewrite by the effort mod itself.
-- [ ] Gemini: verify explicit stdio MCP consumption first; implement optional `BeforeModel` adaptation only for a selected, supported version and authorized scope.
+- [ ] Preserve the existing effort mod's gates; evaluate cache-preserving per-message effort only through supported direct API/model/transport contracts, not by assuming native effort edits preserve cache.
+- [ ] Gemini: implement a `BeforeModel.llm_response` synthetic-text probe and fixed-recipe completion path; use MCP/owned execution for tool dispatch rather than unsupported synthetic function calls.
 - [ ] Other MCP/owned SDK consumers: use existing JS/CLI/MCP interfaces and supported dispatch settings; mark each untested native consumer UNKNOWN.
 - [ ] Before consumption, recheck actual state/candidate freshness, deadline, cancellation and target availability; stale advice must not dispatch.
 - [ ] Preserve installer ownership, reviewed dry-run, trust/approval separation and fail-open behavior; hooks never spawn or wait for a cold worker.
 - [ ] Verify late CLI output is discarded, hooks have bounded latency and shared-host contention is measured without claiming a global rate limit.
 
-**Accept when:** contract fixtures pass and each claimed native capability has
-version-specific execution readback. Unsupported hosts remain explicitly advisory;
-they do not block independently useful adapters or acquire a false PASS.
+**Accept when:** the common executor finishes a work segment with one parent
+dispatch and returns complete evidence; native claims additionally require
+version-specific execution readback. Ship portable recipes independently of
+optional native adapters. A prototype existing only on paper is not ACCEPTED.
 
 ### WP03 — Establish permitted data and trustworthy evidence
 
@@ -223,11 +423,12 @@ and linkage regressions, manifest hashes and approved aggregate diagnostics.
 
 ### WP04 — Build the general-decision corpus and label oracles
 
-**State:** PLANNED. **Depends on:** WP01 and WP03.
+**State:** PLANNED. **Depends on:** WP01, WP03 and the accepted WP02 recipe contract.
 **Owner:** dataset maintainer. **Output:** versioned question-conditioned corpus
 with independent gold, provenance and family/group IDs.
 
 - [ ] Cover grounding, dynamic schema, rule following, agent decisions, domain transfer and stress cases from the curriculum below.
+- [ ] Prioritize independently labeled evidence relevance, next branch, failure class and continue/escalate examples from the actual shared executor; do not start by accumulating unrelated generic tasks.
 - [ ] Include Korean, English and mixed language; reserve new languages/domains as explicit unseen slices instead of claiming universal coverage.
 - [ ] Add label-key/order/position permutations with semantic invariance and same-state rule changes that require different gold answers.
 - [ ] Include negation, corrections/retractions, exceptions/priority, quoted instructions, contradictory/stale evidence and missing information.
@@ -366,13 +567,16 @@ but the Jev-superiority targets UNKNOWN; no overall superiority claim follows.
 
 ### WP11 — Measure task utility and learn routing utility separately
 
-**State:** PLANNED. **Depends on:** WP02, WP03 and a locally qualified WP10
-candidate. Jev arms remain conditional. **Owner:** task-runner/evaluation lead.
+**State:** PLANNED. **Depends on:** WP02, WP03 and a permitted selected provider;
+new local checkpoints additionally need WP10. Run the initial executor experiment
+before waiting for broad model training. **Owner:** task-runner/evaluation lead.
 **Output:** independent task evidence, A scorecard and, only if justified, a
 separately versioned model×effort utility policy.
 
 - [ ] Prepare frozen safe tasks/repository snapshots, available action candidates and independent completion checks before integrated runs.
-- [ ] Compare the competent normal host, deterministic policy, local candidate and permitted Jev-assisted path; use all-strong only as an additional diagnostic.
+- [ ] Run the three-arm comparison: competent host/code-mode, deterministic executor, identical executor plus selected model. Attribute executor and model improvements separately; all-strong is diagnostic only.
+- [ ] Count actual parent model requests, internal tools/decisions, bytes delivered before parent ingestion, missing-evidence recall and cold/warm/cache states; separate segment time from complete user-task time.
+- [ ] Test the initial targets of halving parent requests/intermediate bytes and doubling selected-segment speed; retain a recipe/model only for demonstrated useful gains over the competent baseline.
 - [ ] Randomize execution order and repeat where variation matters; record actual model/effort, conditions, errors, overrides and complete retries/escalations.
 - [ ] Capture independent task success instead of treating recommendation agreement, build success alone or cost telemetry as task correctness.
 - [ ] Do not infer success of unexecuted alternatives; keep observational preference evidence distinct from controlled paired executions.
@@ -389,13 +593,16 @@ release; overall superiority still requires all A/B/C claims to pass.
 
 ### WP12 — Verify native consumption and controlled rollout
 
-**State:** PLANNED. **Depends on:** WP02, WP10 and WP11; authorized capture,
-provider, host and operational scope. **Owner:** integration lead.
+**State:** PLANNED. **Depends on:** WP02 and WP11; WP10 additionally for a new local
+checkpoint, plus the relevant capture/provider/host/operational scope.
+**Owner:** integration lead.
 **Output:** per-host/per-family native evidence and bounded adoption decision.
 
 - [ ] Freeze the accepted code/model/policy/state-builder/adapter revisions and retain the previous checkpoint and modes for recovery.
 - [ ] Review required installer dry-run changes and use only owned artifacts; preserve native trust/approval state and unrelated settings.
 - [ ] Verify host capability readback on the actual target version; do not treat a source fixture or installed MCP entry as application evidence.
+- [ ] On native bypass, prove zero corresponding model request, correct visible/history output, preserved continuation/cancellation and real acceptance. On Codex MCP, report remaining outer model turns honestly.
+- [ ] Update/install host-specific adapters only for verified versions; the local Claude 2.1.280 observation does not satisfy current 2.1.287+ documentation by itself.
 - [ ] Begin non-applying observation/shadow only within authorization; capture recommendation counts, missing outcomes and latency without claiming success/savings.
 - [ ] Confirm local worker readiness, cold/unavailable fail-open and no hidden paid fallback; measure warm/cold/concurrent requests.
 - [ ] Apply only qualified families at their calibrated gates; stale/unknown state, locks, unsupported targets and policy changes retain original behavior.
@@ -446,7 +653,8 @@ Transport compatibility does not make that checkpoint a general decision model.
 ```mermaid
 flowchart TD
     H[Host evidence and current task] --> R[Exact rules and capability checks]
-    R --> S[Minimal frozen state and independent typed questions]
+    R --> W[Shared bounded workflow executor]
+    W --> S[Unresolved known choice over frozen evidence]
     S --> E[Existing Pointsman engine]
     E --> P{Explicit provider selection}
     P --> J[Pinned Jev]
@@ -454,9 +662,11 @@ flowchart TD
     J --> G[Validate result and recheck policy]
     L --> G
     G --> A{Eligible advice and current host snapshot?}
-    A -->|Yes| C[Host consumes advice within existing permissions]
+    A -->|Yes| C[Execute next allowed workflow action]
     A -->|No| O[Continue original host workflow]
-    C --> V[Independent task outcome evidence]
+    C --> W
+    W --> F[Return complete evidence or supported synthetic result]
+    F --> V[Independent task outcome evidence]
     V --> D[Opt-in offline evaluation and training]
 ```
 
@@ -501,7 +711,7 @@ their benefit is a hypothesis until the [evaluation gates](#metrics-and-explicit
 | Layer | Present implementation | Needed for the proposed extension |
 |---|---|---|
 | Typed decisions | [contracts](src/contracts.mjs), [engine](src/engine.mjs), `decideOrDelegate` | Version decision families and consumer contracts without duplicating inference |
-| Interfaces | [stdio MCP](src/mcp.mjs), [stdin CLI](src/cli.mjs), JS exports in [package.json](package.json) | Capability-checked adapters for each additional host |
+| Interfaces | [stdio MCP](src/mcp.mjs), [stdin CLI](src/cli.mjs), JS exports in [package.json](package.json) | One bounded workflow executor and version-matched host adapters; today's interfaces only return advice/observations |
 | Provider | [TypeSafe HTTPS](src/provider.mjs), [local inference](src/inference.mjs), [resident server](src/laya-server.mjs) | Purpose/family-specific qualification; explicit model/checkpoint identities |
 | Routing/filtering | [control layer](src/control-layer.mjs), [routing](src/routing.mjs), [filtering](src/filtering.mjs) | New hosts cannot be passed to the current `route` schema, which accepts only Codex/Claude |
 | Application | [owned hooks](src/hooks.mjs), [installer](src/installer.mjs) for two hosts | Native readback proving task visibility and the action actually taken |
@@ -527,11 +737,11 @@ documentation delivery.
 
 | Host | Lowest common integration | Optional application path | Exact limitation / next evidence |
 |---|---|---|---|
-| Codex | Existing MCP `decide`; explicit, bounded advice | Documented `PreToolUse` input updates and configured subagent roles | Repo observation on CLI 0.154.0: opaque spawn input, recording only. Newer docs expose `spawn_agent`/`Agent`; prove readable input and executed role on the target version before enabling routing. No automatic pre-spawn MCP call by default. |
-| Claude Code | Existing MCP decisions | Existing owned `Agent` hooks; separate effort mod | Verify `updatedInput`, model lock and actual subagent model. The effort mod is a distinct opt-in integration; ordinary command-hook observations do not establish general main-loop effort control. |
-| Gemini CLI | Proposed explicit MCP client of the existing stdio server | Official `BeforeModel` can alter the request model/config | No Gemini installer/adapter/native evidence in this repo. Start with explicit decisions; hook automation is a later version-specific adapter. |
-| Other MCP hosts | Explicit `decide` if stdio tools are supported | Only capabilities actually exposed by that host | MCP supplies tools, not universal control of the main model, context or subagent dispatch. |
-| Owned SDK harness | JS engine, or CLI/MCP across a language boundary | The application owns state, selection and dispatch | Strongest integration boundary: use supported SDK model/run settings and verify the resulting invocation. This does not modify an existing desktop client's internals. |
+| Codex | Existing advice tools; proposed shared workflow tool | Current-app workflow segments; stronger owned app-server client | Installed 0.154.0 schema confirms direct command/MCP execution and conditional `turn/start`. Native hooks do not document transparent model-response synthesis. Opaque spawn input limits routing, not the portable workflow path. |
+| Claude Code | Existing advice/Agent hooks and older effort mod | `turn.step` synthetic response/tool chunks; PostToolBatch stop; full tool-output replacement | Current mod docs are 2.1.287+, installed CLI is 2.1.280. Implement against version-specific declarations and verify inference is actually skipped. Ordinary stop text differs from clean synthetic completion. |
+| Gemini CLI | Proposed workflow tool | `BeforeModel.llm_response` skips the model with synthetic text | Installed 0.42.0 is an identity observation, not a verified adapter. Current translator's response parts are strings; arbitrary synthetic function calls are not this contract. |
+| Other MCP hosts | Shared workflow tool after implementation | Multiple internal actions behind one dispatch | Removes internal round trips without control of the host's outer calls. Existing `decide` alone has no such executor. |
+| Owned SDK/API harness | JS/shared workflow plus supported model/run APIs | App owns when model calls occur; optional programmatic tool calling/per-message effort | Measure cache and actual requests. API beta support does not imply the same mechanism is active in a native mod. |
 
 Sources: [Codex MCP](https://learn.chatgpt.com/docs/extend/mcp?surface=cli),
 [Codex hooks](https://learn.chatgpt.com/docs/hooks),
@@ -540,6 +750,8 @@ Sources: [Codex MCP](https://learn.chatgpt.com/docs/extend/mcp?surface=cli),
 [Claude subagents](https://code.claude.com/docs/en/sub-agents),
 [Gemini hooks](https://geminicli.com/docs/hooks/reference/),
 [Agents SDK models](https://developers.openai.com/api/docs/guides/agents/models).
+The [host-specific acceleration section](#host-specific-acceleration-beyond-the-common-workflow-tool)
+contains the newer mod/app-server/source references and installed-version evidence.
 
 Adapter capability records are **proposed**, not a current config schema. Keep
 them beside an adapter's native test evidence, with host/version, transport,
@@ -622,6 +834,11 @@ call. New evidence or a decision-dependent candidate set starts another snapshot
 The engine currently applies a batch only if all its questions pass; unrelated
 questions would create unnecessary abstention. Do not silently introduce partial
 batch application. [TypeSafe fan-out](https://docs.typesafe.ai/patterns/fan-out).
+
+Speculative fan-out can ask a branch and its precomputable candidate heads in one
+request. Keep old `decide` atomic semantics; a future selected-group interface
+must explicitly version and test which questions jointly authorize consuming one
+workflow action. Never use rejected old results because one answer looks useful.
 
 The Laya worker may batch questions, but it encodes a question/state sequence for
 each question; this is not proof of one shared state encoding. Local filtering
@@ -708,6 +925,11 @@ holdout is a copy of test, not an independent second sample. Preserve its value
 as a regression floor while correcting these boundaries for new research.
 
 ## What the model must learn
+
+Start with the shared executor's actual evidence/branch/failure decision families;
+their qualification is the first local-model deliverable. Broader unseen-task
+generalization remains a subsequent research objective, not a dependency of
+the deterministic/Jev integration track.
 
 Learn `P(answer | state, question, option meanings, current rules)`, rather than
 memorizing the three routing questions or stable label IDs. Reuse Laya's
@@ -851,7 +1073,7 @@ Insufficient statistical power yields INCONCLUSIVE rather than PASS.
 
 | Ledger | Baselines | Required measurements and pass rule |
 |---|---|---|
-| A: tasks | Normal competent host; rule-only policy; current d6; new candidate; permitted Jev-assisted host; all-strong diagnostic arm | Verified success non-inferiority, cost per successful task and end-to-end p50/p95. For the requested combined win, cost and latency must improve; a tradeoff is reported separately. |
+| A: tasks | Competent host with code-mode; deterministic executor; same executor plus permitted Jev/qualified local model; all-strong diagnostic only | Separate structural executor gains from model gains. Verified success non-inferiority, cost per successful task and end-to-end p50/p95. For the combined win, cost and latency must improve; segment/request/token reductions are diagnostic, not substitutes. |
 | B: decisions | Rule baseline where applicable; unmodified base; d6; supervised candidate; RL candidate; permitted pinned Jev | Same frozen state/questions/options and independent gold. Primary paired quality difference must have a positive lower 95% confidence bound; critical error/calibration/coverage gates must also pass. |
 | C: generalization | Same candidates on preregistered unseen slices | Positive lower 95% confidence bound for the unseen-family macro difference against permitted pinned Jev, plus every critical slice floor. Unavailable comparison = UNKNOWN. Count rejections/timeouts; report common-envelope quality separately from full target-envelope coverage. No aggregate win hiding a critical regression. |
 
@@ -957,9 +1179,9 @@ or established by this documentation change.
 
 | Original requirement group | Work packages / canonical detail |
 |---|---|
-| Article analysis, better alternatives, benefit hypothesis and three targets | WP00; targets, article and efficiency sections |
+| Article analysis, deeper source research, execution-first architecture and three targets | WP00, WP02, WP11; targets and high-leverage design |
 | One engine, typed probabilities, provider identity, batching and conservative fallback | WP01; decision/consumer contract |
-| Codex/Claude/Gemini/MCP/SDK capabilities, snapshots, hooks and effort entrypoint gap | WP02, WP12; host capability matrix |
+| Shared recipe executor, Codex app-server, Claude native synthesis, Gemini text bypass, snapshots and existing hook gaps | WP02, WP12; host matrices and execution contracts |
 | Data rights, provenance, no forged trust, privacy and paid scope | WP03, WP04; data rights and evidence baseline |
 | Dynamic schemas, independent gold, curriculum and counterfactuals | WP04; learning target and curriculum |
 | Leakage-resistant groups, four splits, copied regression holdout and prospective confirmation | WP05, WP06, WP10; split design |
@@ -984,6 +1206,10 @@ input, so previously valid runtime evidence is reused. The former three public
 documents are replaced after their consumers are redirected here; their original
 content remains recoverable at `e18cd21`. Private `docs/` stays untouched.
 
-Next executable step: authorize and complete WP00, then open only READY work
-packages. Current A/B/C superiority remains UNKNOWN, and no work package's
-implementation or operational checklist is checked by creating this plan.
+Research revision: three bounded GPT-6.1 Sol/High read-only investigations covered
+native host controls, primary Jev implementations and efficient tool workflows.
+Root inspected current source, CLI identities and the installed Codex-generated
+protocol. No paid requests, upgrades, model training or runtime activation ran.
+The revised critical path starts WP00→WP01/WP03→WP02→WP11; local training and B/C
+comparison proceed separately. No implementation checkbox is completed by writing
+the plan, and measured A/B/C superiority remains UNKNOWN.

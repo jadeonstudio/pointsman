@@ -6,7 +6,7 @@ The existing automatic integration routes Claude Code subagents to a lighter or 
 
 ## Cross-agent design and learning roadmap
 
-The [integrated plan](PLAN.md) combines the cross-agent architecture, local training strategy and three separate evaluation goals: completed-task efficiency, decision quality against Jev, and generalization to unseen tasks and schemas. Its [14 work packages](PLAN.md#detailed-work-packages) include dependencies, detailed checklists, outputs, verification and stop criteria. These are plans, not shipped integrations or demonstrated superiority.
+The [integrated plan](PLAN.md) prioritizes a shared workflow executor that completes bounded search, diagnosis and log-analysis segments behind one call, plus native model-request bypass where supported. [Primary-source research](PLAN.md#high-leverage-design-and-research-findings) maps the concrete Codex, Claude and Gemini paths. Its [14 work packages](PLAN.md#detailed-work-packages) put workflow efficiency experiments before broad local training, while retaining task-efficiency, Jev-quality and generalization goals. These are plans, not shipped integrations or demonstrated superiority.
 
 | Surface | Current repository support | Application boundary |
 |---|---|---|
@@ -160,6 +160,8 @@ pointsman effort ab off   # back to always applying
 ```
 
 It never changes the model, never changes a subagent's role, and never rewrites the prompt. See [AGENTS.md](AGENTS.md) ("Owned Claude Code mod") for the full contract.
+
+These instructions describe the existing effort mod and its older host path. Current Claude documentation describes broader mods on 2.1.287+ with different enablement; the [plan](PLAN.md#host-specific-acceleration-beyond-the-common-workflow-tool) records the migration and native-bypass work separately. That newer workflow integration is not implemented by the existing effort mod.
 
 ## Training your own checkpoint
 
