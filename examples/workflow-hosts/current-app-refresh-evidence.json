@@ -1,0 +1,42 @@
+{
+  "observedAt": "2026-10-03T06:13:13.388Z",
+  "clientCli": "0.154.0",
+  "sharedDaemonVersion": "0.150.1",
+  "daemonVersionStatus": "running",
+  "reportedManagedCodexPath": "~/.codex/packages/standalone/current/codex",
+  "managedExecutableExists": false,
+  "methods": [
+    "initialize"
+  ],
+  "failure": "RPC_TIMEOUT_OUTCOME_UNKNOWN after 15000 ms",
+  "successfulInitialization": false,
+  "inventory": "UNKNOWN",
+  "models": "UNKNOWN",
+  "currentDesktopConnectionBinding": "UNKNOWN",
+  "currentTurnPointsmanToolNames": [
+    "decide",
+    "feedback",
+    "filter",
+    "observe",
+    "record",
+    "route",
+    "status"
+  ],
+  "currentTurnRunAvailable": false,
+  "reloadExecuted": false,
+  "threadStarted": false,
+  "modelRequestsDispatched": 0,
+  "proposedReload": {
+    "method": "config/mcpServer/reload",
+    "params": null,
+    "supportedBy": "Current official docs and installed CLI0.154 schema; not verified on shared daemon0.150.1",
+    "impact": "Queues refresh for loaded threads, broader than current-thread-only. No config file edit; old runtime checkout and current tool catalog delivery still require readback."
+  },
+  "blocker": "Documented proxy binding failed to initialize; no safe current-thread-only reload was established. No reload/restart or internal patch attempted.",
+  "actualReadOnlyError": "zsh: no such file or directory (exit127) for the reported managed executable; documented proxy initialize produced RPC_TIMEOUT_OUTCOME_UNKNOWN after15000ms.",
+  "connectionScope": "Shared CLI control daemon. Binding to the current desktop chat was not established.",
+  "sources": {
+    "reload": "https://learn.chatgpt.com/docs/app-server",
+    "proxy": "Installed codex0.154.0 app-server proxy --help and daemon version readback"
+  }
+}

@@ -30,8 +30,10 @@ The owner authorized completing every checklist on 2026-10-03. Implementation,
 local training/evaluation and operational preparation are now active, with commit
 and push included. Additional paid API/GPU spend is zero; use existing subscriptions
 and local hardware. The owner confirmed no separate TypeSafe competitive-use
-permission, so those paid/competitive comparisons remain unavailable rather than
-being marked successful. Project instructions now include bounded fixed-recipe
+permission, so new paid/competitive API comparisons remain unavailable rather than
+being marked successful. A separately licensed public invoice snapshot was later
+found; its recorded Jev responses can support offline reference comparison, subject
+to independent input/gold assessment below. Project instructions include bounded fixed-recipe
 execution and native adapters while retaining existing authority boundaries.
 
 ### Active execution record
@@ -71,9 +73,9 @@ The CLI/MCP status readback retained global OFF and active d6 checkpoint
 A (whole-task efficiency): **NOT ESTABLISHED**. Small controlled code batches beat
 the executor; actual Codex direct MCP execution passed, but no matched end-to-end
 three-arm task-success/cost/latency experiment passed. B (above pinned Jev):
-**UNKNOWN**, no permitted/financed comparison. C (broad generalization above Jev):
+**UNKNOWN**, no accepted independent-gold comparison. C (broad generalization above Jev):
 **NOT ESTABLISHED / UNKNOWN**; all new local candidates failed their applicable
-gates and the broader Jev comparison is unavailable. No operational promotion or
+gates and the broader Jev comparison remains unaccepted. No operational promotion or
 rollback was performed; the previous model and settings are retained.
 
 Cleanup removed owned temporary Python bytecode and native probe fixture/home/
@@ -250,6 +252,15 @@ This is installed-protocol evidence, not a live execution/zero-inference test.
 Prefer sandboxed `command/exec`; experimental `process/spawn` is not its sandbox
 equivalent. A `toolOutput` on `turn/start` still starts a model turn.
 
+The [current-app readback](examples/workflow-hosts/current-app-refresh-evidence.json)
+later identified a separate shared daemon at `0.150.1`. Its reported managed
+binary was missing; the CLI `0.154.0` proxy timed out during initialization after
+15 seconds. No model-list, inventory, reload or model request followed. This
+chat's seven-tool pointsman catalog still lacks `run`; the successful separate
+0.154.0 probe does not close current-app delivery. The documented MCP reload
+queues every loaded thread, not just this chat. No daemon restart/reload or
+global trust/configuration changes were made.
+
 Current Claude docs require `2.1.287+` for the documented default-enabled mods
 path and say the old function-hooks environment flag is ignored. That is newer
 than the installed `2.1.280`; the existing effort-mod instructions describe the
@@ -369,6 +380,9 @@ candidate invalidates only downstream claims that consumed it.
 - Training measurement preparation now records actual nonpadding token/sequence presentations, synchronized training time, separate dev/checkpoint/resume phases and process-lifetime peak RSS. Per-rank throughput is not labeled global DDP throughput. Accelerator peak is measured only with a supported reset/read API; installed Torch 2.14 MPS lacks it and reports UNKNOWN. The completed historical runs retain their original missing values. The changed tokenizer/metrics/resume/regularization/local-mode boundaries passed 99 focused checks without another real training run.
 - Node attempts: admission failed once from escaped-Unicode head inflation and passed on the second, lossless transformation hypothesis; no training ran on failed admission. Other measured timings are in the public probe/measurement artifacts; unrecorded per-worker duration is UNKNOWN.
 - Frozen follow-up verification: 595/596 Node cases passed in the complete run. The single remaining old purpose-only qualification expectation was updated to require actual question scope and passed its focused rerun, without another production change. One added priority-wording regression also passed (597 covered Node cases across these runs). Python Laya tests passed 168/168; isolated Clef tests passed 3/3. Syntax, offline smoke and three demos passed. Final workflow measurement passed 30/30 independent fixture checks; direct code batches remained faster/smaller. Do not reinterpret this evidence as a model or whole-task efficiency win.
+- Gemini 0.42 [actual installed-component probe](examples/workflow-hosts/gemini-component-evidence.json): the previous response-only adapter reached the provider path. The corrected `BeforeModel` response emits synthetic content with zero provider invocations; OFF/incomplete paths reach a throw-only local sentinel, and pre-cancelled execution invokes neither hook nor provider. These use installed `GeminiChat`, `HookSystem`, `HookRunner` and `Turn`, with no real provider/authentication. Ten focused adapter checks passed. Synthetic assistant output is absent from native history: **full native adoption NO-GO**, not an accepted end-to-end bypass. The installed command-hook contract offers no history-insertion output; no host internals were patched.
+- Real regression seeds now have [pinned red/green and blind retrieval evidence](training/task-utility/evidence.json): pointsman pending-stdin failure on Node 22.18.0, and SymPy #13890/#13895 on Python 3.9.23/mpmath 1.3.0. The same tests fail before and pass after each upstream fix. A bounded code batch found both required source paths/functions in 10.385/103.553 ms with 8,060/8,536-byte index packets. These are single observations, not p50/p95 or repair success. **Semantic frontier selection NO-NEED for these two cases**; adding a classifier is not justified. Initial runtime incompatibilities and one oversized index were preparation issues, preserved separately. No model/provider calls were made by either runner.
+- Following the Gemini fix, the complete Node gate passed **597/597** in 27.898 seconds; syntax, offline smoke and all three demos passed. An earlier sandbox run was interrupted after local TCP/Unix fixture listeners were denied (`listen EPERM`); a focused reproduction confirmed that environment boundary before the permitted-local-sockets rerun. It was not a product-quality failure or paid/live API test. Unchanged Laya Python boundaries retain their prior 168/168 evidence; placement and invoice additions have their own focused tests.
 
 ### Local candidate verdict and next research direction — 2026-10-03
 
@@ -556,7 +570,8 @@ Delivery status: common contracts/workflows, offline learning/evaluation, native
 Codex MCP mechanism and the bounded local comparisons are implemented and tested.
 The goal to close the entire plan remains **incomplete**: no candidate meets the
 new general-decision gates, whole-task A has not passed, and paid/competitive Jev
-comparisons required for B/C remain unavailable under the owner's constraints.
+API comparisons required for B/C remain unavailable under the owner's constraints;
+the separately licensed public-artifact alternative below has not met those gates.
 Keep failed/unknown positive gates open instead of checking them by changing the
 success criteria. Preserve the active d6 checkpoint and global OFF state.
 
@@ -575,6 +590,131 @@ Original experiment sequence, with no production registration or automatic adopt
    model that changes a useful branch enters the executor's third comparison arm.
    Reassess training after those observations; larger parameter count alone does
    not establish better task economics.
+
+### Preregistered follow-up nodes — 2026-10-03
+
+Input revision `6eca73f`; root owns this plan and final acceptance. These bounded
+nodes address observed failures and actual consumer gaps, without another blind
+training scale-up. All workers use GPT-6.1 Sol/high. Existing modes, weights and
+passed evidence remain unchanged. Independent CPU work runs in parallel; a single
+owner holds the GPU resource. Each node has at most three causally justified
+attempts. Preparation failures never count as model-quality outcomes.
+
+| Node / owner | Dependency and scope | Frozen acceptance / output |
+|---|---|---|
+| BACKBONE-PARITY / clef_architecture | Actual pinned Flash weights; isolated existing runtime. Own `training/clef-local/parity_probe.py` and private artifacts. Sole GPU owner first. | Exact selected embedding rows; actual norm/RoPE/GDN gates and sequential layer 0/3, B1/no padding/no cache, lengths 17/65/129, at most 2 GiB additional GPU allocation. FP32 relative L2 ≤5e-4 and cosine ≥0.999999; BF16 block relative L2 ≤1e-2 and cosine ≥0.9999. Stop at first structural/nonfinite/FP32 failure. Report intermediate operations, actual memory/timing and known rounding differences. Component PASS is not 32-layer equivalence. No weight or installed-package mutation. |
+| INPUT-CAUSAL / corpus_evaluation | Existing 8-bit candidate, original frozen rows/predictions. Own placement preparation/scoring and private artifacts; CPU preparation first, inference only after GPU handoff and manifest acceptance. | Original 125 DEV plus 36 descriptive TRAIN supplements per arm; 197 new inferences and 125 reused arm-A predictions, 322 total paired records. Policy placement is the only core input change. Exact request/token/order/provenance identity and complete admission, no row dropping. |
+| PUBLIC-INVOICE / public_baseline | Anonymous pinned Apache-2.0 snapshot only; no API or teacher calls. Own `training/public-invoice/` and private artifacts. | Archive license/revision/hashes; extract input-only questions/states without Jev/reference predictions, timing, confidence or final actions. Assess independent gold blind to model outcomes before selecting a comparison subset. |
+| REAL-TASK-SEEDS / task_utility | Actual pinned pointsman stdin/unref and SymPy #13890/#13895 regressions. Own `training/task-utility/` and private artifacts. | Reproducible buggy FAIL/fixed PASS using test-only changes, runtime/license/source identity, isolated gold validation, and a competent deterministic retrieval baseline. A case already solved by one effective code batch is not evidence that a semantic model is needed. No task-model calls yet. |
+| NATIVE-CONSUMER / native_adapters | Actual installed Gemini 0.42 components and read-only current Codex app-server capability. Own adapter, direct tests and native probe artifacts. | Throw-only provider sentinel proves which paths generate; require visible output, retained assistant history and cancellation separately. No auth/provider/network call, global settings change, daemon restart/reload or host-internal patch. |
+
+For INPUT-CAUSAL, move the exact original `state.policy` bytes into the trusted
+question by replacing only its `Apply state.policy.` prefix (and equivalent
+Korean prefix). Preserve facts, criteria, quotations, wrapper, exceptions and
+query suffixes. Do not inject the later v3 first-match wording. Preserve all eight
+ambiguous Noul rows and report their caveat plus the unambiguous slice. Core gates
+remain agreement ≥.536, F1 ≥.329167, rule pairs ≥4/9, Noul ≥5/20 and Korean ≥22/41.
+Supplement selection is the lowest original case ID among complete informative
+four-sibling groups for EN/KO/mixed × current-evidence Score, revision-branch
+Choice and acceptance-stop Choice; selected parent-ID digest is
+`3942c0d66797a652149301bee2f441c9e95b593bd9b13884efc3dbba2634eda7`.
+Supplemental rules use identical keys/meanings/order within each pair, with only
+semantic-preserving target remaps. Report paired improvements/regressions, NLL,
+Brier, ECE, language/type/class slices, permutation consistency, Score MAE/severe
+errors, unsupported rows and complete latency. These reused development/TRAIN
+cases cannot establish held-out generalization. Clef sorts native Choice keys,
+so the original 21 strict/base pairs already share native option order.
+
+BACKBONE-PARITY r2 is ACCEPTED at its measured component scope (attempt 1):
+[result](training/clef-local/parity-evidence.json), 105 FP32 observations and three
+BF16 norm diagnostics. Maximum FP32 relative L2 3.06e-6; actual layer 0/3 outputs
+passed at all three lengths. Selected embedding/lexical rows were exactly equal.
+Runtime 3.447 seconds, MLX peak 904,643,368 bytes, Torch GPU allocation zero;
+process exited and GPU ownership passed to INPUT-CAUSAL. BF16 whole blocks,
+quantized blocks and full 32-layer equivalence are explicitly NOT_RUN/UNKNOWN.
+Earlier BF16 norm rounding differs numerically but is not a demonstrated cause
+of decision failures. No precision or norm repair is mixed into INPUT-CAUSAL.
+
+INPUT-CAUSAL r2 is ACCEPTED as a completed **NO-GO** experiment, not as a qualified
+model: [aggregate](training/clef-local/placement-evidence.json). All 197 new calls
+completed, 125 original predictions were reused, and every input fit losslessly
+(283–356 tokens). Core arm B was 63/125 (.504), F1 .424379, rule pairs 0/9 with no
+response switches, Noul 13/20 and Korean 13/41. Arm A was 64/125; paired changes
+were seven improvements and eight regressions. Korean Choice stayed 10/28. The
+36-row TRAIN supplement moved 18→19 correct and 0→3 of 18 pure-rule pairs; this
+bounded effect does not repair the core failures. Eight ambiguous Noul rows keep
+their original caveat. Load was 3.991 seconds, first call 2.751 seconds, warm median
+.983 seconds/p95 1.155 seconds, MLX peak about 11.861 GB. Those reused/serial local
+runs are not a controlled speed comparison. Runtime/model/output hashes were
+checked, the process exited, and no further placement variants or scale-up follow.
+
+For PUBLIC-INVOICE, the admitted source is
+[`typesafe/evalsafe-invoice-processing@6beeb2d2acd65c086c835022f5f4d7434114cafc`](https://huggingface.co/datasets/typesafe/evalsafe-invoice-processing/tree/6beeb2d2acd65c086c835022f5f4d7434114cafc).
+Its actual Apache-2.0 license is separate evidence for public-artifact reuse. The
+manifest records Jev 1.13.0 run `code-typesafe-jev-1.13.0-off-160259a2ba80`, 150
+cases, 450 policy decisions and 6,874 question answers. Published labels are
+OpenAI/Anthropic consensus references and selected runs favor highest primary
+agreement: they are not independent gold or an unbiased prospective experiment.
+Any independently executable subset must have input-based eligibility frozen
+before inspecting Jev outcomes; report its coverage and selection limitations.
+Do not generalize this license to other WorkflowEvals datasets or infer B/C PASS
+from reference agreement. Public input-only preparation does not authorize new
+Jev calls or distillation from its responses.
+
+The blind assessment admits one narrow primary question, `discount_days`: all
+150 invoice cases, 2.1821% of the 6,874 question instances. Parse only canonical
+source payment terms: due-on-receipt or `Net N` means `none`; a positive `D/K Net N`
+discount means K when it is one of 7/10/15/20/30, otherwise `none`. Unsupported or
+conflicting terms remain rejected. The source field, recorded state and computed
+`exact_facts` agree on all 150 inputs; the oracle is recomputed from source text,
+not copied from reference answers. Candidate identity is frozen. The input-only
+class balance is 136 `none` and 14 `10`; always-none is a required control.
+Exclude the proposed five degenerate lump-sum examples from this primary study.
+Questions for the pinned Jev run match all 150 blinded question/state objects by
+canonical JSON hash; string serialization differs. They are 150 independent case
+inputs, not 450 observations from the three downstream policy contexts. Freeze
+oracle artifacts before unblinding any predictions. This controlled extraction
+task can establish narrow agreement/accuracy, not general superiority or useful
+model economics where a deterministic parser already resolves the input.
+
+Oracle freeze: preregistration SHA256
+`010c1aa3df38294833c6cd2e93992f5011af410402bafce91838b384e4f77555`,
+gold SHA256 `8b0b2883a48612dc0945f9d474e0fcffa259d804cc8ced1e62225175aeec73f2`.
+Four focused oracle tests and all 150 complete recorded-input matches passed
+before answer access. The subsequent comparison fixes the recorded Jev run,
+always-none control and original Clef-Flash 8-bit weights before unblinding.
+Use the exact original question/state objects with no added pointsman instruction
+wrapper, complete 2048-token admission and at most 150 local inference calls.
+Unsupported/missing/invalid outputs remain in coverage accounting. Report six-way
+confusion, NLL/Brier/ECE, paired case improvements/regressions, exact McNemar and
+fixed-seed case-bootstrap intervals; one task family cannot establish C. Public
+Jev timings and local Mac timings are different conditions, not a speed benchmark.
+No model training, provider registration or runtime adoption is part of this
+separately licensed artifact comparison.
+
+The initial 2048-token consumer admitted **0/150**, with zero forward calls.
+These immutable refusals are coverage evidence, not zero accuracy. Actual complete
+lengths are 4459/6542/8981/10567 tokens (minimum/median/p95/maximum). The official
+encoder defaults to 16384 and model/tokenizer support 262144; 2048 was this local
+experiment's cap, not the model's capacity. Before any Clef answer, a separate
+lossless 16384-token contract was authorized for the same 150 inputs and frozen
+comparison rules. Run the deterministic longest input first, then continue only
+if finite outputs and combined Metal allocation stay within 14 GiB. Reuse that
+first prediction in the cohort, with at most 150 total forward calls. Preserve
+the old refusal artifact, use separate output/admission identities, add no
+instruction wrapper and never truncate. This is an input-coverage-driven resource
+extension, not selection based on model quality.
+
+The longest-input resource probe passed and counts as the first of 150: 10,567
+tokens, 41.417 seconds for the first forward, MLX peak 12,986,770,920 bytes and
+sampled combined Metal driver allocation 13,187,268,608 bytes (12.282 GiB).
+The same process continues the remaining inputs; full-cohort quality is pending.
+This first-call timing includes its actual cold conditions and is not a warm
+speed estimate. The source manifest additionally records Jev `question_mode=all`:
+the target question and state match, but the original complete multi-question API
+envelope is not attested by per-question records. Report narrow target outcomes,
+not an identical-full-request experiment or broad B/C proof. Numerical rules and
+inputs remain frozen; no extra inference follows from this caveat.
 
 ### Frozen local pilot — 2026-10-03
 
@@ -702,7 +842,7 @@ optional native adapters. A prototype existing only on paper is not ACCEPTED.
 
 ### WP03 — Establish permitted data and trustworthy evidence
 
-**State:** PARTIAL ACCEPTANCE — independent corpus admitted; Jev competitive use unavailable. **Depends on:** WP00; WP01 identity contract before importing
+**State:** PARTIAL ACCEPTANCE — independent corpus admitted; new Jev API competitor use unavailable, licensed public invoice assessment in progress. **Depends on:** WP00; WP01 identity contract before importing
 new captures. **Owner:** data/evidence maintainer. **Scope:** existing training
 schema/store/runner/host paths and private manifests. **Output:** permitted-source
 inventory and question-specific evidence contract.
@@ -721,7 +861,7 @@ inventory and question-specific evidence contract.
 unresolved rights or missing evidence remain excluded/UNKNOWN. **Evidence:** schema
 and linkage regressions, manifest hashes and approved aggregate diagnostics. The
 rights inventory covers only the admitted independently authored corpus and pinned
-local models; uncleared historical captures remain excluded. TypeSafe comparative
+local models; uncleared historical captures remain excluded. New TypeSafe API comparative
 use is resolved as UNAVAILABLE under current permission/budget, not as a successful
 comparison. No external AI verbalization or Jev teacher labels were used.
 
@@ -846,7 +986,7 @@ or documented SKIPPED decision retaining WP08.
 - [x] Identify the specific gap that warrants an ablation; skip this package if the supervised baseline is adequate.
 - [x] Compare existing RL/noise-reward recipe against CE using equal data and update budgets, reporting compute as well as quality.
 - [x] Do not claim the Laya recipe reproduces Jev's undisclosed training; require independent gains rather than the RLCD name.
-- [ ] Add ordinal-distribution loss, larger encoder, LoRA or quantization only for the observed error/resource problem, one factor at a time.
+- [x] Add ordinal-distribution loss, larger encoder, LoRA or quantization only for the observed error/resource problem, one factor at a time. The isolated 9B Flash candidate addressed failed rule conditioning; 4-bit/group-64 conversion met local memory bounds and the frozen 8-bit-only ablation did not recover quality. Both remain rejected; unused LoRA/ordinal variants were not added.
 - [ ] If expanding context/options, change admission, input construction, training, inference and calibration together; test evidence at start/middle/end.
 - [ ] Include retrieval shortlist recall when using candidate reduction; do not call it native 255-way classification.
 - [ ] Measure batching/shared-state encoding, cold/warm latency and contention separately; do not infer saved host turns from encoder batching.
@@ -858,7 +998,7 @@ new calibration and affected downstream evidence.
 
 ### WP10 — Calibrate and evaluate decision quality and generalization
 
-**State:** PREPARED — sealed test unopened and Jev comparison unavailable. **Depends on:** WP05 and frozen WP08/WP09 candidate.
+**State:** PREPARED — sealed test unopened; licensed public Jev reference identified, independent-gold comparison unaccepted. **Depends on:** WP05 and frozen WP08/WP09 candidate.
 **Owner:** evaluation maintainer. **Output:** separate B/C scorecards and
 family/provider qualifications, with UNKNOWN where comparisons are unavailable.
 
@@ -1232,11 +1372,12 @@ uses compute, memory and maintenance effort.
 | [Evidence evaluator](src/training/evaluate.mjs) | Question-specific evidence, separate shadow/active, observational comparisons | New utility targets for actual model×effort outcomes; do not relabel route intent/difficulty/risk as task success |
 | [Lifecycle](src/training/laya-lifecycle.mjs) | Register, qualify, compare, explicit promote/rollback | Bind qualifications to decision family, data/preprocessing and runtime identity; add prospective holdout evidence |
 
-Today the general exporter has train/calibration/test splits. The trainer uses
-calibration to select the best epoch and then fits temperature on it, so that
-calibration estimate has been exposed to model selection. The frozen regression
-holdout is a copy of test, not an independent second sample. Preserve its value
-as a regression floor while correcting these boundaries for new research.
+At the planning baseline, the exporter had train/calibration/test splits and the
+trainer used calibration both for epoch selection and temperature fitting. The
+accepted implementation now separates development selection from calibration
+fitting. Historical estimates retain that limitation. The legacy frozen regression
+holdout is a copy of test, not an independent second sample; retain it as a
+regression floor without counting it twice.
 
 ## What the model must learn
 

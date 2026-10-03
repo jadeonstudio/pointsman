@@ -7,7 +7,7 @@ export const WORKFLOW_HOST_CONTRACTS = Object.freeze({
   claude: Object.freeze({ revision: 'claude-turn-step-2026-10-03', minimumVersion: '2.1.287', transport: 'mod-async-generator', nativeEvidence: 'UNKNOWN',
     readable: ['turnId', 'index', 'model', 'agentId'], writable: ['text chunk', 'stop chunk'], source: 'https://github.com/anthropics/claude-code/blob/main/mods/types/claude-code.d.ts' }),
   gemini: Object.freeze({ revision: 'gemini-before-model-0.42.0', versions: ['0.42.0'], transport: 'BeforeModel-json', nativeEvidence: 'UNKNOWN',
-    readable: ['llm_request'], writable: ['hookSpecificOutput.llm_response text'], source: 'https://geminicli.com/docs/hooks/reference/' }),
+    readable: ['llm_request'], writable: ['BeforeModel decision deny with synthetic llm_response text'], source: 'https://geminicli.com/docs/hooks/reference/' }),
 });
 
 function versionParts(version) { return typeof version === 'string' && /^\d+\.\d+\.\d+$/.test(version) ? version.split('.').map(Number) : null; }
@@ -66,7 +66,9 @@ export async function* claudeWorkflowStep(event, next, options, envelope, { sign
 }
 export async function geminiWorkflowResponse(options, envelope, { signal } = {}) {
   const out = await prepareNativeWorkflow({ ...options, host: 'gemini' }, envelope, { signal });
-  return out.apply ? { hookSpecificOutput: { llm_response: { candidates: [{ content: { role: 'model', parts: [out.text] }, finishReason: 'STOP' }] } } } : {};
+  // Installed 0.42.0 consumes the synthetic response only on its BeforeModel blocking path.
+  // This decision suppresses model generation; it is never a tool/permission hook response.
+  return out.apply ? { decision: 'deny', reason: 'Completed bounded pointsman workflow.', hookSpecificOutput: { llm_response: { candidates: [{ content: { role: 'model', parts: [out.text] }, finishReason: 'STOP' }] } } } : {};
 }
 
 // The caller owns process startup, initialization, trust UI, and permissions. No host patch or process spawning.

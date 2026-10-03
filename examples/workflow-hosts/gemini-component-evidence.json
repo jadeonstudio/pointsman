@@ -1,0 +1,213 @@
+{
+  "observedAt": "2026-10-03T06:09:28.398Z",
+  "host": "gemini",
+  "version": "0.42.0",
+  "grade": "installed_native_component_with_injected_provider",
+  "bundleHash": "38ea40ff0e78168243378aa05bf188e52bb88fb04886c03f7df462be906238b0",
+  "packet": {
+    "version": 1,
+    "recipeRevision": "workflow-v1",
+    "id": "860e60c5-944c-4579-876f-b56631286b9c",
+    "workflow": "repo-evidence",
+    "mode": "on",
+    "status": "done",
+    "reason": "EVIDENCE_COLLECTED",
+    "acceptance": {
+      "definition": "met",
+      "direct_callers": "met",
+      "tests": "met"
+    },
+    "evidence": [
+      {
+        "ref": "e0",
+        "path": "source.mjs",
+        "hash": "25457087337699136d7c54a0d6e713b53ff7b22302a9b31511a9598b1988e52b",
+        "text": "export function sum(a,b) { return a+b; }\n",
+        "role": "definition",
+        "startLine": 1,
+        "endLine": 2,
+        "roles": [
+          "definition"
+        ],
+        "symbols": [
+          "sum"
+        ]
+      },
+      {
+        "ref": "e1",
+        "path": "source.test.mjs",
+        "hash": "2bee8ca4d5628cc5f2bd4517e5a308408b56e7ee432a0d0703d9173fe96a3af4",
+        "text": "sum(1,2);\n",
+        "role": "direct_caller",
+        "startLine": 1,
+        "endLine": 2,
+        "roles": [
+          "direct_caller",
+          "test"
+        ],
+        "symbols": [
+          "sum"
+        ]
+      }
+    ],
+    "coverage": {
+      "requested": "selective",
+      "complete": true,
+      "filesConsidered": 2,
+      "filesRead": 2,
+      "scope": [
+        "."
+      ],
+      "omissions": [],
+      "limits": [
+        "Lexical direct callers only; dynamic registries, generated and cross-language edges are UNKNOWN.",
+        "Comments, string references and aliases require parent interpretation."
+      ],
+      "excluded": []
+    },
+    "needsParent": null,
+    "authorizesExecution": false,
+    "stats": {
+      "actions": 3,
+      "decisions": 0,
+      "networkCalls": 0,
+      "inferenceCalls": 0,
+      "bytesRead": 51,
+      "outputBytes": 1711,
+      "cacheHits": 2,
+      "elapsedMs": 50.436
+    },
+    "details": {
+      "symbols": {
+        "sum": {
+          "definitions": [
+            "e0"
+          ],
+          "directCallers": [
+            "e1"
+          ],
+          "tests": [
+            "e1"
+          ],
+          "contracts": [],
+          "references": []
+        }
+      },
+      "selectedBranch": null,
+      "semanticSelection": "NOT_IMPLEMENTED",
+      "dynamicEdges": "UNKNOWN",
+      "requiredPaths": [],
+      "uncertainPaths": [],
+      "counterevidencePaths": []
+    },
+    "snapshot": {
+      "revision": null,
+      "files": {
+        "source.mjs": "25457087337699136d7c54a0d6e713b53ff7b22302a9b31511a9598b1988e52b",
+        "source.test.mjs": "2bee8ca4d5628cc5f2bd4517e5a308408b56e7ee432a0d0703d9173fe96a3af4"
+      }
+    }
+  },
+  "actualExternalModelRequests": 0,
+  "actualProviderCreated": false,
+  "globalsChanged": false,
+  "observations": [
+    {
+      "name": "complete_on",
+      "hookCalls": 1,
+      "providerInvocations": 0,
+      "error": null,
+      "eventTypes": [
+        "agent_execution_blocked",
+        "content",
+        "finished"
+      ],
+      "visibleText": "{\"version\":1,\"recipeRevision\":\"workflow-v1\",\"id\":\"860e60c5-944c-4579-876f-b56631286b9c\",\"workflow\":\"repo-evidence\",\"mode\":\"on\",\"status\":\"done\",\"reason\":\"EVIDENCE_COLLECTED\",\"acceptance\":{\"definition\":\"met\",\"direct_callers\":\"met\",\"tests\":\"met\"},\"evidence\":[{\"ref\":\"e0\",\"path\":\"source.mjs\",\"hash\":\"25457087337699136d7c54a0d6e713b53ff7b22302a9b31511a9598b1988e52b\",\"text\":\"export function sum(a,b) { return a+b; }\\n\",\"role\":\"definition\",\"startLine\":1,\"endLine\":2,\"roles\":[\"definition\"],\"symbols\":[\"sum\"]},{\"ref\":\"e1\",\"path\":\"source.test.mjs\",\"hash\":\"2bee8ca4d5628cc5f2bd4517e5a308408b56e7ee432a0d0703d9173fe96a3af4\",\"text\":\"sum(1,2);\\n\",\"role\":\"direct_caller\",\"startLine\":1,\"endLine\":2,\"roles\":[\"direct_caller\",\"test\"],\"symbols\":[\"sum\"]}],\"coverage\":{\"requested\":\"selective\",\"complete\":true,\"filesConsidered\":2,\"filesRead\":2,\"scope\":[\".\"],\"omissions\":[],\"limits\":[\"Lexical direct callers only; dynamic registries, generated and cross-language edges are UNKNOWN.\",\"Comments, string references and aliases require parent interpretation.\"],\"excluded\":[]},\"needsParent\":null,\"authorizesExecution\":false,\"stats\":{\"actions\":3,\"decisions\":0,\"networkCalls\":0,\"inferenceCalls\":0,\"bytesRead\":51,\"outputBytes\":1711,\"cacheHits\":2,\"elapsedMs\":50.436},\"details\":{\"symbols\":{\"sum\":{\"definitions\":[\"e0\"],\"directCallers\":[\"e1\"],\"tests\":[\"e1\"],\"contracts\":[],\"references\":[]}},\"selectedBranch\":null,\"semanticSelection\":\"NOT_IMPLEMENTED\",\"dynamicEdges\":\"UNKNOWN\",\"requiredPaths\":[],\"uncertainPaths\":[],\"counterevidencePaths\":[]},\"snapshot\":{\"revision\":null,\"files\":{\"source.mjs\":\"25457087337699136d7c54a0d6e713b53ff7b22302a9b31511a9598b1988e52b\",\"source.test.mjs\":\"2bee8ca4d5628cc5f2bd4517e5a308408b56e7ee432a0d0703d9173fe96a3af4\"}}}",
+      "historyRoles": [
+        "user"
+      ],
+      "syntheticAssistantInHistory": false
+    },
+    {
+      "name": "legacy_response_only",
+      "hookCalls": 1,
+      "providerInvocations": 1,
+      "error": "CONTENT_GENERATOR_SENTINEL",
+      "eventTypes": [
+        "agent_execution_stopped"
+      ],
+      "visibleText": "",
+      "historyRoles": [
+        "user"
+      ],
+      "syntheticAssistantInHistory": false
+    },
+    {
+      "name": "off",
+      "hookCalls": 1,
+      "providerInvocations": 1,
+      "error": "CONTENT_GENERATOR_SENTINEL",
+      "eventTypes": [
+        "agent_execution_stopped"
+      ],
+      "visibleText": "",
+      "historyRoles": [
+        "user"
+      ],
+      "syntheticAssistantInHistory": false
+    },
+    {
+      "name": "incomplete_on",
+      "hookCalls": 1,
+      "providerInvocations": 1,
+      "error": "CONTENT_GENERATOR_SENTINEL",
+      "eventTypes": [
+        "agent_execution_stopped"
+      ],
+      "visibleText": "",
+      "historyRoles": [
+        "user"
+      ],
+      "syntheticAssistantInHistory": false
+    },
+    {
+      "name": "already_aborted",
+      "hookCalls": 0,
+      "providerInvocations": 0,
+      "error": null,
+      "eventTypes": [
+        "user_cancelled"
+      ],
+      "visibleText": "",
+      "historyRoles": [
+        "user"
+      ],
+      "syntheticAssistantInHistory": false
+    }
+  ],
+  "streamBypass": "PASS",
+  "fallThroughSentinel": "PASS",
+  "cancellationBeforeRequest": "PASS",
+  "history": "FAIL_INSTALLED_COMPONENT_SYNTHETIC_ASSISTANT_NOT_RETAINED",
+  "authenticatedCli": "UNKNOWN",
+  "userInterface": "UNKNOWN",
+  "inFlightCancellation": "UNKNOWN",
+  "adoption": "NO_GO_FULL_NATIVE_HISTORY",
+  "sourceAssessment": {
+    "bundleHash": "38ea40ff0e78168243378aa05bf188e52bb88fb04886c03f7df462be906238b0",
+    "confirmed": [
+      "BeforeModelHookOutput supports llm_request and llm_response, not a transcript/history insertion output.",
+      "HookSystem blocked branch consumes synthetic response and returns before applying llm_request modifications.",
+      "GeminiChat catches the blocked response, yields its synthetic chunk, then returns before processStreamResponse appends the model entry."
+    ],
+    "lineAnchors": {
+      "hookOutput": "296356-296391",
+      "hookSystem": "321976-321994",
+      "syntheticCatch": "293464-293479",
+      "normalHistoryAppend": 293916
+    },
+    "ownedComponentApi": "GeminiChat.addHistory exists for an application owning that object, but command-based native BeforeModel hooks receive only serialized input/output and no chat handle. Using a separate owned client is outside this native-hook scope.",
+    "supportedNativeHistoryInsertion": "NONE_IDENTIFIED_FOR_INSTALLED_0.42.0",
+    "hostInternalsPatched": false
+  }
+}

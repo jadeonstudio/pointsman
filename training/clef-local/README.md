@@ -59,3 +59,51 @@ From the actual 4-bit tensor headers, an 8-bit backbone projects to 11,421,508,6
 The one authorized 8-bit conversion passed in 31.101 seconds with MLX peak 11,421,508,616 bytes and RSS peak 5,964,857,344 bytes. One DEV pass served all 125 rows in 158.303 seconds of loop time; model/head load took 3.534 seconds. First call was 10,676.530 ms; remaining-call median was 1207.773 ms and p95 1352.153 ms. MLX peak was 11,862,750,856 bytes and RSS peak 3,132,194,816 bytes. Stage timestamps are `2026-10-03T05:31:10.731117Z`–`2026-10-03T05:34:01.845531Z`; CPU gates had completed per the root, while other host load was uncontrolled.
 
 Direct 4/8 readback confirmed all 125 rows share the same sample IDs/order, shared/full wire hashes, encoded token hashes/lengths, and head option order. The 8-bit checkpoint is `2d78acadca4a2d3865b6c9efd8402d1b2483c1dc6c43a802f81ecc72dcb45e63`; prediction-file SHA256 is `dad2e3b3f7337942598881a7b0658886bb9b7acc3b05284b48927ea111723fd0`. Private `artifacts8/` holds the frozen results; the GPU process exited and no further inference was run. These execution checks leave quality scoring to the original evaluator and preserve the source-oracle caveat.
+
+## Native component parity follow-up
+
+[parity_probe.py](parity_probe.py) compares actual Hugging Face CPU FP32 and MLX
+GPU FP32 operations using pinned weights, with no copied forward implementation.
+[The result](parity-evidence.json) passed 105 FP32 observations plus three BF16
+norm diagnostics, including sequential native layers 0 and 3 at lengths 17/65/129.
+Maximum FP32 relative L2 was 3.06e-6. Selected embedding and lexical rows 0–128
+matched both converted models exactly. Execution took 3.447 seconds with 904.6 MB
+MLX peak, below the 2 GiB component budget.
+
+The FP32 probe performs zero-centered norm addition in FP32. Existing converted
+BF16 norm multipliers round earlier; the separate diagnostic observed relative
+L2 .00335–.00358. This has not been shown to cause the quality failures. BF16 whole
+blocks, quantized decoder parity and the complete 32-layer backbone were not run.
+The component result cannot certify those paths or justify model adoption.
+
+Run once in a fresh `parity/` output directory with the existing isolated runtime:
+
+```sh
+"$CLEF_ROOT/.venv/bin/python" training/clef-local/parity_probe.py --root "$CLEF_ROOT"
+```
+
+Executed source SHA256: `057dca102404bc1c14e50b4e1a59e1f991ecbd57793de8f33cdd5054a548f84f`.
+Result SHA256: `dfdfe684b827505a8b32c0b0914a711eb34447a5ba6f371a0e33c0bd16fd52b7`.
+The original evaluator, weights and predictions were unchanged.
+
+## Policy placement experiment
+
+[placement_experiment.py](placement_experiment.py) prepared and ran the single
+registered input ablation: relocate the exact policy from state into its trusted
+question, preserving facts, choices, exceptions and labels. All 322 paired records
+fit completely; 125 frozen predictions were reused and 197 new calls completed.
+[The aggregate](placement-evidence.json) preserves the original DEV and descriptive
+TRAIN supplement separately, with input/model/source hashes and the eight
+ambiguous Noul-row caveat.
+
+Original DEV agreement changed 64/125→63/125, rule pairs stayed 0/9, and Korean
+Choice stayed 10/28. Supplement agreement changed 18/36→19/36 and pure-rule pairs
+0/18→3/18. This is **NO-GO** for adoption: policy placement alone did not repair
+the core failures. No additional training or variants followed.
+
+The script supports CPU preparation, `--check-consumer` and `--predict`; prediction
+requires the exact frozen `--manifest-sha` and refuses existing output. The actual
+manifest was `59d3afaf8bff0b7873473d410813e48a618d8725e06365cd499aed509e1d943b`.
+Frozen scoring and executed-source snapshots are retained in the private research
+`placement/` directory. The aggregate is public; private canonical rows and full
+per-case evidence are not bundled here. Five focused tests passed before inference.

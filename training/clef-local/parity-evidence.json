@@ -1,0 +1,104 @@
+{
+  "status": "PASS_COMPONENTS_ONLY",
+  "failure": null,
+  "contract_sha256": "b085760a580301978acb502c0f24a7e147d79923385ed4ef4b8b0fac220c8954",
+  "elapsed_seconds": 3.446531082969159,
+  "finished_at_utc": "2026-10-03T06:21:34.758505+00:00",
+  "memory": {
+    "mlx_peak_bytes": 904643368,
+    "mlx_active_bytes": 12,
+    "torch_gpu_current_bytes": 0
+  },
+  "observations": 108,
+  "full_backbone_equivalence": "UNKNOWN",
+  "coverage": {
+    "FP32_native_decoder_blocks": {
+      "layers": [
+        0,
+        3
+      ],
+      "B": 1,
+      "T": [
+        17,
+        65,
+        129
+      ],
+      "status": "PASS",
+      "weights": "pinned BF16 source cast FP32; zero-centered norm +1 performed in FP32 before MLX forward"
+    },
+    "standalone_FP32": {
+      "operations": [
+        "final norm",
+        "partial RoPE64 text",
+        "GDN q/k normalization",
+        "GDN decay",
+        "GDN beta"
+      ],
+      "status": "PASS"
+    },
+    "original_vs_converted_embedding_lexical_rows": {
+      "rows": "0..128",
+      "converted_modes": [
+        4,
+        8
+      ],
+      "status": "EXACT_EQUAL"
+    },
+    "BF16_norm_policy_diagnostic": "RUN; relativeL2 .00335-.00358; not whole-block parity",
+    "BF16_whole_decoder_block": "NOT_RUN",
+    "quantized_4_or_8_bit_decoder_block_parity": "NOT_RUN",
+    "full_32_layer_backbone": "NOT_RUN; equivalence UNKNOWN"
+  },
+  "runtime": {
+    "torch": "2.14.0",
+    "transformers": "5.17.0",
+    "mlx": "0.32.3",
+    "mlx-lm": "0.32.0",
+    "safetensors": "0.8.0"
+  },
+  "installed_source_readback_sha256": {
+    "transformers/models/qwen3_5/modeling_qwen3_5.py": "762feb6c7426a7f15b5bf830df54c07438bf9e7c27b8cdb23179045920412c3b",
+    "mlx_lm/models/qwen3_5.py": "10c59a71d8d739b8cdff38c7e9c7345deb9a9688e821ac37cb774d3086cac42e",
+    "mlx_lm/models/qwen3_next.py": "67ca08a4d08cb7be124965e95399735e556f1eaeb21a16bc23cb88d1ac035e11",
+    "mlx_lm/models/gated_delta.py": "f69e837ea68641dbb06fdb5dcc024a9a7e1d9353f08ae58c05275253a0c39428"
+  },
+  "native_layer_output_metrics": [
+    {
+      "operation": "T17/layer0.native_output",
+      "relative_l2": 7.019191172915953e-07,
+      "cosine": 0.9999999999997571,
+      "max_abs": 5.245208740234375e-06
+    },
+    {
+      "operation": "T65/layer0.native_output",
+      "relative_l2": 6.004359372725387e-07,
+      "cosine": 0.9999999999998194,
+      "max_abs": 5.7220458984375e-06
+    },
+    {
+      "operation": "T129/layer0.native_output",
+      "relative_l2": 9.29496639971073e-07,
+      "cosine": 0.9999999999995686,
+      "max_abs": 7.152557373046875e-06
+    },
+    {
+      "operation": "T17/layer3.native_output",
+      "relative_l2": 1.9723522505057153e-06,
+      "cosine": 0.9999999999980572,
+      "max_abs": 3.62396240234375e-05
+    },
+    {
+      "operation": "T65/layer3.native_output",
+      "relative_l2": 2.0531403962593974e-06,
+      "cosine": 0.9999999999978944,
+      "max_abs": 5.14984130859375e-05
+    },
+    {
+      "operation": "T129/layer3.native_output",
+      "relative_l2": 1.8853687334863851e-06,
+      "cosine": 0.9999999999982226,
+      "max_abs": 3.24249267578125e-05
+    }
+  ],
+  "FP32_max_relative_l2": 3.0590038178389066e-06
+}

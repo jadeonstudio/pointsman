@@ -10,12 +10,14 @@ The [integrated plan](PLAN.md) prioritizes bounded work completed behind one cal
 
 The [local Clef-Flash experiment](training/clef-local/README.md) ran 4-bit and 8-bit backbones with the official BF16 decision head on a 24 GiB Mac. Both processed all 125 development inputs but failed the changed-rule and Korean gates; neither is a production provider or promoted checkpoint. The [eight-candidate evidence](training/clef-local/evidence.json) preserves the one-family and eight ambiguous-oracle-row limitations. The current recommendation is to retain existing behavior, not scale or adopt these rejected candidates.
 
+Follow-up [policy placement](training/clef-local/placement-evidence.json) also failed the core rule gate; [native FP32 component parity](training/clef-local/parity-evidence.json) passed without certifying the complete converted backbone. [Public invoice comparison tools](training/public-invoice/README.md) use separately licensed recorded Jev inputs and source-derived gold, with no new paid API calls. [Two real regression seeds](training/task-utility/README.md) were already localized by a bounded code batch, so adding a semantic chooser to those segments is not justified.
+
 | Surface | Current repository support | Application boundary |
 |---|---|---|
 | MCP / CLI / JavaScript | Shared typed decision engine and fixed workflow runner | Decisions need `apply=true`; workflows return segment status and source evidence |
 | Claude Code | Owned spawn hooks; separate opt-in effort mod | Host/version and policy dependent; native behavior needs verification |
 | Codex | MCP decisions/workflows and spawn-recording hooks; direct app-server MCP execution verified on 0.154.0 | The owned probe passed with no `turn/start`; total provider requests and UI/history continuation remain UNKNOWN. Normal MCP keeps outer parent turns |
-| Claude / Gemini native adapters | Version-bound synthetic-response contracts | OFF by default; contract tests do not establish live bypass |
+| Claude / Gemini native adapters | Version-bound synthetic-response contracts | OFF by default; Gemini 0.42 component bypass works, but assistant-history retention fails |
 | Other MCP clients / owned SDK harnesses | Common engine/runner are reusable; no host-specific installer | Root and capabilities are bound by the trusted caller |
 
 Jev is selected explicitly; a local failure never silently calls the paid provider. Likewise, an unqualified local checkpoint does not acquire general-purpose capabilities just because the request uses the same schema.
@@ -180,7 +182,7 @@ The three recipes currently collect evidence deterministically with zero provide
 
 `node scripts/workflow-benchmark.mjs 5 17` compares actual purpose-built code batches and this executor on controlled fixtures. The [current packet measurement](examples/workflow-hosts/measurement-evidence.json) passed all 30 independent checks. Compared with the previous packet on identical frozen contents, repository/log/test output fell by 52.4%/51.3%/27.7% while preserving the required evidence and acceptance. Log repetition uses the timeline/group semantics above. Purpose-built code batches remain faster and smaller; this executor has not demonstrated an efficiency win over that baseline. Parent requests, cache use, full task time, cost savings and model contribution remain unmeasured. Use direct batching when it already finishes the segment; native completion and genuinely dependent segments require separate measured acceptance.
 
-`pointsman workflow native off|shadow|on` controls a separate adapter gate; ON also requires global/workflow ON and a supported host contract. The Codex owned-client, Claude `turn.step` and Gemini `BeforeModel` adapters retain normal continuation when a packet is incomplete or the host is unsupported. They are not installed automatically by the existing hooks or effort mod. Contract tests establish packet/version/fallback behavior; actual live model-request bypass remains UNKNOWN until verified on that host.
+`pointsman workflow native off|shadow|on` controls a separate adapter gate; ON also requires global/workflow ON and a supported host contract. The Codex owned-client, Claude `turn.step` and Gemini `BeforeModel` adapters retain normal continuation when a packet is incomplete or the host is unsupported. They are not installed automatically by the existing hooks or effort mod. The [Gemini 0.42 installed-component probe](examples/workflow-hosts/gemini-component-evidence.json) verifies synthetic text and zero provider invocations using a throw-only local provider sentinel. That version requires a `BeforeModel` blocking decision to consume the synthetic response, but fails to retain it in assistant history. Full Gemini native adoption is therefore NO-GO; authenticated CLI/UI and in-flight cancellation remain unverified. The response is specific to `BeforeModel` and never answers a tool-permission request.
 
 ## Measuring cost and time
 

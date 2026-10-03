@@ -49,6 +49,7 @@ test('Claude yields native chunks and preserves fallback stream/result', async (
 });
 test('Gemini uses string parts with no synthetic functionCall or fabricated token usage', async () => {
   const out = await geminiWorkflowResponse(opts('gemini'), envelope);
+  assert.equal(out.decision, 'deny');
   assert.equal(typeof out.hookSpecificOutput.llm_response.candidates[0].content.parts[0], 'string');
   assert.equal(out.hookSpecificOutput.llm_response.usageMetadata, undefined);
   assert.deepEqual(await geminiWorkflowResponse(opts('gemini', {}), envelope), {});
