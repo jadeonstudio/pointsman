@@ -302,6 +302,7 @@ The ordinary-entry fix and completed invoice comparison were then pushed as
 The clean installed checkout was fast-forwarded to that revision; workflow-mod
 and shared-runtime hashes match. Installer/skills were unchanged, so no repeat
 dry-run, reinstall, reload or global write was needed. OFF modes and d6 remain.
+The cancellation/data revision `ca6aebd4de041e52b9791315004e665e8d9a2c50` was subsequently pushed/read back and fast-forwarded into the clean installed checkout. CLI/mod hashes match; the accepted 605-case gate and unchanged installer dry-run were reused. Production OFF/d6 and unrelated settings remain preserved.
 
 Current Claude docs require `2.1.287+` for the documented default-enabled mods
 path and say the old function-hooks environment flag is ignored. A later readback
@@ -735,6 +736,7 @@ progress: authenticated Claude packet/history/continuation and completed invoice
 comparison, followed by verified delivery). Four independent read-only nodes
 use GPT-6.1 Sol; root alone owns integration, native sessions and GPU admission.
 No new model run or training follows merely from investigation.
+Outcome: native input-boundary cancellation/recovery accepted at that scope; BFCL preparation accepted; prefix optimization failed parity; current real-task seeds still have no defensible model-dependent action consumer. All workers and GPU ownership are released.
 
 | Current node / owner | Required next evidence | Scope / stop boundary |
 |---|---|---|

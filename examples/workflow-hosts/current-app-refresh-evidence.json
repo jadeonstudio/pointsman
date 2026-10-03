@@ -215,5 +215,29 @@
     "extraTestsRun": false,
     "validation": "Reused accepted 601/601 gate; installed-runtime readback is separate from later documentation-only receipt commits",
     "removedFiles": []
+  },
+  "cancellationRuntimeDelivery": {
+    "observedAt": "2026-10-03T11:00:07.945Z",
+    "acceptedSourceAndRemoteCommit": "ca6aebd4de041e52b9791315004e665e8d9a2c50",
+    "installedCommit": "ca6aebd4de041e52b9791315004e665e8d9a2c50",
+    "previousInstalledCommit": "231ef7e0a73f8cc28c97af005ce75181dc0b2101",
+    "cleanMain": true,
+    "update": "local fetch, fast-forward only",
+    "sourceMatches": {
+      "src/features-cli.mjs": "90c2c949df03e1091a74583a87d4cf7fb0597e789e8ed466d3b12de80ce25cd8",
+      "mods/pointsman-workflows/hooks/pointsman-workflows.ts": "c864aea504ed07c012a97c1000885f297cd7419da478be881cb8d945f5bb3cd5"
+    },
+    "globalMode": "off",
+    "workflowMode": "off",
+    "nativeMode": "off",
+    "provider": "laya",
+    "model": "multilingual-d6",
+    "checkpoint": "d145e848f7827fdd0a643b90727e65a8fe67d5637bf8c6c07ab3d26511edd434",
+    "unchangedInstallerAndSkills": true,
+    "reusedDryRun": true,
+    "reusedNodeTestsPassed": 605,
+    "reinstall": false,
+    "nativeReload": false,
+    "globalWrites": false
   }
 }
