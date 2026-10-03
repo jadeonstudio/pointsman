@@ -33,6 +33,7 @@ try {
   await fs.writeFile(manifestPath, JSON.stringify(manifest));
   await fs.mkdir(path.join(plugin, 'tests'));
   const testSource = `import { describe, expect, mock, test } from 'claude-code/testing';
+import { register } from '../hooks/pointsman-workflows.ts';
 const request = ${JSON.stringify(request)};
 const packet = ${JSON.stringify(packet)};
 const response = { apply: true, text: JSON.stringify(packet), contractRevision: ${JSON.stringify(WORKFLOW_HOST_CONTRACTS.claude.revision)} };
@@ -118,6 +119,28 @@ describe('pointsman-workflows installed native component', () => {
     expect(out.result.answer).toBe('fallback-sentinel');
     expect(calls).toEqual({ bridge: 1, delegate: 1, network: 0 });
   });
+  test('actual module suppresses pending process resolve/reject after injected Next.signal abort and preabort starts no process', async ($, on) => {
+    let finish, entered, bridgeCalls = 0;
+    const engine = { process: { run: () => { bridgeCalls++; entered(); return new Promise((resolve, reject) => {
+      finish = rejectResult => rejectResult ? reject(new Error('cancelled process')) : resolve({ exitCode: 0, stdout: JSON.stringify(response), stderr: '' });
+    }); } } };
+    for (const scenario of ['resolve', 'reject', 'preabort']) {
+      const hooks = {}, controller = new AbortController();
+      const started = new Promise(resolve => { entered = resolve; });
+      register((name, fn) => { hooks[name] = fn; }, { pointsmanPath: '/owned/pointsman', timeoutMs: 100 });
+      let modelCalls = 0;
+      const next = async function* () { modelCalls++; yield { kind: 'text', index: 0, text: 'fallback-sentinel' }; };
+      next.signal = controller.signal;
+      await hooks['prompt.submit'](engine, { text: 'pointsman-workflow ' + JSON.stringify(request), origin: { kind: 'composer' }, wait: false }, async e => e);
+      const before = bridgeCalls;
+      if (scenario === 'preabort') controller.abort();
+      const result = hooks['turn.step'](engine, event, next).next();
+      if (scenario !== 'preabort') { await started; controller.abort(); finish(scenario === 'reject'); }
+      expect(await result).toEqual({ value: undefined, done: true });
+      expect(bridgeCalls - before).toBe(scenario === 'preabort' ? 0 : 1);
+      expect(modelCalls).toBe(0);
+    }
+  });
 });
 `;
   await fs.writeFile(path.join(plugin, 'tests/pointsman-workflows.test.ts'), testSource);
@@ -143,9 +166,12 @@ describe('pointsman-workflows installed native component', () => {
     globalSettingsChanged: false, activationChanged: false,
     testConfigOverride: { timeoutMs: 100, scope: 'owned temporary plugin copy; production default unchanged' },
     lateSuccessFallback: run.status === 0 ? 'PASS_NATIVE_TEST_HOST' : 'FAIL',
+    abortGuard: run.status === 0 ? 'PASS_INSTALLED_SANDBOX_ACTUAL_MODULE_INJECTED_NEXT_SIGNAL' : 'FAIL',
+    abortGuardScope: 'The actual module runs in the installed test sandbox; its process Promise and Next.signal are explicitly injected. The other six checks use the native testing engine. This does not prove native user-interrupt propagation or child termination.',
     priorRevision: { receiptSha256: createHash('sha256').update(priorText).digest('hex'), moduleHash: prior.moduleHash,
       observedAt: prior.observedAt, passedTests: (prior.nativeTestOutput.match(/\(pass\)/g) ?? []).length, nativeTestExitCode: prior.nativeTestExitCode,
-      note: 'Prior accepted component checks retained in Git history; this run uses the ordinary text entry and adds its guard regression.' },
+      previousAccepted: prior.nativeTestExitCode === 0 ? { receiptSha256: createHash('sha256').update(priorText).digest('hex'), moduleHash: prior.moduleHash } : prior.priorRevision?.previousAccepted ?? prior.priorRevision,
+      note: 'Prior component attempt retained by hash; accepted baseline retained in Git history. This run adds cancellation guards with explicitly injected process and Next.signal.' },
     streamAndResult: run.status === 0 ? 'PASS_NATIVE_TEST_HOST' : 'FAIL',
     ordinaryContinuation: run.status === 0 ? 'PASS_NATIVE_HOOK_CHAIN_WITH_SENTINEL' : 'FAIL',
     cancellationBeforeConsumption: run.status === 0 ? 'PASS_NATIVE_TEST_HOST' : 'FAIL',

@@ -124,6 +124,7 @@ test('actual Claude mod registers bounded explicit entry and yields synthetic re
   const step = { turnId: 'native-fixture', index: 0, model: 'locked-original' };
   let modelCalls = 0;
   const next = async function* (event) { assert.equal(event, step); modelCalls++; yield { kind: 'text', index: 0, text: 'normal' }; return { answer: 'normal' }; };
+  next.signal = new AbortController().signal;
   await hooks['prompt.submit']($, { text: 'ordinary prompt' }, async event => event);
   await hooks['turn.step']($, step, next).next();
   assert.equal(modelCalls, 1); assert.equal(calls.length, 0);
@@ -143,6 +144,7 @@ test('Claude ordinary entry is explicit; slash, malformed JSON and plugin submis
   module.register((name, fn) => { hooks[name] = fn; }, {});
   const $ = { process: { run: () => assert.fail('Non-entry text must not invoke the bridge') } };
   const next = async function* () { yield { kind: 'text', index: 0, text: 'normal' }; return { answer: 'normal' }; };
+  next.signal = new AbortController().signal;
   for (const event of [
     { text: `/pointsman-workflow ${JSON.stringify(request)}` },
     { text: `Please run pointsman-workflow ${JSON.stringify(request)}` },
@@ -151,5 +153,27 @@ test('Claude ordinary entry is explicit; slash, malformed JSON and plugin submis
   ]) {
     assert.equal(await hooks['prompt.submit']($, event, async received => received), event);
     assert.equal((await hooks['turn.step']($, { turnId: 'entry-guard', index: 0 }, next).next()).value.text, 'normal');
+  }
+});
+test('Claude cancelled bridge suppresses late success and rejection fallback; preabort starts nothing', async () => {
+  const source = await fs.readFile(new URL('../mods/pointsman-workflows/hooks/pointsman-workflows.ts', import.meta.url), 'utf8');
+  const module = await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(source)).toString('base64')}`);
+  for (const scenario of ['resolve', 'reject', 'preabort']) {
+    const hooks = {}, controller = new AbortController();
+    let settle, started, bridgeCalls = 0, modelCalls = 0;
+    const entered = new Promise(resolve => { started = resolve; });
+    module.register((name, fn) => { hooks[name] = fn; }, { pointsmanPath: '/owned/pointsman' });
+    const $ = { process: { run: () => { bridgeCalls++; started(); return new Promise((resolve, reject) => {
+      settle = () => scenario === 'reject' ? reject(new Error('cancelled process')) : resolve({ exitCode: 0, stdout: JSON.stringify({ apply: true, text: 'late packet', contractRevision: WORKFLOW_HOST_CONTRACTS.claude.revision }) });
+    }); } } };
+    const next = async function* () { modelCalls++; yield { kind: 'text', index: 0, text: 'normal' }; };
+    next.signal = controller.signal;
+    await hooks['prompt.submit']($, { text: `pointsman-workflow ${JSON.stringify(request)}` }, async event => event);
+    if (scenario === 'preabort') controller.abort();
+    const result = hooks['turn.step']($, { turnId: 'cancelled-entry', index: 0 }, next).next();
+    if (scenario !== 'preabort') { await entered; controller.abort(); settle(); }
+    assert.deepEqual(await result, { value: undefined, done: true });
+    assert.equal(bridgeCalls, scenario === 'preabort' ? 0 : 1);
+    assert.equal(modelCalls, 0);
   }
 });

@@ -1,0 +1,130 @@
+{
+  "revision": "clef-prefix-probe-r1",
+  "status": "FAIL_PARITY_STOPPED",
+  "scope": "Exact complete synthetic request, uncached versus prefix-cached local 8-bit backbone; not model quality or completed-agent-task A evidence",
+  "inputs": {
+    "independently_authored_synthetic": true,
+    "private_inputs_or_gold_opened": false,
+    "prepared_prefix_tokens": [
+      1011,
+      6029
+    ],
+    "executed_prefix_tokens": [
+      1011
+    ],
+    "executed_full_tokens": [
+      1132
+    ],
+    "executed_schema_count": 1,
+    "long_case_executed": false
+  },
+  "identity": {
+    "spec_sha256": "bf0b68cd5beee2385d3f713191fff554edb66b1b5dabb74351ef448489c6565d",
+    "probe_source_sha256": "8ce2af7970f94c28cac69619b2427fcae538b28553d333f4798ac2948bfa0e05",
+    "test_source_sha256": "dad4fd0c15ce5365145368880ab5437b8f3202743a0a6830e4b6e690e462db6a",
+    "progress_sha256": "0ff027317b3778d901fa065a8248a489aef2f0895bbf7984071e0c31b847b660",
+    "failure_receipt_sha256": "c53a40e006cf359ddb2fc7118bfac7784e78cd0946b0621cb312b9cd8ba45a8d",
+    "checkpoint": "2d78acadca4a2d3865b6c9efd8402d1b2483c1dc6c43a802f81ecc72dcb45e63",
+    "runtime": {
+      "torch": "2.14.0",
+      "transformers": "5.17.0",
+      "mlx": "0.32.3",
+      "mlx-lm": "0.32.0",
+      "safetensors": "0.8.0"
+    },
+    "installed_source_sha256": {
+      "probe": "8ce2af7970f94c28cac69619b2427fcae538b28553d333f4798ac2948bfa0e05",
+      "evaluator": "b04cd71fd132e423545967ce6f1c589ebf7dccccbf5c5d985bfc0658a2ece85f",
+      "official": "0e304cf7c6500e8bb59bef7e2afd2c6373f82596dfb3b57d1aa93c175e2dc3a3",
+      "mlx_lm/qwen3_5.py": "10c59a71d8d739b8cdff38c7e9c7345deb9a9688e821ac37cb774d3086cac42e",
+      "mlx_lm/qwen3_next.py": "67ca08a4d08cb7be124965e95399735e556f1eaeb21a16bc23cb88d1ac035e11",
+      "mlx_lm/gated_delta.py": "f69e837ea68641dbb06fdb5dcc024a9a7e1d9353f08ae58c05275253a0c39428",
+      "mlx_lm/base.py": "b782b2ac0f55ed8fa9c1afce1f36307d5d8714aad2c0991d63998047f7507174",
+      "mlx_lm/cache.py": "c96cb169fd5e0ec4584a162dd61dc62ab08ccdca03a9850f8a491ce6809145e6",
+      "mlx_lm/pipeline.py": "5897f414f550584442594c766fc91ca53d72a8eb1e242ffbc5bababcd7a4ae35"
+    },
+    "frozen_model_and_source_checks_passed_before_run": true
+  },
+  "execution": {
+    "attempts": 2,
+    "attempt1": "Sandbox Metal import unavailable; exit1; zero model loads and forwards",
+    "attempt2_exit_code": 1,
+    "backbone_forwards": 3,
+    "maximum_authorized_backbone_forwards": 10,
+    "further_inference_after_parity_failure": false,
+    "process_absence_verified": true,
+    "exclusive_gpu_released": true
+  },
+  "acceptance": {
+    "correctness": "FAIL: first short-schema parity conjunction failed",
+    "max_probability_delta": "UNKNOWN: pair output was only in memory when assertion stopped process",
+    "same_choice": "UNKNOWN: not persisted before assertion",
+    "threshold_crossings": "UNKNOWN: not persisted before assertion",
+    "thresholds": [
+      0.5,
+      0.8,
+      0.95
+    ],
+    "tolerance": 0.002,
+    "material_optimization": "NOT_ACCEPTED: correctness failed; both long-schema pairs not executed",
+    "A_or_quality_acceptance": false
+  },
+  "timing": {
+    "full_warm_request_seconds": 3.272352292202413,
+    "cached_warm_request_seconds": 0.7794077931903303,
+    "cached_to_full_ratio": 0.238179671255921,
+    "prefix_prefill_seconds": 3.2262099161744118,
+    "interpretation": "One short-schema pair, invalid optimization candidate because parity failed; no p50/p95 or long-input result; cached request excludes separately measured prefix",
+    "phase_seconds": {
+      "model_load": 4.048768374603242,
+      "head_load": 1.1637942078523338,
+      "lexical_bridge": 0.005441334098577499,
+      "1011/prefix_prefill": 3.2262099161744118,
+      "1011/0/full_backbone": 3.25529812509194,
+      "head_first_invocation_warmup": 0.9063774589449167,
+      "1011/0/full_head_bridge_postprocess": 0.017054167110472918,
+      "1011/0/cache_clone": 0.0006096670404076576,
+      "1011/0/cached_suffix": 0.7301055840216577,
+      "1011/0/hidden_assembly": 0.030243542045354843,
+      "1011/0/cached_head_bridge_postprocess": 0.01844900008291006
+    }
+  },
+  "memory": {
+    "combined_metal_limit_bytes": 15032385536,
+    "maximum_sampled_torch_mps_driver_bytes": 12465307648,
+    "maximum_recorded_mlx_peak_bytes": 12541821944,
+    "note": "Driver/MLX/RSS counters overlap; not added. Sampled phase boundaries, not continuous total peak."
+  },
+  "cache": {
+    "native_type_count_assertions_passed": {
+      "ArraysCache": 24,
+      "KVCache": 8
+    },
+    "exact_prefix_and_changed_state_key_checks": "CPU PASS",
+    "fresh_cache_and_array_object_nonalias_assertions": "Passed before suffix forward",
+    "prefix_hidden_dtype_assertion": "BF16 passed",
+    "cache_dtype_shapes": "UNKNOWN: pair metadata not persisted before assertion",
+    "original_cache_post_suffix_check": "NOT_REACHED: parity assertion stopped first"
+  },
+  "limitations": [
+    "The specific failing member of probability/choice/threshold conjunction was not persisted; no claim is made about its numeric magnitude or cause.",
+    "No uncached-versus-cached full-backbone numerical equivalence was established.",
+    "No repeat, long case, second schema, training, promotion, runtime provider integration, installed package modification or gate change followed."
+  ],
+  "observability_correction": {
+    "executed_source_snapshot_sha256": "8ce2af7970f94c28cac69619b2427fcae538b28553d333f4798ac2948bfa0e05",
+    "future_probe_source_sha256": "cd38c9b496d3ab2e837b2dd2fb5f765aa08fdd0537534a4747ab71a3e20cba1b",
+    "change": "Persist pair metrics before parity assertion; no new inference; r1 spec preserved unchanged",
+    "focused_cpu_tests_passed": 2,
+    "syntax_check": "PASS"
+  },
+  "source_only_diagnosis": {
+    "KVCache": "state getter/setter preserves keys, values and offset; suffix RoPE uses prefix offset; fetched KV is sliced to logical offset",
+    "ArraysCache": "state getter/setter preserves convolution and FP32 recurrence arrays plus left_padding/lengths; B1 unpadded masks remain None",
+    "positions_and_mask": "Text configuration rope_type default uses ordinary RoPE, offset0 for empty caches and prefix length for suffix; causal SDPA is lower-right aligned, preserving intended suffix attention positions",
+    "training_and_packed_kernel": "eval recursively disables training; full/prefix/suffix GDN calls all meet source packed eligibility (Dk128/Dv128, no mask, scalar float32 gate/state). Actual inherited kill-switch and kernel dispatch were not recorded and are UNKNOWN; no environment was read",
+    "structural_bug_found": false,
+    "hypothesis": "Full1132 versus prefix1011 plus suffix121 changes quantized matmul and SDPA tensor shapes. Installed SDPA documents shape-dependent fused-kernel heuristics; chunking can change floating-point arithmetic, but neither this cause nor exact probability delta is established",
+    "recommended_next_action": "Retain FAIL. No third attempt is justified solely to recover lost metrics; require separately accepted diagnostic identity and a causal hypothesis before any further GPU execution."
+  }
+}

@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { once } from 'node:events';
 import { PassThrough } from 'node:stream';
 import { startMcp } from '../src/mcp.mjs';
 import { createWorkflowRunner } from '../src/workflows.mjs';
@@ -102,4 +103,43 @@ test('native CLI observes actual host version and separate gates before syntheti
   assert.equal(run({ ...envelope, runtime: { version: '2.1.287' } }).apply, false);
   setMode(home, 'off', {});
   assert.equal(run(envelope).apply, false);
+});
+
+test('workflow CLI cancellation closes held-open stdin and kills an in-flight host-version child', async t => {
+  for (const phase of ['stdin', 'version']) await t.test(phase, async t => {
+    const home = tempHome(t), root = source(t), bin = path.join(home, 'bin');
+    fs.mkdirSync(bin);
+    const marker = path.join(home, 'version-child.json');
+    fs.writeFileSync(path.join(bin, 'claude'), `#!${process.execPath}\nimport fs from 'node:fs';\nfs.writeFileSync(${JSON.stringify(marker)}, JSON.stringify({pid:process.pid}));\nsetTimeout(() => console.log('2.1.288'), 12000);\n`, { mode: 0o700 });
+    setMode(home, 'on', {}); setFeatureMode(home, 'workflow', 'on'); setWorkflowNativeMode(home, 'on');
+    // A test-only readiness marker avoids sending SIGINT before the real handler exists.
+    const readiness = "process.on('newListener', name => { if (name === 'SIGTERM' && process.listenerCount('SIGINT')) process.stderr.write('WORKFLOW_CANCEL_READY\\n'); });";
+    const child = spawn(process.execPath, ['--import', `data:text/javascript,${encodeURIComponent(readiness)}`,
+      'bin/pointsman.mjs', 'workflow-native', '--host', 'claude', '--event', 'turn-step', '--root', root, '--home', home],
+    { env: { PATH: `${bin}:${process.env.PATH}`, HOME: home }, stdio: ['pipe', 'pipe', 'pipe'] });
+    const closed = once(child, 'close');
+    let stdout = '', stderr = '', versionPid;
+    child.stdout.on('data', b => { stdout += b; }); child.stderr.on('data', b => { stderr += b; });
+    child.stdin.on('error', () => {});
+    t.after(() => {
+      child.stdin.destroy();
+      if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
+      if (versionPid) { try { process.kill(versionPid, 'SIGKILL'); } catch (e) { if (e.code !== 'ESRCH') throw e; } }
+    });
+    child.stdin.write(JSON.stringify({ scope: 'workflow', request }));
+    if (phase === 'version') child.stdin.end();
+    for (let i = 0; i < 400 && !(phase === 'stdin' ? stderr.includes('WORKFLOW_CANCEL_READY') : fs.existsSync(marker)); i++) await delay(5);
+    if (phase === 'version') { assert.ok(fs.existsSync(marker), stderr); versionPid = JSON.parse(fs.readFileSync(marker)).pid; }
+    else assert.match(stderr, /WORKFLOW_CANCEL_READY/);
+    child.kill(phase === 'stdin' ? 'SIGINT' : 'SIGTERM');
+    let timer;
+    try {
+      await Promise.race([closed, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(`${phase} did not stop after cancellation`)), 4000); })]);
+    } finally { clearTimeout(timer); }
+    assert.doesNotMatch(stdout, /"apply"\s*:\s*true/);
+    if (versionPid) {
+      assert.throws(() => process.kill(versionPid, 0), { code: 'ESRCH' });
+      versionPid = undefined;
+    }
+  });
 });

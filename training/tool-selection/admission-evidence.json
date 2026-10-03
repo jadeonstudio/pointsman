@@ -1,0 +1,333 @@
+{
+  "schema_version": 1,
+  "status": "PREPARED_CPU_ONLY; no model quality evaluation or training",
+  "contract": "bfcl-tool-name-choice-wire-v1",
+  "source_revision": "916260dfc116bf06793a1af79b4ec8195b0453b6",
+  "source_license": "Apache-2.0",
+  "source_files": [
+    {
+      "file": "LICENSE",
+      "url": "https://raw.githubusercontent.com/gorilla-llm/gorilla/916260dfc116bf06793a1af79b4ec8195b0453b6/LICENSE",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "git_blob": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64"
+    },
+    {
+      "file": "eval_runner.py",
+      "url": "https://raw.githubusercontent.com/gorilla-llm/gorilla/916260dfc116bf06793a1af79b4ec8195b0453b6/berkeley-function-call-leaderboard/bfcl/eval_checker/eval_runner.py",
+      "bytes": 28637,
+      "sha256": "62d5fffe6caef974cf1e9cff70ba5b0f5f0a1ea9e8dcbf22953193b01b10dd97",
+      "git_blob": "8c2bed57dacacaa1a94646f681859b2fcdacd5a8"
+    },
+    {
+      "file": "eval_runner_helper.py",
+      "url": "https://raw.githubusercontent.com/gorilla-llm/gorilla/916260dfc116bf06793a1af79b4ec8195b0453b6/berkeley-function-call-leaderboard/bfcl/eval_checker/eval_runner_helper.py",
+      "bytes": 29871,
+      "sha256": "f036c415713162e52b58848b9eae3379b9a3fc26e2893e97c88638e54d3a90a5",
+      "git_blob": "2c9446b3de3a8109fad21c6cad61707966fb1c5d"
+    },
+    {
+      "file": "multiple.json",
+      "url": "https://raw.githubusercontent.com/gorilla-llm/gorilla/916260dfc116bf06793a1af79b4ec8195b0453b6/berkeley-function-call-leaderboard/data/BFCL_v3_multiple.json",
+      "bytes": 316581,
+      "sha256": "8fb6b043cc80a1a0d5b5a578d5dd0593ed454d922d47034dcfdadfc4e36f7e5d",
+      "git_blob": "341f01bed444b8fe015cdc967ae9d2fb556b9e13"
+    },
+    {
+      "file": "irrelevance.json",
+      "url": "https://raw.githubusercontent.com/gorilla-llm/gorilla/916260dfc116bf06793a1af79b4ec8195b0453b6/berkeley-function-call-leaderboard/data/BFCL_v3_irrelevance.json",
+      "bytes": 159961,
+      "sha256": "d5a6da2d26e4f40f535120b75c2b61a5887ce4cf1dc04078c9e33a59901733b7",
+      "git_blob": "21a516f707ebf8cd9672771efae2fec1c38b4352"
+    },
+    {
+      "file": "multiple-reference.json",
+      "url": "https://raw.githubusercontent.com/gorilla-llm/gorilla/916260dfc116bf06793a1af79b4ec8195b0453b6/berkeley-function-call-leaderboard/data/possible_answer/BFCL_v3_multiple.json",
+      "bytes": 32252,
+      "git_blob": "7c8b0a922e10a568a1c4503059344aa442181e1a",
+      "sha256": "a17c86584546eb92899217f55751cecd95dacd2077f30366e19d3a6fa93d5fdd",
+      "admission_preregistered_sha256": "6d94a86b4aea34a28450f4d981de456cff3827b8989ee1b67d63d9c502be9f3d"
+    }
+  ],
+  "freeze": {
+    "timestamp_source": "local filesystem st_mtime; not a trusted external timestamp",
+    "input_admission_frozen_utc": "2026-10-03T10:26:44.342991+00:00",
+    "reference_download_utc": "2026-10-03T10:27:19.591400+00:00",
+    "freeze_precedes_reference_download": true,
+    "admission_sha256": "6d94a86b4aea34a28450f4d981de456cff3827b8989ee1b67d63d9c502be9f3d",
+    "policy_contrast_frozen_utc": "2026-10-03T10:28:31.723392+00:00",
+    "target_extraction_analysis_written_utc": "2026-10-03T10:28:31.730252+00:00",
+    "contrast_freeze_precedes_target_extraction": true
+  },
+  "private_manifest_sha256": "7b2a773b53f6169632a475d6256bac45b122924d67290e9a21cdb987591d7d28",
+  "builder_sha256": "512a9c2b1d96c9841411c8790831cd4eac0d40ac8f2d5398dd9e0e177ab6c5d2",
+  "focused_test_source_sha256": "ae9e61813d20506c6fa667d66aec1a18d7b882cdbe24b599b62d45ca90c02de6",
+  "runtime_validator_sha256": "991fc309892cfafee6aa043cf7d910c2ba0739f9721f3543815e636add6d03b9",
+  "split_checker_sha256": "63ac6b1f318d104d90988c4526fd737802f0737acd7ae978cd2d47a123c93fe4",
+  "counts": {
+    "source_cases": 440,
+    "schema_components": 363,
+    "case_variants": 840,
+    "binary_fields": 1911,
+    "split_cases": {
+      "dev": 127,
+      "train": 228,
+      "test": 85
+    },
+    "split_variants": {
+      "dev": 287,
+      "train": 392,
+      "test": 161
+    },
+    "split_fields": {
+      "dev": 755,
+      "train": 776,
+      "test": 380
+    },
+    "split_schema_components": {
+      "train": 225,
+      "dev": 76,
+      "test": 62
+    },
+    "references": {
+      "benchmark_reference": 440,
+      "derived_policy_oracle": 400
+    }
+  },
+  "reference_provenance": "440 native benchmark_reference cases;400 derived_policy_oracle variants; no authored-rule, human, runner, confidence or model-agreement labels",
+  "canonical_dataset_gap": "writeIndependentDataset requires objective+independently_authored_oracle and reassigns70/10/10/10; explicit wirepack preserves benchmark reference and frozen split without store changes",
+  "file_hashes": {
+    "train/cases.jsonl": "c5758abae5f1f765119bbcac3187cca46dcd1c8366fc55b1029da1a2474642f9",
+    "train/fields.jsonl": "2340796f71a8410b8afaf51fb189805fdf71e14d62514442d7dcd9c87e85d0c9",
+    "train/reference.jsonl": "c890cecf0b50e628fbabe6aa88ce1864024a086ece125be53c96181baec23724",
+    "dev/cases.jsonl": "0e45cc4dc9901bfe8819b09a6150864ec0adbd0767d31068e2921921711411a0",
+    "dev/fields.jsonl": "03cf28ef0229d26692ea034638f9b216b3df457645c29c9a2e556d16320e94b8",
+    "dev/reference.jsonl": "ac978cf7bc26c12294c55172a8efcc4da5e6c494402ec066f68c12529cdc4319",
+    "test/cases.jsonl": "2433cfb50f2840c16c50ad390e6250904ad58ddfc72979bbb8d5ca3f7769f498",
+    "test/fields.jsonl": "b467f2e742f0873cd305881136168d6e60695f9f1437704ade3be202e6a6c427",
+    "test/reference.jsonl": "523817e494d786941670969cf6f993705f90fe500f788a7413dd0afffc65b67e",
+    "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "token-lengths.jsonl": "e8a69a379b14eaee9ac60a110e10602b6718154445401d5ea9af199140b5ad10"
+  },
+  "validity": {
+    "portable_request": "PASS",
+    "split_isolation": "PASS",
+    "original_candidate_input_sha256": "8eda4839fb57cfc8c9c3e25e774d26fc576c71511c9de710baa7be9422ccf9b9",
+    "source_input_identity_sha256": "cb9f05f9c81f0cf8ba530a151af2fa124052980003737a5fa63b9c319671e579",
+    "case_envelopes": 840,
+    "field_envelopes": 1911,
+    "field_question_id": "tool_name",
+    "field_options": [
+      "yes",
+      "no"
+    ],
+    "runtime_wrapper_added": true,
+    "case_vs_field_envelopes": "distinct; model must consume wire only, never provenance/reference metadata",
+    "source_conversation_and_functions_preserved": true
+  },
+  "cpu_tokens": {
+    "minimum": 306,
+    "maximum": 1338,
+    "encoded_requests": 2751,
+    "over_2048": 0,
+    "over_16384": 0,
+    "case": {
+      "count": 840,
+      "min": 308,
+      "max": 1338,
+      "p95": 1160
+    },
+    "field": {
+      "count": 1911,
+      "min": 306,
+      "max": 872,
+      "p95": 726
+    },
+    "tokenizer": {
+      "upstream_revision": "17f0b0ad64efb65d273590632833508766b2aae6",
+      "assets": {
+        "joint_schema_model.py": "0e304cf7c6500e8bb59bef7e2afd2c6373f82596dfb3b57d1aa93c175e2dc3a3",
+        "tokenizer.json": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+        "tokenizer_config.json": "91a08f825d370d085d692e04cf117cdd7faad7bf18e996f1e6031b6dab03db72",
+        "config.json": "66f87f6fb2616b46604daf2a9c67ddc87938296d07156efa34d59b5be49e3238",
+        "chat_template.jinja": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715"
+      },
+      "transformers": "5.17.0",
+      "tokenizers": "0.23.2",
+      "max_length": 1000000,
+      "truncation": false,
+      "weights_loaded": false,
+      "gpu_calls": 0
+    }
+  },
+  "recorded_controls": {
+    "source_all": {
+      "cases": 440,
+      "source_cases": 440,
+      "schema_components": 363,
+      "binary_fields": 797,
+      "positive_fields": 200,
+      "negative_fields": 597,
+      "none_case_correct": 240,
+      "all_case_correct": 0,
+      "none_field_accuracy": 0.7490589711417817,
+      "none_case_accuracy": 0.5454545454545454,
+      "all_case_accuracy": 0.0,
+      "first_lexicographic_policy_compliant_case_correct": 80,
+      "zero_errors_one_sided95_upper_per_source_case": 0.006785357235607692
+    },
+    "derived_all": {
+      "cases": 840,
+      "source_cases": 440,
+      "schema_components": 363,
+      "binary_fields": 1911,
+      "positive_fields": 320,
+      "negative_fields": 1591,
+      "none_case_correct": 520,
+      "all_case_correct": 0,
+      "none_field_accuracy": 0.8325484039769754,
+      "none_case_accuracy": 0.6190476190476191,
+      "all_case_accuracy": 0.0,
+      "first_lexicographic_policy_compliant_case_correct": 353,
+      "zero_errors_one_sided95_upper_per_source_case": 0.006785357235607692
+    },
+    "source_splits": {
+      "train": {
+        "cases": 228,
+        "source_cases": 228,
+        "schema_components": 225,
+        "binary_fields": 356,
+        "positive_fields": 82,
+        "negative_fields": 274,
+        "none_case_correct": 146,
+        "all_case_correct": 0,
+        "none_field_accuracy": 0.7696629213483146,
+        "none_case_accuracy": 0.6403508771929824,
+        "all_case_accuracy": 0.0,
+        "first_lexicographic_policy_compliant_case_correct": 29,
+        "zero_errors_one_sided95_upper_per_source_case": 0.01305323447190343
+      },
+      "dev": {
+        "cases": 127,
+        "source_cases": 127,
+        "schema_components": 76,
+        "binary_fields": 283,
+        "positive_fields": 80,
+        "negative_fields": 203,
+        "none_case_correct": 47,
+        "all_case_correct": 0,
+        "none_field_accuracy": 0.7173144876325088,
+        "none_case_accuracy": 0.3700787401574803,
+        "all_case_accuracy": 0.0,
+        "first_lexicographic_policy_compliant_case_correct": 31,
+        "zero_errors_one_sided95_upper_per_source_case": 0.023312410428213082
+      },
+      "test": {
+        "cases": 85,
+        "source_cases": 85,
+        "schema_components": 62,
+        "binary_fields": 158,
+        "positive_fields": 38,
+        "negative_fields": 120,
+        "none_case_correct": 47,
+        "all_case_correct": 0,
+        "none_field_accuracy": 0.759493670886076,
+        "none_case_accuracy": 0.5529411764705883,
+        "all_case_accuracy": 0.0,
+        "first_lexicographic_policy_compliant_case_correct": 20,
+        "zero_errors_one_sided95_upper_per_source_case": 0.03463007497068704
+      }
+    },
+    "derived_splits": {
+      "train": {
+        "cases": 392,
+        "source_cases": 228,
+        "schema_components": 225,
+        "binary_fields": 776,
+        "positive_fields": 135,
+        "negative_fields": 641,
+        "none_case_correct": 257,
+        "all_case_correct": 0,
+        "none_field_accuracy": 0.8260309278350515,
+        "none_case_accuracy": 0.6556122448979592,
+        "all_case_accuracy": 0.0,
+        "first_lexicographic_policy_compliant_case_correct": 148,
+        "zero_errors_one_sided95_upper_per_source_case": 0.01305323447190343
+      },
+      "dev": {
+        "cases": 287,
+        "source_cases": 127,
+        "schema_components": 76,
+        "binary_fields": 755,
+        "positive_fields": 129,
+        "negative_fields": 626,
+        "none_case_correct": 158,
+        "all_case_correct": 0,
+        "none_field_accuracy": 0.8291390728476821,
+        "none_case_accuracy": 0.5505226480836237,
+        "all_case_accuracy": 0.0,
+        "first_lexicographic_policy_compliant_case_correct": 136,
+        "zero_errors_one_sided95_upper_per_source_case": 0.023312410428213082
+      },
+      "test": {
+        "cases": 161,
+        "source_cases": 85,
+        "schema_components": 62,
+        "binary_fields": 380,
+        "positive_fields": 56,
+        "negative_fields": 324,
+        "none_case_correct": 105,
+        "all_case_correct": 0,
+        "none_field_accuracy": 0.8526315789473684,
+        "none_case_accuracy": 0.6521739130434783,
+        "all_case_accuracy": 0.0,
+        "first_lexicographic_policy_compliant_case_correct": 69,
+        "zero_errors_one_sided95_upper_per_source_case": 0.03463007497068704
+      }
+    },
+    "multiple_originals": {
+      "cases": 200,
+      "none_correct": 0,
+      "invoke_all_correct": 0,
+      "first_lexicographic_correct": 80
+    },
+    "multiple_policy_variants": {
+      "cases": 600,
+      "none_correct": 280,
+      "invoke_all_correct": 0
+    },
+    "definition": "none selects empty; invoke_all selects ALL offered including prohibited; first lexicographic selects first allowed tool, empty if none allowed. Controls copied from frozen source admission, not model/test evaluation."
+  },
+  "checks": {
+    "focused_tests": {
+      "passed": 5,
+      "failed": 0,
+      "command": "PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -p test_tool_selection.py -v"
+    },
+    "builder_exit_code": 0,
+    "test_status": "SEALED_NOT_EVALUATED; separate reference and immutable file hashes; existing output refused"
+  },
+  "limitations": [
+    "363 components are schema groups, not363 semantic families/domains",
+    "Native irrelevance240 cases all have one candidate; candidate-count shortcut exists; primary semantic-choice slice multiple200",
+    "No natural identical complete candidate sets with changed question in this small source; policy variants keep same conversation/functions",
+    "Derived policy oracle means required primary tools intersect allowed set, no alternative substitution; empty is not task fulfillment",
+    "Name-set projection only; no arguments, AST, multiplicity, order, execution or actual external action severity",
+    "Published BFCL pretraining contamination UNKNOWN; no Jev per-case comparator",
+    "Variants/yes-no fields correlated; resample original source cases and schema components",
+    "No A/B/C qualification: even zero errors in85heldout origins one-sided95upper3.463%,38multiple7.581%"
+  ],
+  "claims": {
+    "pretraining_contamination": "UNKNOWN",
+    "AST_or_task_completion": "UNKNOWN",
+    "operational_candidate_recall": "UNKNOWN",
+    "actual_action_severity": "UNKNOWN",
+    "C_unseen_task_family_qualification": "NOT_ESTABLISHED",
+    "Jev_comparison": "NOT_PERFORMED",
+    "model_inference_calls": 0,
+    "jev_calls": 0,
+    "training_executed": false,
+    "weights_loaded": false,
+    "gpu_calls": 0
+  }
+}

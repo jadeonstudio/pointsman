@@ -1,0 +1,141 @@
+{
+  "version": 1,
+  "observedAt": "2026-10-03T10:55:47.764082+00:00",
+  "hostVersion": "2.1.288",
+  "moduleHash": "c864aea504ed07c012a97c1000885f297cd7419da478be881cb8d945f5bb3cd5",
+  "cliSourceHash": "90c2c949df03e1091a74583a87d4cf7fb0597e789e8ed466d3b12de80ce25cd8",
+  "sourceCommitBeforeWorkingPatch": "9a2263d44d49693fe53e90abcc0b0a3528b87318",
+  "status": "PASS_NATIVE_INPUT_BOUNDARY_CANCEL_AND_RECOVERY",
+  "scope": "Actual SDK interruption with injected20s EOF hold around unchanged production workflow CLI; not cancellation during recipe work or model inference",
+  "cliRegressions": {
+    "before": "Held-open stdin SIGINT and slow --version child SIGTERM both exceeded4s exit bound",
+    "after": "7/7 workflow consumer tests PASS; real child terminated; no apply=true",
+    "beforeToolChunk": "16df7c",
+    "afterToolChunk": "cfcc17"
+  },
+  "modRegression": {
+    "change": "Check supported Next.signal.aborted before work and after awaited bridge; do not yield late text or invoke normal model fallback after cancellation",
+    "focusedNodeTests": 3,
+    "installedComponentTests": 7,
+    "nativeInjectedAbortTest": "Production compiled module with owned process Promise and Next.signal; child termination established separately below"
+  },
+  "trials": [
+    {
+      "sessionId": "16c83c78-df50-4eb2-a1a4-77b3c10ddba6",
+      "status": "UNACCEPTED_CANCELLATION_WINDOW",
+      "injectedDelayMs": 4000,
+      "markerAgeAtRequestMs": 276.037109375,
+      "actualKeyDelivery": "UNKNOWN",
+      "observed": "Completed packet before an accepted interrupt observation; tool orchestration outlasted short window",
+      "usage": {
+        "toolChunk": "b83989",
+        "mainModelUsage": "NONE_REPORTED",
+        "haikuInput": 941,
+        "haikuOutput": 16,
+        "apiEquivalentUsd": 0.001,
+        "reportedApiSeconds": 0,
+        "usageCredits": "off"
+      },
+      "exitCode": 0
+    },
+    {
+      "sessionId": "be33f510-0181-44eb-b7c4-bba5409ec295",
+      "inputBytes": 291,
+      "injectedEofHoldMs": 20000,
+      "moduleTimeoutMs": 60000,
+      "readyHoldStartAt": 1791024719680,
+      "signalAt": 1791024723145,
+      "signal": "SIGTERM",
+      "signalBeforeHoldDeadline": true,
+      "wrapperAndProductionCliGone": true,
+      "childExit": {
+        "code": null,
+        "signal": "SIGTERM"
+      },
+      "signalToChildCloseMs": 2.33525,
+      "eofReleased": false,
+      "latePacketObserved": false,
+      "cancellationToolChunks": [
+        "3fbd8c",
+        "fda82f"
+      ],
+      "shutdownTimeScope": "Same wrapper monotonic clock, received signal to child close; excludes unknown key-delivery latency. Native process-group termination need not be graceful CLI exit2.",
+      "postCancelObserverError": {
+        "toolChunk": "a08fe9",
+        "action": "Ctrl-U removed only last visual line of restored prompt, so intended /usage appended into remaining JSON and was submitted as a new malformed ordinary prompt",
+        "riskScope": "tools disabled; credits OFF; no production mode change",
+        "nativePreContinuationMainCount": "UNKNOWN: intended usage read was not executed",
+        "cancelSignalAndTerminationProof": "unchanged; separate observer/UI preparation error",
+        "next": "Stop unintended response and close session; preserve actual usage/history grade without another cancellation rerun"
+      },
+      "usageAfterObserverError": {
+        "toolChunk": "3c653b",
+        "mainRequests": 1,
+        "sonnet": {
+          "input": 2,
+          "output": 309,
+          "cacheReadDisplayed": "1.5k",
+          "cacheWriteDisplayed": "1.3k"
+        },
+        "haiku": {
+          "input": 941,
+          "output": 14
+        },
+        "apiEquivalentUsd": 0.0094,
+        "apiSeconds": 3,
+        "usageCredits": "off",
+        "interpretation": "One reported main request for the visible new malformed prompt; no pre-continuation readback, so cancellation-only request count remains unisolated."
+      },
+      "recovery": {
+        "toolChunk": "79bb9c",
+        "packetId": "9da38265-4f97-488a-95dc-fddfa410829a",
+        "status": "done",
+        "acceptance": {
+          "definition": "met",
+          "direct_callers": "met",
+          "tests": "met"
+        },
+        "elapsedMs": 70.171,
+        "actions": 3,
+        "bytesRead": 157,
+        "decisions": 0,
+        "inferenceCalls": 0,
+        "networkCalls": 0,
+        "postUsageToolChunk": "e0bad0",
+        "mainRequestsBeforeRecovery": 1,
+        "mainRequestsAfterRecovery": 1,
+        "reportedTokenUsageUnchanged": true
+      },
+      "exitCode": 0
+    }
+  ],
+  "cancellationOnlyProviderCount": "UNKNOWN: isolated post-cancel usage read was contaminated by a separate malformed input. One main request was reported for that visible input; recovery added none. No raw transport capture.",
+  "billing": "Actual native UI repeatedly confirmed Usage credits OFF; included Max subscription only; quoted costs are API-equivalent, not additional charges",
+  "globalSettingsChanged": false,
+  "productionModesChanged": false,
+  "activeCheckpointChanged": false,
+  "remaining": "Actual recipe/model in-flight cancellation, isolated cancellation-only provider count and full task economics remain unaccepted",
+  "cleanup": {
+    "nativeSessionsExit0": 2,
+    "ownedWrapperAndChildExited": true,
+    "ownedTemporarySourcesSettingsHomesHelpersRemoved": true,
+    "generatedPluginTypesAndTsconfigRemoved": true,
+    "originalHostSessionRecordsRemoved": false
+  },
+  "privateReproduction": "Exact synthetic fixture, settings, helper source, markers and argv retained in private local research receipt; no host credentials/transcripts read",
+  "integrationVerification": {
+    "nodeTestsPassed": 605,
+    "nodeTestsFailed": 0,
+    "durationMs": 24129.2765,
+    "syntaxModules": 238,
+    "offlineSmoke": "PASS",
+    "demos": [
+      "fast-path PASS",
+      "classifier-design PASS",
+      "training-pipeline PASS"
+    ],
+    "logSha256": "64720ca4e3d2d0bcb5e2d69ffbebad8772365f7ea4392337ecc132eabe5b84ac",
+    "paidModelGpuCalls": 0,
+    "scope": "Complete frozen-source Node gate once; reuse unchanged Python evidence, with5tool-selection and2prefix focused checks separately passed"
+  }
+}

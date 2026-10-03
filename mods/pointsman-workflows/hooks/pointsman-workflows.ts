@@ -32,10 +32,12 @@ export const register: Register = (on, raw) => {
     return next(e);
   });
   on('turn.step', async function* ($, e, next) {
+    if (next.signal.aborted) return;
     if (e.agentId || e.index !== 0 || pending === null) return yield* next(e);
     const request = pending;
     pending = null;
     const out = await prepare($, options, request, e);
+    if (next.signal.aborted) return;
     if (!out) return yield* next(e);
     yield { kind: 'text', index: 0, text: out.text };
     yield { kind: 'stop', stopReason: 'end_turn', usage: null };

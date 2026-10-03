@@ -1,6 +1,7 @@
 import { parseArgs } from 'node:util';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { addAbortSignal } from 'node:stream';
 import { MAX_FRAME_BYTES, fail } from './constants.mjs';
 import { resolveHome } from './storage.mjs';
 import { initializeFeaturePolicy, loadFeaturePolicy, setFeatureMode, presetHostRoles, setAbControlShare, setWorkflowNativeMode, workflowPolicy } from './feature-policy.mjs';
@@ -9,12 +10,20 @@ import { createControlLayer } from './control-layer.mjs';
 import { evaluatePairedRuns } from './evaluation.mjs';
 
 const print = value => process.stdout.write(JSON.stringify(value, null, 2) + '\n');
-async function jsonStdin(limit = MAX_FRAME_BYTES) {
+async function jsonStdin(limit = MAX_FRAME_BYTES, signal) {
   if (process.stdin.isTTY) fail('PIPE_JSON_TO_STDIN');
+  signal?.throwIfAborted();
+  const input = signal ? addAbortSignal(signal, process.stdin) : process.stdin;
   const chunks = []; let size = 0;
-  for await (const chunk of process.stdin) {
-    size += Buffer.byteLength(chunk); if (size > limit) fail('INPUT_TOO_LARGE'); chunks.push(Buffer.from(chunk));
+  try {
+    for await (const chunk of input) {
+      size += Buffer.byteLength(chunk); if (size > limit) fail('INPUT_TOO_LARGE'); chunks.push(Buffer.from(chunk));
+    }
+  } catch (error) {
+    if (signal?.aborted) fail('CANCELLED');
+    throw error;
   }
+  if (signal?.aborted) fail('CANCELLED');
   try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))); }
   catch { fail('INVALID_JSON'); }
 }
@@ -70,7 +79,7 @@ export async function featureMain(argv = process.argv.slice(2), env = process.en
     const cancel = () => controller.abort();
     process.once('SIGINT', cancel); process.once('SIGTERM', cancel);
     try {
-      const request = await jsonStdin();
+      const request = await jsonStdin(MAX_FRAME_BYTES, controller.signal);
       if (command === 'run') print(await runner.run(request, { signal: controller.signal }));
       else {
         if (!['claude', 'gemini'].includes(values.host) ||
@@ -81,10 +90,11 @@ export async function featureMain(argv = process.argv.slice(2), env = process.en
           const { prepareNativeWorkflow, geminiWorkflowResponse, WORKFLOW_HOST_CONTRACTS } = await import('./workflow-hosts.mjs');
           let version;
           try {
-            const result = await promisify(execFile)(values.host, ['--version'], { timeout: 5000, maxBuffer: 4096, env });
+            const result = await promisify(execFile)(values.host, ['--version'], { timeout: 5000, maxBuffer: 4096, env, signal: controller.signal });
             version = result.stdout.match(/\b\d+\.\d+\.\d+\b/)?.[0];
           } catch { /* unavailable host delegates without running a workflow */ }
-          if (!version) print({ apply: false, reason: 'HOST_VERSION_UNAVAILABLE' });
+          if (controller.signal.aborted) print({ apply: false, reason: 'cancelled' });
+          else if (!version) print({ apply: false, reason: 'HOST_VERSION_UNAVAILABLE' });
           else {
             const native = values.host === 'gemini' ? geminiWorkflowResponse : prepareNativeWorkflow;
             print(await native({ host: values.host,

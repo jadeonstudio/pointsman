@@ -107,3 +107,14 @@ manifest was `59d3afaf8bff0b7873473d410813e48a618d8725e06365cd499aed509e1d943b`.
 Frozen scoring and executed-source snapshots are retained in the private research
 `placement/` directory. The aggregate is public; private canonical rows and full
 per-case evidence are not bundled here. Five focused tests passed before inference.
+
+## Exact-prefix reuse probe
+
+The separate [prefix probe](prefix-evidence.json) is **FAIL / not adopted**.
+The first short input took 3.272 seconds uncached and 0.779 seconds using retained
+prefix state, plus a separate 3.226-second prefix prefill. Its parity conjunction
+failed, so the timing is not an accepted speedup. Three of ten authorized backbone
+calls ran; no long case followed. Specific probability/choice/threshold values
+were not persisted before the assertion and are UNKNOWN. Future probe code saves
+pair evidence before asserting; the executed source/spec remain frozen privately
+and no inference was repeated. This does not change model quality or production.

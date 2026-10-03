@@ -307,7 +307,7 @@ Current Claude docs require `2.1.287+` for the documented default-enabled mods
 path and say the old function-hooks environment flag is ignored. A later readback
 found installed `2.1.288`; this work did not upgrade the host. The existing
 effort-mod instructions describe the older path. The new workflow mod was checked
-against the actual `2.1.288` plugin test engine: [six native component tests
+against the actual `2.1.288` plugin test engine: [seven native component tests
 passed](examples/workflow-hosts/claude-component-evidence.json), covering synthetic
 stream/result, exact ordinary-text entry, normal fallback, late-success rejection and closing before consumption. Native manifest
 validation required two missing user-config descriptions; those are now present.
@@ -347,6 +347,24 @@ model-stream cancellation remain UNKNOWN. Full native acceptance stays open.
 The CLI exited 0; owned source/settings/home and generated plugin type-cache
 files were removed after evidence preservation. Production modes, installed
 trust and d6 were unchanged.
+
+A later [cancellation probe](examples/workflow-hosts/claude-cancellation-evidence.json)
+reproduced and fixed two CLI gaps: cancellation did not close pending stdin or
+stop an in-flight host-version child. The mod now checks documented `next.signal`
+before work and after the bridge, suppressing late output and post-cancel model
+fallback. Its seventh installed-sandbox check injects the process Promise and
+signal explicitly; it is not a native child-termination test.
+The actual authenticated probe withheld input EOF for 20 seconds around the real
+workspace CLI. Claude's Esc interruption delivered SIGTERM before the hold expired;
+wrapper and CLI were both gone, with 2.335 ms between signal receipt and child close.
+A subsequent native request returned all three acceptance checks in 70.171 ms
+without increasing the reported main request count. This accepts SDK/CLI
+input-boundary termination and native recovery, not recipe/model-compute cancellation.
+A prior 4-second version-delay window was too short for the control transport and
+remains unaccepted. An observer mistake appended `/usage` to a partly cleared prompt,
+causing one separate ordinary model request; cancellation-only provider count remains
+unisolated. Both sessions exited 0, fixtures were removed, and credits stayed OFF.
+The final offline integration gate passed **605/605** Node cases in 24.129 seconds, syntax checked 238 modules, and smoke plus all three demos passed. Five tool-selection and two prefix CPU checks have their own focused evidence. The current checklist is **103/157**; full A/B/C acceptance remains open.
 [Current mod availability](https://code.claude.com/docs/en/plugins/mods/overview)
 
 Cache-aware effort has a stronger supported route in an owned Claude API client:
@@ -712,6 +730,72 @@ Original experiment sequence, with no production registration or automatic adopt
 
 ### Preregistered follow-up nodes — 2026-10-03
 
+Current continuation starts from accepted `9a2263d` (the previous turn made
+progress: authenticated Claude packet/history/continuation and completed invoice
+comparison, followed by verified delivery). Four independent read-only nodes
+use GPT-6.1 Sol; root alone owns integration, native sessions and GPU admission.
+No new model run or training follows merely from investigation.
+
+| Current node / owner | Required next evidence | Scope / stop boundary |
+|---|---|---|
+| CLAUDE-CANCEL / claude_native | Supported SDK cancellation of an in-flight owned bridge, no late packet or model fallback, then normal continuation | Inspect exact installed/official contracts first; root owns any authenticated test. Existing packet/history proof is reused. |
+| CLEF-LATENCY / clef_latency | Identify full-input backbone/head/synchronization costs and a semantics-preserving optimization hypothesis | Read frozen runtime identities; no GPU, package edit, truncation or new precision sweep during diagnosis. |
+| TOOL-SELECTION-DATA / public_baseline | Independently labeled, nontrivial tool-choice families with input-defined admission and meaningful no/all-tool baselines | Pinned licensed public source only; no Jev outputs/API, private captures, training or inference. Not another failed Laya recipe retry. |
+| WORKFLOW-UTILITY / workflow_core | One actual model-dependent action boundary and competent baseline with independent completion oracle | Reuse existing task artifacts; the two already-localized bug seeds remain NO-NEED. No implementation or model call before a concrete useful consumer. |
+
+Each begins at attempt 1 with a maximum of three causally distinct attempts;
+existing exhausted training nodes remain exhausted. Freeze concrete experiment
+inputs and limits here before dependent execution. Production OFF and d6 stay fixed.
+
+**CLEF-PREFIX-PROBE r1, frozen before GPU:** the CPU-only preparation admits two
+independently authored synthetic states, with exact prefixes 1,011/6,029 tokens
+and complete schema-A/B requests of 1,132/1,130 and 6,150/6,148 tokens. Spec SHA256
+`bf0b68cd5beee2385d3f713191fff554edb66b1b5dabb74351ef448489c6565d`;
+probe source `8ce2af7970f94c28cac69619b2427fcae538b28553d333f4798ac2948bfa0e05`.
+Use the existing frozen 8-bit checkpoint and official BF16 head, no package or
+weight edits, and record current installed source hashes. At most ten backbone
+forwards: two prefix prefills, four full requests and four suffixes, each on a
+fresh deep copy of the native 24 GDN/8 KV caches. Retain prefix hidden states and
+recompute the full head; no state truncation, schema change or answer cache.
+Require finite outputs, identical choices, max probability difference 0.002,
+no crossings at 0.5/0.8/0.95 and sampled combined Metal allocation ≤14 GiB.
+Stop before the long case on short-case failure. Synchronize individual phases;
+prefix cost stays separate, while warm cached totals include clone, suffix,
+hidden assembly and head/bridge/postprocessing. First head warm-up reuses hidden
+states without another backbone call. A material optimization needs both long
+schema pairs at ≤0.8 of full-request time. Single pairs are not p50/p95, general
+quality or A acceptance. The invoice cohort has 150 unique states and would have
+zero identical-state hits; this hypothesis concerns repeated decisions over
+one shared state. CPU preparation checks passed 2/2; no GPU had run at freeze.
+
+**Result: FAIL / no adoption.** The first sandbox attempt could not access Metal
+and made no model calls. The identical approved local-GPU attempt stopped after
+three forwards at the first short-schema parity assertion. Full/cached measured
+time was 3.272/0.779 seconds, excluding the separate 3.226-second prefix, but no
+speedup is accepted because correctness failed. Specific probability/choice/
+threshold values were not saved before the assertion and remain UNKNOWN. The
+executed source and spec are preserved; future probe code saves those values
+before asserting, with no inference repeated. [Failure evidence](training/clef-local/prefix-evidence.json)
+records source identities, phases, memory and the unresolved numerical hypothesis.
+No structural cache-offset/state/mask defect was found in read-only inspection;
+no third attempt, long case or package/weight mutation followed. GPU is released.
+
+**TOOL-SELECTION-DATA r1 accepted for preparation only.** The [builder and
+admission evidence](training/tool-selection/README.md) retain 440 pinned BFCL
+origins in 363 schema-sharing components, input-frozen train/dev/test counts
+228/127/85, and 840 correlated policy variants / 1,911 binary fields. Published
+benchmark references and derived-policy oracles are distinct. The authored-oracle
+canonical store cannot represent that provenance and frozen split, so the thin
+adapter emits explicit common Choice wires without changing the shared store.
+All 2,751 joint/single-field envelopes passed current request validation and
+lossless CPU encoding: joint maximum 1,338 tokens, single-field maximum 872.
+Five focused tests passed; no inference, training or test-quality evaluation ran.
+Single-tool no-call cases have a candidate-count shortcut and are auxiliary;
+the 200 multiple-tool origins are the primary semantic-choice slice. Schema
+components are not domains, published pretraining exposure is UNKNOWN, and the
+held-out sample cannot establish the 1% critical-error floor or B/C. Test files
+remain hash sealed. This is usable evaluation input, not a qualified model.
+
 Input revision `6eca73f`; root owns this plan and final acceptance. These bounded
 nodes address observed failures and actual consumer gaps, without another blind
 training scale-up. All workers use GPT-6.1 Sol/high. Existing modes, weights and
@@ -960,7 +1044,7 @@ portable work-segment execution plus host/version capability records.
 - [x] Keep generic MCP `decide` usable without claiming that it controls the host; retain Codex/Claude-only `route` schema until an intentional adapter extension is implemented and tested.
 - [ ] Codex: deliver the workflow tool inside the current app; separately prototype an app-server client using direct `command/exec`/MCP calls and conditional `turn/start`, with sandbox and actual inference-count readback.
 - [ ] Codex spawn optimization: test actual payload visibility and update behavior; opacity does not block the common workflow tool or owned-client path.
-- [ ] Claude: implement a version-matched `turn.step` synthetic-stream probe and normal fallback, then bind fixed recipes; retain normal tool execution/permissions for emitted tool actions.
+- [x] Claude: implement a version-matched `turn.step` synthetic-stream probe and normal fallback, then bind fixed recipes; retain normal tool execution/permissions for emitted tool actions. Actual 2.1.288 packet/history/continuation and later input-boundary cancellation/recovery have separate receipts; no synthetic tool permission is emitted. Full native task adoption remains WP12.
 - [x] Correct and test the effort CLI's router-OFF early return against event-specific effort gates, including the real entrypoint, without changing default modes.
 - [ ] Preserve the existing effort mod's gates; evaluate cache-preserving per-message effort only through supported direct API/model/transport contracts, not by assuming native effort edits preserve cache.
 - [ ] Gemini: implement a `BeforeModel.llm_response` synthetic-text probe and fixed-recipe completion path; use MCP/owned execution for tool dispatch rather than unsupported synthetic function calls.
@@ -976,7 +1060,7 @@ optional native adapters. A prototype existing only on paper is not ACCEPTED.
 
 ### WP03 — Establish permitted data and trustworthy evidence
 
-**State:** PARTIAL ACCEPTANCE — independent corpus admitted; new Jev API competitor use unavailable, licensed public invoice assessment in progress. **Depends on:** WP00; WP01 identity contract before importing
+**State:** SCOPED EVIDENCE ACCEPTED — independent corpus and licensed public invoice gold/comparison completed; new Jev API competitor use unavailable. **Depends on:** WP00; WP01 identity contract before importing
 new captures. **Owner:** data/evidence maintainer. **Scope:** existing training
 schema/store/runner/host paths and private manifests. **Output:** permitted-source
 inventory and question-specific evidence contract.
@@ -1132,7 +1216,7 @@ new calibration and affected downstream evidence.
 
 ### WP10 — Calibrate and evaluate decision quality and generalization
 
-**State:** PREPARED — sealed test unopened; licensed public Jev reference identified, independent-gold comparison unaccepted. **Depends on:** WP05 and frozen WP08/WP09 candidate.
+**State:** PARTIAL EVALUATION — sealed test unopened; narrow independent-gold public invoice comparison completed as a tie, broader family/critical-risk qualification unaccepted. **Depends on:** WP05 and frozen WP08/WP09 candidate.
 **Owner:** evaluation maintainer. **Output:** separate B/C scorecards and
 family/provider qualifications, with UNKNOWN where comparisons are unavailable.
 

@@ -1,10 +1,10 @@
 {
-  "observedAt": "2026-10-03T09:39:52.037Z",
+  "observedAt": "2026-10-03T10:35:01.170Z",
   "host": "claude",
   "version": "2.1.288",
   "grade": "installed_native_plugin_test_host_with_injected_bottom_hooks",
   "binaryHash": "bbe93063f7a0879a1021b2891e5c9354e5b3b98433e32efe6750f7710afed750",
-  "moduleHash": "ff2c3f42f5a14c30988469444b84513761ec11711147b631a967dd3833e21dd5",
+  "moduleHash": "c864aea504ed07c012a97c1000885f297cd7419da478be881cb8d945f5bb3cd5",
   "contractRevision": "claude-turn-step-2026-10-03",
   "entry": "pointsman-workflow <request JSON> (ordinary text, not a slash command)",
   "officialTypes": {
@@ -20,7 +20,7 @@
   ],
   "productionManifestValidation": "PASS",
   "nativeTestExitCode": 0,
-  "nativeTestOutput": "(pass) pointsman-workflows installed native component > completed segment streams text and final result without bottom model request; ordinary continuation delegates once [28.77ms]\n(pass) pointsman-workflows installed native component > ordinary entry is exact and malformed JSON stays on the native fallback chain [7.52ms]\n(pass) pointsman-workflows installed native component > unapplied bridge result delegates once and preserves fallback chunks/result [6.51ms]\n(pass) pointsman-workflows installed native component > subagent and later step bypass the bridge unchanged [6.04ms]\n(pass) pointsman-workflows installed native component > closing before stream consumption calls neither bridge nor bottom model [6.21ms]\n(pass) pointsman-workflows installed native component > successful bridge stdout arriving after its deadline delegates without synthetic output [149.67ms]\n 6 pass\n 0 fail\nRan 6 tests across 1 file. [0.35s]",
+  "nativeTestOutput": "(pass) pointsman-workflows installed native component > completed segment streams text and final result without bottom model request; ordinary continuation delegates once [26.19ms]\n(pass) pointsman-workflows installed native component > ordinary entry is exact and malformed JSON stays on the native fallback chain [7.40ms]\n(pass) pointsman-workflows installed native component > unapplied bridge result delegates once and preserves fallback chunks/result [7.07ms]\n(pass) pointsman-workflows installed native component > subagent and later step bypass the bridge unchanged [6.67ms]\n(pass) pointsman-workflows installed native component > closing before stream consumption calls neither bridge nor bottom model [5.66ms]\n(pass) pointsman-workflows installed native component > successful bridge stdout arriving after its deadline delegates without synthetic output [149.44ms]\n(pass) pointsman-workflows installed native component > actual module suppresses pending process resolve/reject after injected Next.signal abort and preabort starts no process [1.62ms]\n 7 pass\n 0 fail\nRan 7 tests across 1 file. [0.35s]",
   "installedTestingStream": "Async generator: capture done.value through next(); installed test stream has no .result property.",
   "actualProviderPresentInTestHost": false,
   "actualExternalModelRequests": 0,
@@ -34,13 +34,22 @@
     "scope": "owned temporary plugin copy; production default unchanged"
   },
   "lateSuccessFallback": "PASS_NATIVE_TEST_HOST",
+  "abortGuard": "PASS_INSTALLED_SANDBOX_ACTUAL_MODULE_INJECTED_NEXT_SIGNAL",
+  "abortGuardScope": "The actual module runs in the installed test sandbox; its process Promise and Next.signal are explicitly injected. The other six checks use the native testing engine. This does not prove native user-interrupt propagation or child termination.",
   "priorRevision": {
-    "receiptSha256": "80b15051c2d273231b49369f6aa3b5383499e3b47553dfe9d53c680fcef62013",
-    "moduleHash": "49dff1938e9cdaab285057d0344e423f48a1a5b26b920a853da18ace6b5b79c4",
-    "observedAt": "2026-10-03T08:37:39.131Z",
-    "passedTests": 5,
-    "nativeTestExitCode": 0,
-    "note": "Prior accepted component checks retained in Git history; this run uses the ordinary text entry and adds its guard regression."
+    "receiptSha256": "b29bde6c71df6b11a6a7f2c86495281c9aefcd7f6ad45f43bb7148d15c7df66c",
+    "moduleHash": "c864aea504ed07c012a97c1000885f297cd7419da478be881cb8d945f5bb3cd5",
+    "observedAt": "2026-10-03T10:31:29.766Z",
+    "passedTests": 6,
+    "nativeTestExitCode": 1,
+    "note": "Prior component attempt retained by hash; accepted baseline retained in Git history. This run adds cancellation guards with explicitly injected process and Next.signal.",
+    "previousAccepted": {
+      "receiptSha256": "74df7b07a636870c41937dd0bd428b0554cf40d486722215901368901f8c696a",
+      "moduleHash": "ff2c3f42f5a14c30988469444b84513761ec11711147b631a967dd3833e21dd5",
+      "observedAt": "2026-10-03T09:39:52.037Z",
+      "passedTests": 6,
+      "nativeTestExitCode": 0
+    }
   },
   "streamAndResult": "PASS_NATIVE_TEST_HOST",
   "ordinaryContinuation": "PASS_NATIVE_HOOK_CHAIN_WITH_SENTINEL",

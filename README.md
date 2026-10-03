@@ -186,6 +186,8 @@ The three recipes currently collect evidence deterministically with zero provide
 
 The separate `mods/pointsman-workflows` Claude mod accepts ordinary prompt text beginning exactly `pointsman-workflow ` followed by request JSON. Use the installed executable `pointsman` shim for its `pointsmanPath`; the source `.mjs` is not executable. In the [authenticated 2.1.288 session](examples/workflow-hosts/claude-session-preflight.json), a two-file recipe completed in 66.502 ms and the next ordinary model turn correctly read its four evidence facts. Native usage showed no main-model usage for the recipe and one main request for continuation; a Haiku helper still used tokens. This verifies a bounded bypass, not zero total provider traffic, cancellation while the bridge runs, or whole-task savings. Production modes remain OFF.
 
+A later [actual cancellation check](examples/workflow-hosts/claude-cancellation-evidence.json) verified termination while the real CLI awaited input, using an explicit 20-second EOF hold, followed by successful native recovery. The CLI now aborts pending stdin and host-version children; the mod drops late results after `next.signal` aborts. Recipe/model-compute cancellation and complete task economics remain open.
+
 ## Measuring cost and time
 
 `pointsman router ab 0.2` randomly holds back 20% of otherwise-rewritten spawns as an unmodified `control` arm (the host's own role/model choice, proposal only logged) instead of always applying the route (`treatment`); `pointsman router ab off` (or `0`) goes back to always applying. Share is capped at 0.5 and is off (0) by default, so nothing changes until you opt in.
