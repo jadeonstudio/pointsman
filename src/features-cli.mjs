@@ -83,24 +83,34 @@ export async function featureMain(argv = process.argv.slice(2), env = process.en
       if (command === 'run') print(await runner.run(request, { signal: controller.signal }));
       else {
         if (!['claude', 'gemini'].includes(values.host) ||
-            values.event !== (values.host === 'claude' ? 'turn-step' : 'before-model')) fail('INVALID_WORKFLOW_HOST');
+            !(values.host === 'claude' ? ['turn-step'] : ['before-agent', 'before-model']).includes(values.event)) fail('INVALID_WORKFLOW_HOST');
         const policy = getPolicy();
-        if (policy.nativeMode !== 'on') print({ apply: false, reason: policy.nativeMode.toUpperCase() });
+        const publicGemini = values.host === 'gemini' && (values.event === 'before-agent' || request?.hook_event_name !== undefined || request?.llm_request !== undefined || request?.scope !== 'workflow');
+        const { prepareNativeWorkflow, geminiWorkflowResponse, geminiWorkflowEnvelope, WORKFLOW_HOST_CONTRACTS } = await import('./workflow-hosts.mjs');
+        if (policy.nativeMode !== 'on') {
+          if (publicGemini) geminiWorkflowEnvelope({ home, root: values.root ?? process.cwd(), getMode: () => ({ mode: 'off' }) }, request);
+          print(publicGemini ? {} : { apply: false, reason: policy.nativeMode.toUpperCase() });
+        }
         else {
-          const { prepareNativeWorkflow, geminiWorkflowResponse, WORKFLOW_HOST_CONTRACTS } = await import('./workflow-hosts.mjs');
           let version;
           try {
             const result = await promisify(execFile)(values.host, ['--version'], { timeout: 5000, maxBuffer: 4096, env, signal: controller.signal });
             version = result.stdout.match(/\b\d+\.\d+\.\d+\b/)?.[0];
           } catch { /* unavailable host delegates without running a workflow */ }
-          if (controller.signal.aborted) print({ apply: false, reason: 'cancelled' });
-          else if (!version) print({ apply: false, reason: 'HOST_VERSION_UNAVAILABLE' });
+          if (publicGemini && (!version || controller.signal.aborted)) geminiWorkflowEnvelope({ home, root: values.root ?? process.cwd(), getMode: () => ({ mode: 'off' }) }, request);
+          if (controller.signal.aborted) print(publicGemini ? {} : { apply: false, reason: 'cancelled' });
+          else if (!version) print(publicGemini ? {} : { apply: false, reason: 'HOST_VERSION_UNAVAILABLE' });
           else {
             const native = values.host === 'gemini' ? geminiWorkflowResponse : prepareNativeWorkflow;
-            print(await native({ host: values.host,
+            const options = { host: values.host,
               runtime: { version, contractRevision: WORKFLOW_HOST_CONTRACTS[values.host].revision },
-              getMode: () => ({ globalMode: engine.status().mode, mode: getPolicy().nativeMode }), runner },
-            request, { signal: controller.signal }));
+              getMode: () => ({ globalMode: engine.status().mode, mode: getPolicy().nativeMode }), runner };
+            if (publicGemini && request?.hook_event_name !== (values.event === 'before-agent' ? 'BeforeAgent' : 'BeforeModel')) {
+              geminiWorkflowEnvelope({ home, root: values.root ?? process.cwd(), getMode: () => ({ mode: 'off' }) }, request);
+            }
+            const envelope = publicGemini ? (request?.hook_event_name === (values.event === 'before-agent' ? 'BeforeAgent' : 'BeforeModel') ?
+              geminiWorkflowEnvelope({ ...options, home, root: values.root ?? process.cwd() }, request, { signal: controller.signal }) : null) : request;
+            print(envelope ? await native(options, envelope, { signal: controller.signal }) : {});
           }
         }
       }
@@ -109,4 +119,4 @@ export async function featureMain(argv = process.argv.slice(2), env = process.en
   return true;
   } finally { engine.close(); }
 }
-export const FEATURE_HELP = `\nClassifier-inspired features (explicit Jev or local Laya provider):\n  policy init|check   Create/validate private features.json; no automatic targets\n  policy roles --host codex|claude [--dry-run] [--replace]\n                      Preset router.profiles[host] from roles the host actually has (~/.codex/agents/*.toml, ~/.claude/agents/*.md); refuses to overwrite an existing profile unless --replace\n  router off|shadow|on  Cap routing independently of the global switch\n  router ab SHARE|off Randomised control/treatment split (0..0.5) of otherwise-rewritten spawns; see README "Measuring cost and time"\n  bulk off|shadow|on    Cap prefiltering independently of the global switch\n  effort off|shadow|on  Cap the Claude Code main-loop reasoning-effort mod independently of the global switch (see mods/pointsman-effort)\n  effort ab SHARE|off Randomised control/treatment split (0..0.5) of otherwise-applied ON-mode effort changes\n  workflow off|shadow|on|status  Gate fixed recipes independently of the global switch\n  workflow native off|shadow|on Gate opt-in native completion independently\n  run [--root PATH]  Read one repo-evidence/test-diagnose/log-triage request from stdin\n  workflow-native --host claude|gemini --event turn-step|before-model [--root PATH]\n                      Version-checked native bridge; requires both workflow gates ON\n  route|filter       Read bounded JSON from stdin; results contain no raw text\n  evaluate           Offline paired-execution report from JSON stdin\n`;
+export const FEATURE_HELP = `\nClassifier-inspired features (explicit Jev or local Laya provider):\n  policy init|check   Create/validate private features.json; no automatic targets\n  policy roles --host codex|claude [--dry-run] [--replace]\n                      Preset router.profiles[host] from roles the host actually has (~/.codex/agents/*.toml, ~/.claude/agents/*.md); refuses to overwrite an existing profile unless --replace\n  router off|shadow|on  Cap routing independently of the global switch\n  router ab SHARE|off Randomised control/treatment split (0..0.5) of otherwise-rewritten spawns; see README "Measuring cost and time"\n  bulk off|shadow|on    Cap prefiltering independently of the global switch\n  effort off|shadow|on  Cap the Claude Code main-loop reasoning-effort mod independently of the global switch (see mods/pointsman-effort)\n  effort ab SHARE|off Randomised control/treatment split (0..0.5) of otherwise-applied ON-mode effort changes\n  workflow off|shadow|on|status  Gate fixed recipes independently of the global switch\n  workflow native off|shadow|on Gate opt-in native completion independently\n  run [--root PATH]  Read one repo-evidence/test-diagnose/log-triage request from stdin\n  workflow-native --host claude|gemini --event turn-step|before-agent|before-model [--root PATH]\n                      Version-checked native bridge; requires both workflow gates ON\n  route|filter       Read bounded JSON from stdin; results contain no raw text\n  evaluate           Offline paired-execution report from JSON stdin\n`;

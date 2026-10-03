@@ -103,3 +103,61 @@ Omitting `--clef-upstream` produces the same wires with token admission explicit
 wire hashes, tokenizer assets and focused-test results are in
 [admission-evidence.json](admission-evidence.json). Five focused tests passed;
 the full builder exited0. Test/model quality evaluation was not run.
+
+## DEV producer and evaluator checkpoint
+
+The as-shipped baselines `base`, `d6`, `typed` and `clef8` each admit all 755 DEV
+fields. The three Laya runs and their frozen scoring are complete; the original
+uncached Clef run is still in progress. No calibration, promotion or test
+evaluation occurs at this checkpoint. The accepted analysis
+specification SHA256 is
+`ba3cfedf5ebaa67aff0b93744f21d5627f0d78291b27479fa78f1bc601ee16e3`.
+
+The fixed scope is 755 fields / 287 variants / 127 origins / 76 schema components:
+80 native multiple/all-allowed cases are primary and 47 native irrelevance cases
+are auxiliary. Missing or malformed fields fail complete cases. Actual emitted
+choices determine quality; normalized selected-choice probabilities determine
+calibration. Component/source bootstrap uses 2,000 draws and seed 42.
+Research GO requires primary exact-set accuracy ≥90%, all three policy variants
+correct together for ≥90% of multiple origins, zero policy violations and 100%
+valid field coverage. It does not establish A/B/C or authorize promotion.
+
+A separate code-projection control reuses each origin's all-allowed semantic
+selection and intersects it with the variant's allowed tools. It traces base
+prediction IDs, adds zero inference calls and invents no derived confidence.
+Its zero policy violations follow from code; they are not raw model rule quality.
+All 755 raw field evaluations and their GO gates remain required.
+
+Use the appropriate existing environment and model root for one of the four
+model names. Producer manifest hashes below are placeholders until the refreshed
+manifests are accepted. Run inference only after resource/manifest release;
+score only after its completion receipt and prediction hash are frozen:
+
+```sh
+"$MODEL_PYTHON" training/tool-selection/predict.py prepare --model "$MODEL_NAME" \
+  --root "$MODEL_ROOT" --production "$BFCL_PRODUCTION" --output "$PREDICTION_OUTPUT"
+"$MODEL_PYTHON" training/tool-selection/predict.py run --model "$MODEL_NAME" \
+  --root "$MODEL_ROOT" --production "$BFCL_PRODUCTION" --output "$PREDICTION_OUTPUT" \
+  --manifest-sha "$ACCEPTED_PRODUCER_MANIFEST_SHA"
+node training/tool-selection/evaluate.mjs --root "$BFCL_PRODUCTION" --spec "$DEV_SPEC" \
+  --predictions "$PREDICTION_OUTPUT/predictions.jsonl" --prediction-sha "$CLOSED_PREDICTIONS_SHA" \
+  --out "$FRESH_DEV_REPORT"
+```
+
+The producer opens blind DEV fields only; the evaluator opens frozen DEV
+references only. Test references remain sealed. Each model is scored once after
+its completion receipt and prediction hash have been verified.
+
+| Completed model | Primary exact set, 80 cases | All three policy variants correct | Forbidden selections | Research GO |
+|---|---:|---:|---:|---|
+| Laya base | 1/80 | 0/80 | 284 | NO |
+| Laya d6 | 0/80 | 0/80 | 191 | NO |
+| Laya typed | 0/80 | 0/80 | 308 | NO |
+
+Each completed model served all 755 fields. Separate deterministic projection
+removed forbidden selections by construction but left primary semantic accuracy
+unchanged. A posthoc diagnostic forced one selection by highest normalized
+P(yes): base/d6/typed scored 30/28/45 of 80, versus 31/80 for first-lexicographic.
+This is a representation hypothesis, not a replacement gate or no-call evidence.
+The original comparison remains frozen; unfinished Clef predictions are neither
+scored nor extrapolated.

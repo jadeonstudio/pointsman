@@ -554,6 +554,17 @@ Cloudflare's [Clef model card](https://huggingface.co/Cloudflare/clef) describes
 | Reported median request latency, ms | 209.3 | 38.8 | 524.1 |
 
 These support a tool-selection/classification candidate, not universal dominance.
+**Interpretation clarified after the owner's comparison question:** the evidence
+does not rank Jev above the Clef family overall. The publisher reports stronger
+Clef tool-selection/classification results and stronger Jev hard-reasoning results.
+Our local timing/quality experiments use **9B Clef-Flash with an 8-bit backbone**,
+not the linked 27B Clef release. In the independently scored, narrow invoice
+discount-term comparison both models returned the same 144 correct and six
+incorrect decisions. The measured long-input local Flash latency is a practical
+problem for this implementation and hardware, not evidence of inferior 27B Clef
+quality or a matched hosted latency comparison. Keep Clef as a serious local
+candidate under the zero-additional-spend constraint; do not imply Jev wins by
+default or that open weights alone establish agent speed/cost savings.
 The latency numbers are publisher measurements, not this Mac's measurements or
 controlled whole-agent savings. The exact comparative hardware, network, cache,
 batch conditions and pinned Jev requests were not independently reproduced here.
@@ -797,6 +808,132 @@ the 200 multiple-tool origins are the primary semantic-choice slice. Schema
 components are not domains, published pretraining exposure is UNKNOWN, and the
 held-out sample cannot establish the 1% critical-error floor or B/C. Test files
 remain hash sealed. This is usable evaluation input, not a qualified model.
+
+**TOOL-SELECTION-EVAL/PREDICT r1 preparation:** continue from `4a9426e` with
+the accepted production wire pack, DEV only: 755 fields / 287 variants /
+127 origins / 76 schema components. Root owns the final freeze and GPU admission;
+`public_baseline` owns the thin scorer, `clef_latency` the single local producer,
+and `workflow_core` a separate CPU-only native utility preparation. All use
+GPT-6.1 Sol. Existing failed training and prefix nodes remain closed; this is an
+as-shipped baseline evaluation on a newly admitted independent tool-choice family,
+not another training retry. No new weights or dependencies are downloaded.
+CPU preparation checks exact Laya head/full input admission and current model,
+tokenizer, worker/package and wire hashes before any inference. Preserve every
+unsupported/missing field. Candidate baselines are existing Clef-Flash 8-bit,
+Laya multilingual base/d6, and the existing English typed specialist if its
+pin is available unchanged. Use original temperatures and uncached inference;
+models run serially with a 14 GiB combined-Metal ceiling. The maximum planned
+budget is 755 requests per model, at most 3,020 across four fully admitted models;
+actual admission and immutable producer/analysis specifications must be accepted
+before execution. No test inputs/references, calibration fitting or promotion.
+
+Research GO is distinct from final acceptance: 100% served coverage, at least
+90% complete-set accuracy on native multiple-tool all-allowed origins, zero
+observed policy violations, and at least 90% correct joint rule contrasts.
+Freeze denominator/cluster definitions in the scorer before predictions. Use
+actual emitted choices; normalize only runtime-valid rounded probability mass
+for NLL/Brier/ECE, preserving choice/argmax disagreements. Count missing/refused
+fields as incomplete cases; report no-call auxiliary slices separately. Fixed
+source/component bootstrap uses seed 42 and 2,000 resamples; neither schema
+groups nor correlated variants prove semantic-family generalization or A/B/C.
+
+A separately labeled code-projection control reuses each origin's all-allowed
+semantic choices and intersects them with each variant's allowed tools. This
+is exact declared no-substitution logic and adds no inference. Preserve source
+prediction lineage and distinguish by-construction policy compliance from learned
+rule following; do not invent raw model probabilities for projected decisions.
+All raw variant predictions still belong to the primary frozen comparison.
+
+CPU preparation is accepted, with **zero model loads or inference calls**.
+The scorer source is `a645a289198e94788add25e187c29ec92e39159dd8b603e8d0db165518e25dd2`;
+the frozen analysis specification is
+`ba3cfedf5ebaa67aff0b93744f21d5627f0d78291b27479fa78f1bc601ee16e3`.
+The producer source is
+`4ff13ffb499d2297d1da58ef7f298554117fb2bbfe0751c387fb9f37b0330ae3`.
+Focused scorer tests passed 7/7; producer contract tests passed 4/4, including
+an explicit zero-call load-failure receipt. Root reviewed the current-asset
+checks, actual dtype capture and memory/attempt receipts. Metadata-only manifest
+refresh preserved every original CPU admission row; all four admit 755/755 fields.
+Accepted producer manifest SHA256 values:
+
+| Model | Manifest SHA256 |
+|---|---|
+| base | `e51de493788350297773340d1356e4c085005aa6792d56bddc2b39ab3dba9c73` |
+| d6 | `6d5d1a7db5bbdf2365b437ac45f1fb73820be39634c7a92777bbba7252b2869f` |
+| typed | `aa1e38eb7bfa51c2413009f1052984ad98e5d804e041aaa744902b0b9f6edb6b` |
+| clef8 | `ddb58d00e0f01a803f0337afc23e3937ac13568b56570ad818f7f49d9ed96318` |
+
+The next execution order is base, d6, typed, then uncached clef8, with one GPU
+owner and the existing 3,020-call/14 GiB bounds. No GPU execution is open at this
+checkpoint. Native utility preparation separately passed its 8/8 source-site
+oracle; no native host comparison ran. Preparation writers are released and
+production modes/checkpoints remain unchanged. This closes no quality gate.
+
+**Execution checkpoint:** base, d6 and typed each completed 755 calls with 755
+valid outputs and process exit 0. Their frozen primary exact-set scores are
+1/80, 0/80 and 0/80; all-three policy contrasts are 0/80 throughout and forbidden
+selections are 284/191/308. All three are RESEARCH_NO_GO. Source/component
+intervals, calibration metrics and separate code-projection controls were scored
+once and are retained privately; [the public method/results](training/tool-selection/README.md)
+distinguish those controls from learned decisions. Posthoc forced-one ranking
+scored 30/28/45 of 80 against first-lexicographic 31/80; it motivates a bounded
+direct-enum representation preparation, not a changed primary gate. No new
+representation inference is open. The original uncached Clef process remains
+live on its original handle; its later request latency increased substantially,
+with cause and completion time UNKNOWN. Do not restart it because observation
+is slow or score only the available prefix.
+
+**GEMINI-COMMAND accepted at installed-component scope:** the 0.42.0 public
+BeforeAgent/BeforeModel command hooks now reach the production CLI and execute
+a fresh fixed recipe. A content-free prompt hash bound to session/canonical root
+is consumed once; mode/version changes, expiry and a failed/busy model-hook
+attempt invalidate it. Root rejected an initial busy-lock path because it left
+a stale token after model fallback; that boundary was corrected and verified.
+The [installed receipt](examples/workflow-hosts/gemini-component-evidence.json)
+proves zero sentinel-provider invocations on completion, source-fact checks,
+replay rejection and ordinary fallback. The installed engine still omits the
+synthetic assistant response from history, so WP12 full adoption remains NO-GO.
+No Gemini host registration, external model call or production mode changed.
+
+The integrated validation covers **616 distinct passing Node test names**:
+588 passed in the initial full run; all 74 tests in the five socket-related
+files passed on the targeted recovery run. Their union is 616 with no duplicate
+names inside either run. The initial environment refused HTTP/Unix `listen`
+with EPERM and left one test child waiting; only that verified owned child was
+terminated to recover diagnostics. No production correction was needed for
+these environment failures and other passing tests were not repeated. Syntax
+checked 245 modules; smoke and all three demos passed. Logs are the private
+`tool-selection-gemini-gate.log` and `tool-selection-gemini-socket-recovery.log`.
+Their CPU/process load overlaps the continuing Clef run; observed latency is
+ambient-load evidence, not an isolated performance benchmark.
+
+The separate real Claude comparison reached a normal workspace trust prompt for
+the frozen source copy before any task prompt. Explicit owner approval is
+pending; that is not a failed baseline or an efficiency win. Runtime was pinned
+to installed `ca6aebd` for both arms, independent of concurrent workspace edits.
+Automatic approval review also refused answering `No` to close that trust prompt;
+no response or alternate termination was attempted. The owned session remains
+at the human decision boundary. The current app still exposes seven legacy
+Pointsman tools without `run`; its actual status readback confirms global OFF,
+d6 unchanged and no local worker running. Codex current-app workflow delivery
+therefore remains open. The checklist is **104/157** at this checkpoint.
+
+The parallel three-avenue public-reference search found one additional explicitly
+licensed archive: [evalsafe-onet at
+`bda14bdd85be4d93140a842332359f526543b314`](https://huggingface.co/datasets/typesafe/evalsafe-onet/tree/bda14bdd85be4d93140a842332359f526543b314).
+Its own LICENSE/card/manifest declare Apache-2.0; the manifest identifies
+Jev 1.13.0, run `onet-5ea55de28cb0cea2`, question mode one and 7,500 questions.
+However, the README explicitly describes Astra/Fable consensus over synthetic
+workplace documents, not independent human gold or held-out generalization.
+Only catalog/card/license/schema metadata was read, not cases or predictions;
+an independently answerable subset is therefore UNKNOWN and B/C remain unopened.
+The other three TypeSafe workflow archives (customer-service, security-incidents,
+agent-trace-observability) have no explicit dataset license at the inspected pins;
+the invoice/O*NET license cannot be transferred to them. The inspected Decision
+Index Space `cdbd1cab3b6eb1811ebd82d2686ad563a4d0fc0d` is community-maintained
+and exposes aggregates, not a per-case Jev archive. Cloudflare's linked dashboard
+returned HTTP 403; additional raw archives there remain UNKNOWN. No inference,
+paid API, credential access or data-row download occurred in this search.
 
 Input revision `6eca73f`; root owns this plan and final acceptance. These bounded
 nodes address observed failures and actual consumer gaps, without another blind
@@ -1049,7 +1186,7 @@ portable work-segment execution plus host/version capability records.
 - [x] Claude: implement a version-matched `turn.step` synthetic-stream probe and normal fallback, then bind fixed recipes; retain normal tool execution/permissions for emitted tool actions. Actual 2.1.288 packet/history/continuation and later input-boundary cancellation/recovery have separate receipts; no synthetic tool permission is emitted. Full native task adoption remains WP12.
 - [x] Correct and test the effort CLI's router-OFF early return against event-specific effort gates, including the real entrypoint, without changing default modes.
 - [ ] Preserve the existing effort mod's gates; evaluate cache-preserving per-message effort only through supported direct API/model/transport contracts, not by assuming native effort edits preserve cache.
-- [ ] Gemini: implement a `BeforeModel.llm_response` synthetic-text probe and fixed-recipe completion path; use MCP/owned execution for tool dispatch rather than unsupported synthetic function calls.
+- [x] Gemini: implement a `BeforeModel.llm_response` synthetic-text probe and fixed-recipe completion path; use MCP/owned execution for tool dispatch rather than unsupported synthetic function calls. Actual 0.42.0 command hooks execute a fresh recipe through the production CLI with a BeforeAgent one-shot entry. The installed component passes source facts, zero provider invocation, replay rejection and fallback; missing assistant-history retention remains a separate WP12 NO-GO.
 - [x] Other MCP/owned SDK consumers: use existing JS/CLI/MCP interfaces and supported dispatch settings; mark each untested native consumer UNKNOWN.
 - [x] Before consumption, recheck actual state/candidate freshness, deadline, cancellation and target availability; stale advice must not dispatch.
 - [x] Preserve installer ownership, reviewed dry-run, trust/approval separation and fail-open behavior; hooks never spawn or wait for a cold worker.

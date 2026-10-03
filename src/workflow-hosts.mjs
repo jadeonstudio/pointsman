@@ -1,4 +1,8 @@
 import { createInterface } from 'node:readline';
+import fs from 'node:fs';
+import path from 'node:path';
+import { createHash } from 'node:crypto';
+import { ensureDir, noSymlinks, readText, atomicWrite } from './storage.mjs';
 
 // These are protocol contracts, not a claim that an installed client passed a native probe.
 export const WORKFLOW_HOST_CONTRACTS = Object.freeze({
@@ -69,6 +73,71 @@ export async function geminiWorkflowResponse(options, envelope, { signal } = {})
   // Installed 0.42.0 consumes the synthetic response only on its BeforeModel blocking path.
   // This decision suppresses model generation; it is never a tool/permission hook response.
   return out.apply ? { decision: 'deny', reason: 'Completed bounded pointsman workflow.', hookSpecificOutput: { llm_response: { candidates: [{ content: { role: 'model', parts: [out.text] }, finishReason: 'STOP' }] } } } : {};
+}
+
+// Stable model-hook input omits function calls/results. BeforeAgent is therefore
+// required to establish a fresh explicit entry; BeforeModel consumes it only once.
+export function geminiWorkflowEnvelope({ home, root, runtime, getMode }, event, { signal, now = Date.now() } = {}) {
+  if (!['BeforeAgent', 'BeforeModel'].includes(event?.hook_event_name) ||
+      typeof event.session_id !== 'string' || !event.session_id.length || event.session_id.length > 256) return null;
+  let lock, pendingFile, applied = false;
+  try {
+    const hash = text => createHash('sha256').update(text).digest('hex');
+    const dir = path.join(home, 'run', 'gemini-workflows');
+    const file = path.join(dir, `${hash(JSON.stringify([event.session_id, fs.realpathSync(root)]))}.json`);
+    pendingFile = file;
+    if (signal?.aborted) return null;
+    if (activeMode(getMode) !== 'on' || !matchesWorkflowHost('gemini', runtime)) {
+      if (readText(file, { optional: true, privateFile: true, maxBytes: 256 }) !== null) fs.unlinkSync(file);
+      return null; // Disabled hooks only invalidate an existing token; they create no state.
+    }
+    const capture = event.hook_event_name === 'BeforeAgent';
+    const last = Array.isArray(event.llm_request?.messages) ? event.llm_request.messages.at(-1) : null;
+    const text = capture ? event.prompt : last?.role === 'user' ? last.content : null;
+    let request;
+    if (typeof text === 'string' && Buffer.byteLength(text) <= 49152 && text.startsWith('pointsman-workflow ')) {
+      try { request = JSON.parse(text.slice('pointsman-workflow '.length)); } catch { /* fail open */ }
+    }
+    if (!request || typeof request !== 'object' || Array.isArray(request)) request = null;
+    if (!fs.existsSync(dir) && (!capture || !request)) return null;
+    ensureDir(home, true); ensureDir(dir, true);
+    const lockPath = path.join(dir, 'lock'); noSymlinks(lockPath);
+    // ponytail: a short synchronous directory lock bounds state and serializes
+    // capture/consume; contention or an abandoned lock fails open, never waits.
+    fs.mkdirSync(lockPath, { mode: 0o700 }); lock = lockPath;
+    const read = target => {
+      const value = readText(target, { optional: true, privateFile: true, maxBytes: 256 });
+      if (value === null) return null;
+      try { return JSON.parse(value); } catch { return null; }
+    };
+    const pending = read(file);
+    if (fs.existsSync(file)) { noSymlinks(file); fs.unlinkSync(file); }
+    if (!capture) {
+      if (!request || !pending || pending.promptHash !== hash(text) || !Number.isFinite(pending.createdAt) ||
+          now < pending.createdAt || now - pending.createdAt > 300000) return null;
+      applied = true;
+      return { scope: 'workflow', request };
+    }
+    if (!request) return null; // An ordinary/malformed new prompt invalidates its own pending entry.
+    for (const name of fs.readdirSync(dir).filter(name => /^[a-f0-9]{64}\.json$/.test(name))) {
+      const target = path.join(dir, name), record = read(target);
+      if (!record || !Number.isFinite(record.createdAt) || now < record.createdAt || now - record.createdAt > 300000) {
+        noSymlinks(target); fs.unlinkSync(target);
+      }
+    }
+    if (fs.readdirSync(dir).filter(name => name.endsWith('.json')).length >= 64) return null;
+    atomicWrite(file, JSON.stringify({ promptHash: hash(text), createdAt: now }) + '\n');
+  } catch { /* Missing/unsafe/busy state never suppresses a model request. */ }
+  finally {
+    // A fall-through may already reach the provider. Never leave its entry for
+    // a later tool continuation, including when another session holds the lock.
+    if (!applied && pendingFile && event.hook_event_name === 'BeforeModel') {
+      try { if (readText(pendingFile, { optional: true, privateFile: true, maxBytes: 256 }) !== null) fs.unlinkSync(pendingFile); }
+      catch { /* Unsafe/unreadable state cannot apply; never follow it. */ }
+    }
+    if (lock) { try { fs.rmdirSync(lock); } catch { /* fail open */ } }
+  }
+  return null;
 }
 
 // The caller owns process startup, initialization, trust UI, and permissions. No host patch or process spawning.

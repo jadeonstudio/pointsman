@@ -105,6 +105,59 @@ test('native CLI observes actual host version and separate gates before syntheti
   assert.equal(run(envelope).apply, false);
 });
 
+test('Gemini public command bridge captures and consumes one-shot entries and preserves internal callers', t => {
+  const home = tempHome(t), root = source(t), bin = path.join(home, 'bin'); fs.mkdirSync(bin);
+  const host = path.join(bin, 'gemini'); fs.writeFileSync(host, '#!/bin/sh\nprintf "0.42.0\\n"\n', { mode: 0o700 });
+  const text = `pointsman-workflow ${JSON.stringify(request)}`;
+  const before = { hook_event_name: 'BeforeAgent', session_id: 'session', prompt: text, cwd: '/untrusted' };
+  const model = { hook_event_name: 'BeforeModel', session_id: 'session', cwd: '/untrusted', llm_request: { messages: [{ role: 'user', content: text }] } };
+  const run = input => {
+    const event = input.hook_event_name === 'BeforeAgent' ? 'before-agent' : 'before-model';
+    const p = spawnSync(process.execPath, ['bin/pointsman.mjs', 'workflow-native', '--host', 'gemini', '--event', event, '--root', root, '--home', home], {
+      env: { PATH: `${bin}:${process.env.PATH}`, HOME: home }, input: JSON.stringify(input), encoding: 'utf8', timeout: 10000 });
+    assert.equal(p.status, 0, p.stderr); return JSON.parse(p.stdout);
+  };
+  const dir = path.join(home, 'run/gemini-workflows');
+  setMode(home, 'on', {}); setFeatureMode(home, 'workflow', 'on');
+  assert.deepEqual(run(before), {}); assert.equal(fs.existsSync(dir), false);
+  setWorkflowNativeMode(home, 'on');
+  assert.deepEqual(run(model), {}); assert.deepEqual(run(before), {});
+  const packet = JSON.parse(run(model).hookSpecificOutput.llm_response.candidates[0].content.parts[0]);
+  assert.equal(packet.status, 'done'); assert.equal(packet.stats.inferenceCalls, 0); assert.equal(packet.evidence[0].path, 'hello.mjs');
+  assert.deepEqual(run(model), {});
+  run(before); run({ ...before, prompt: 'ordinary' }); assert.deepEqual(run(model), {});
+  run(before); fs.writeFileSync(host, '#!/bin/sh\nprintf "0.43.0\\n"\n', { mode: 0o700 }); assert.deepEqual(run(model), {});
+  fs.writeFileSync(host, '#!/bin/sh\nprintf "0.42.0\\n"\n', { mode: 0o700 });
+  assert.deepEqual(run(model), {}); // Version drift invalidated the old entry.
+  run(before); setFeatureMode(home, 'workflow', 'off'); assert.deepEqual(run(model), {});
+  setFeatureMode(home, 'workflow', 'on'); assert.deepEqual(run(model), {});
+  run(before); setMode(home, 'off', {}); assert.deepEqual(run(model), {});
+  setMode(home, 'on', {}); assert.deepEqual(run(model), {});
+  assert.equal(run({ scope: 'workflow', request }).decision, 'deny'); // Existing owned envelope still works.
+});
+
+test('concurrent Gemini model-hook processes consume at most one pending entry', async t => {
+  const home = tempHome(t), root = source(t), bin = path.join(home, 'bin'); fs.mkdirSync(bin);
+  fs.writeFileSync(path.join(bin, 'gemini'), '#!/bin/sh\nprintf "0.42.0\\n"\n', { mode: 0o700 });
+  setMode(home, 'on', {}); setFeatureMode(home, 'workflow', 'on'); setWorkflowNativeMode(home, 'on');
+  const text = `pointsman-workflow ${JSON.stringify(request)}`;
+  const env = { PATH: `${bin}:${process.env.PATH}`, HOME: home };
+  const argv = ['bin/pointsman.mjs', 'workflow-native', '--host', 'gemini', '--root', root, '--home', home, '--event'];
+  const before = spawnSync(process.execPath, [...argv, 'before-agent'], { env, encoding: 'utf8', input: JSON.stringify({ hook_event_name: 'BeforeAgent', session_id: 'race', prompt: text }) });
+  assert.equal(before.status, 0, before.stderr);
+  const run = () => new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [...argv, 'before-model'], { env, stdio: ['pipe', 'pipe', 'pipe'] });
+    let stdout = '', stderr = ''; child.stdout.on('data', chunk => { stdout += chunk; }); child.stderr.on('data', chunk => { stderr += chunk; });
+    child.on('error', reject); child.on('close', code => { try { assert.equal(code, 0, stderr); resolve(JSON.parse(stdout)); } catch (error) { reject(error); } });
+    child.stdin.end(JSON.stringify({ hook_event_name: 'BeforeModel', session_id: 'race', llm_request: { messages: [{ role: 'user', content: text }] } }));
+    t.after(() => { if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL'); });
+  });
+  const results = await Promise.all([run(), run()]);
+  assert.equal(results.filter(result => result.decision === 'deny').length, 1);
+  assert.equal(results.filter(result => Object.keys(result).length === 0).length, 1);
+  assert.equal(fs.readdirSync(path.join(home, 'run/gemini-workflows')).length, 0);
+});
+
 test('workflow CLI cancellation closes held-open stdin and kills an in-flight host-version child', async t => {
   for (const phase of ['stdin', 'version']) await t.test(phase, async t => {
     const home = tempHome(t), root = source(t), bin = path.join(home, 'bin');

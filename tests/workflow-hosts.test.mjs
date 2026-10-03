@@ -2,11 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PassThrough } from 'node:stream';
 import { promises as fs } from 'node:fs';
+import fsSync from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { stripTypeScriptTypes } from 'node:module';
 import { createWorkflowRunner } from '../src/workflows.mjs';
-import { WORKFLOW_HOST_CONTRACTS, matchesWorkflowHost, prepareNativeWorkflow, claudeWorkflowStep, geminiWorkflowResponse, createCodexWorkflowClient, createWorkflowRpc } from '../src/workflow-hosts.mjs';
+import { WORKFLOW_HOST_CONTRACTS, matchesWorkflowHost, prepareNativeWorkflow, claudeWorkflowStep, geminiWorkflowResponse, geminiWorkflowEnvelope, createCodexWorkflowClient, createWorkflowRpc } from '../src/workflow-hosts.mjs';
+import { tempHome } from './helpers.mjs';
 
 const request = { workflow: 'repo-evidence', inputs: { symbols: ['hello'] } };
 const completed = () => ({ version: 1, recipeRevision: 'workflow-v1', workflow: 'repo-evidence', mode: 'on', status: 'done', needsParent: null,
@@ -53,6 +55,60 @@ test('Gemini uses string parts with no synthetic functionCall or fabricated toke
   assert.equal(typeof out.hookSpecificOutput.llm_response.candidates[0].content.parts[0], 'string');
   assert.equal(out.hookSpecificOutput.llm_response.usageMetadata, undefined);
   assert.deepEqual(await geminiWorkflowResponse(opts('gemini', {}), envelope), {});
+});
+test('Gemini public entry is content-free, root/session-bound, expiring and consumed exactly once', t => {
+  const home = tempHome(t), root = tempHome(t), options = { ...opts('gemini'), home, root };
+  const text = `pointsman-workflow ${JSON.stringify(request)}`;
+  const before = { hook_event_name: 'BeforeAgent', session_id: 'session', prompt: text, cwd: '/untrusted' };
+  const model = { hook_event_name: 'BeforeModel', session_id: 'session', llm_request: { messages: [{ role: 'user', content: text }] } };
+  const entry = (e, now = 1000, extra = {}) => geminiWorkflowEnvelope({ ...options, ...extra }, e, { now });
+  const dir = path.join(home, 'run/gemini-workflows');
+  assert.equal(entry(model), null);
+  assert.equal(fsSync.existsSync(dir), false);
+  for (const getMode of [() => ({ globalMode: 'off', mode: 'on' }), () => ({ globalMode: 'on', mode: 'off' })]) {
+    assert.equal(entry(before, 1000, { getMode }), null); assert.equal(fsSync.existsSync(dir), false);
+  }
+  entry(before);
+  const files = fsSync.readdirSync(dir); assert.equal(files.length, 1);
+  const persisted = fsSync.readFileSync(path.join(dir, files[0]), 'utf8');
+  assert.equal(persisted.includes('repo-evidence'), false); assert.equal(persisted.includes(text), false);
+  assert.deepEqual(Object.keys(JSON.parse(persisted)).sort(), ['createdAt', 'promptHash']);
+  assert.equal(fsSync.statSync(dir).mode & 0o077, 0); assert.equal(fsSync.statSync(path.join(dir, files[0])).mode & 0o077, 0);
+  assert.equal(entry({ ...model, session_id: 'other' }), null);
+  assert.equal(entry(model, 1000, { root: tempHome(t) }), null);
+  assert.deepEqual(entry(model), { scope: 'workflow', request }); assert.equal(entry(model), null);
+  entry(before); assert.deepEqual(entry(model), { scope: 'workflow', request }); // Repeated human text is a new entry.
+  entry(before); entry({ ...before, prompt: 'ordinary prompt' }); assert.equal(entry(model), null);
+  entry(before); assert.equal(entry({ ...model, llm_request: { messages: [{ role: 'user', content: text }, { role: 'model', content: 'tool result' }] } }), null);
+  assert.equal(entry(model), null); // A mismatch also consumes the token; never search older user messages.
+  entry(before); assert.equal(entry(model, 301001), null); assert.equal(entry(model, 1000), null);
+  entry(before); assert.equal(entry(model, 999), null); // Future timestamp / backward clock fails open.
+  entry(before); assert.equal(entry(model, 1000, { getMode: () => ({ globalMode: 'off', mode: 'on' }) }), null);
+  assert.equal(entry(model), null); // OFF invalidates existing state without creating state.
+  for (const prompt of ['pointsman-workflow {bad', 'please run pointsman-workflow {}', '/pointsman-workflow {}', 'pointsman-workflow null']) {
+    entry({ ...before, prompt }); assert.equal(entry(model), null);
+  }
+  entry(before); fsSync.mkdirSync(path.join(dir, 'lock'));
+  assert.equal(entry(model), null); fsSync.rmdirSync(path.join(dir, 'lock'));
+  assert.equal(entry(model), null); // Busy fallback spent this entry; a tool continuation must not take it over.
+  entry(before); assert.deepEqual(entry(model), { scope: 'workflow', request });
+  entry(before);
+  const aborted = new AbortController(); aborted.abort();
+  assert.equal(geminiWorkflowEnvelope(options, model, { signal: aborted.signal, now: 1000 }), null);
+  assert.equal(entry(model), null);
+  entry(before); fsSync.writeFileSync(path.join(dir, files[0]), 'broken'); assert.equal(entry(model), null);
+  entry(before); fsSync.unlinkSync(path.join(dir, files[0]));
+  const target = path.join(home, 'outside'); fsSync.writeFileSync(target, persisted);
+  fsSync.symlinkSync(target, path.join(dir, files[0])); assert.equal(entry(model), null);
+  assert.equal(fsSync.readFileSync(target, 'utf8'), persisted);
+});
+test('Gemini pending state bounds sessions and removes expired records before admitting a new entry', t => {
+  const home = tempHome(t), options = { ...opts('gemini'), home, root: tempHome(t) };
+  const event = { hook_event_name: 'BeforeAgent', prompt: `pointsman-workflow ${JSON.stringify(request)}` };
+  for (let i = 0; i < 65; i++) geminiWorkflowEnvelope(options, { ...event, session_id: String(i) }, { now: 1000 });
+  const dir = path.join(home, 'run/gemini-workflows'); assert.equal(fsSync.readdirSync(dir).length, 64);
+  geminiWorkflowEnvelope(options, { ...event, session_id: 'fresh' }, { now: 301001 });
+  assert.equal(fsSync.readdirSync(dir).length, 1);
 });
 test('Codex direct MCP completed path starts no turn; unresolved starts one preserving input', async () => {
   const calls = [];
