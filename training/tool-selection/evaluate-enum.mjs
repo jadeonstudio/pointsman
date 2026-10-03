@@ -5,12 +5,18 @@ import {parseArgs} from 'node:util';
 import {digest,encode} from '../../src/training/schema.mjs';
 import {clusteredInterval} from './evaluate.mjs';
 
-export const REVISION='bfcl-dev-enum-evaluation-v1';
+export const REVISION='bfcl-dev-enum-evaluation-v2';
 const FROZEN={'blind-inputs.jsonl':'b755a9364dd91fccc4206a8dbe0ff6789ee1c5e9fbb2fc75594ac163f6fd2977',
   'reference.jsonl':'796938193d4d0632f2aa47d721089812a0aaed996068cbc2af9f808e034df457',
   'projection-lineage.jsonl':'0a47bc81df276b7e1cbc761db259af51139c0db944e8c04e40ebbaadba019217',
   'specification.json':'ea825ab3e9043bfc559013855692b1cf8a71c55c987b1228eeffd67af209067d'};
-const ORIGINAL='55f64b16b904a26aabeeb419c4a07bd9632ff2b9d943c51ab6230c58eb4708a8';
+const CANDIDATES={
+  typed:{model_id:'tool-selection/typed',checkpoint:'56f6474957ea3e5660562efd7e588ee631045a3c6ff557934787ac252fd5350c',
+    original_report_sha256:'55f64b16b904a26aabeeb419c4a07bd9632ff2b9d943c51ab6230c58eb4708a8'},
+  clef4:{model_id:'tool-selection/clef4',checkpoint:'ef744cdfbba595a68a082368f047d6472a6e5ef576c97c074fb15d3291001b97',
+    original_report_sha256:'451ecba34cefe67a2bb1d629ec4c4d121f42910aac8346ad4690e8824a53595f'}
+};
+function candidate(name) {if(!Object.hasOwn(CANDIDATES,name)) throw new Error('ENUM_CANDIDATE_UNSUPPORTED');return CANDIDATES[name];}
 const BINARY_SOURCE='a645a289198e94788add25e187c29ec92e39159dd8b603e8d0db165518e25dd2';
 const STATUSES=['ok','timeout','rejected','unsupported_input','error'];
 const mean=xs=>xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:null;
@@ -19,9 +25,10 @@ const same=(a,b)=>encode([...a].sort())===encode([...b].sort());
 const rows=p=>fs.readFileSync(p,'utf8').trim().split('\n').filter(Boolean).map(JSON.parse);
 export const inputIdentity=r=>digest({state:r.wire.state,questions:r.wire.questions});
 
-export function loadPrototype(root,original) {
+export function loadPrototype(root,original,name='typed') {
+  const selected=candidate(name);
   for(const [name,hash] of Object.entries(FROZEN)) if(digest(fs.readFileSync(path.join(root,name),'utf8'))!==hash) throw new Error('ENUM_ARTIFACT_CHANGED');
-  if(digest(fs.readFileSync(original,'utf8'))!==ORIGINAL) throw new Error('ORIGINAL_TYPED_REPORT_CHANGED');
+  if(digest(fs.readFileSync(original,'utf8'))!==selected.original_report_sha256) throw new Error('ORIGINAL_MODEL_REPORT_CHANGED');
   if(digest(fs.readFileSync(new URL('./evaluate.mjs',import.meta.url),'utf8'))!==BINARY_SOURCE) throw new Error('BINARY_SCORER_CHANGED');
   const inputs=rows(path.join(root,'blind-inputs.jsonl')),reference=rows(path.join(root,'reference.jsonl')),lineage=rows(path.join(root,'projection-lineage.jsonl'));
   if(inputs.length!==127||reference.length!==127||lineage.length!==287||new Set(inputs.map(r=>r.source_id)).size!==127
@@ -29,14 +36,14 @@ export function loadPrototype(root,original) {
     ||inputs.filter(r=>r.source_category==='multiple').length!==80) throw new Error('ENUM_DEV_COHORT_CHANGED');
   const baseline=JSON.parse(fs.readFileSync(original,'utf8')).projection_control.trace.filter(r=>r.case_id===r.base_case_id);
   if(baseline.length!==127) throw new Error('ORIGINAL_NATIVE_OUTCOMES_MISSING');
-  return {inputs,reference,lineage,baseline};
+  return {inputs,reference,lineage,baseline,candidate:selected};
 }
 
-export function analysisSpec() {
+export function analysisSpec(name='typed') {
+  const selected=candidate(name);
   return {revision:REVISION,scope:'DEV enum127 ONLY:80primary multiple/47auxiliary irrelevance; code projection287',
     scorer_sha256:digest(fs.readFileSync(fileURLToPath(import.meta.url),'utf8')),prototype_hashes:FROZEN,
-    frozen_binary_scorer_sha256:BINARY_SOURCE,original_typed_report_sha256:ORIGINAL,
-    typed_checkpoint:'56f6474957ea3e5660562efd7e588ee631045a3c6ff557934787ac252fd5350c',
+    frozen_binary_scorer_sha256:BINARY_SOURCE,candidate:selected,
     prediction:{required:['sample_id','model_id','checkpoint','input_identity','status'],statuses:STATUSES,
       input_identity:'SHA256 encode({state:wire.state,questions:wire.questions}); never binary identity',
       served:'actual choice must belong to per-row criteria; probabilities exact same keys, finite numbers[0,1],positive mass,abs(sum-1)<=0.02; normalize mass only',
@@ -44,14 +51,14 @@ export function analysisSpec() {
     denominators:{native:'all127; every missing/malformed/unserved case is wrong',primary:80,auxiliary:47,
       probability_metrics:'valid served enum cases only, expose count; categorical NLLfloor1e-15/Brier sum over actual options/ECE10equal bins; separate from binary loss space',
       projection:'all287; valid enum singleton/empty intersect each allowed_tools with no substitution; unserved origin fails every sibling; no derived probabilities/confidence'},
-    paired:'Same-origin native correctness against original typed binary fixed outcomes; original all_allowed code-projection trace is unchanged from raw binary; no original report rewrite',
+    paired:'Same-origin native correctness against the same model\'s original binary fixed outcomes; original all_allowed code-projection trace is unchanged from raw binary; no original report rewrite',
     bootstrap:{draws:2000,seed:42,reuse:'frozen clusteredInterval component→source nested resampling; origin weight1; all derived siblings remain in source/component cluster'},
     research_screen:{coverage:1,primary_exact_set_at_least:.9,auxiliary_exact_set_at_least:.9},
     screen_scope:'ENUM_RESEARCH_SCREEN only; code policy0 by construction is not raw learned-rule gate, A/B/C, task completion or promotion; no fitted thresholds/calibration/test selection',
     controls:['none','first_lexicographic_candidate'],
-    budget:{typed_enum_forwards:127,clef4_original_binary_forwards:755,total_new_forwards:882,other_enum_arms:0,projection_additional_calls:0,
-      supersedes:'prototype conditional508all-four enum budget; root explicitly authorizes typed enum only plus separate clef4 binary arm'},
-    temperature:'Existing typed config unchanged; choice3-5 and choice2 buckets naturally differ from old all2 binary; no tuning',
+    budget:{candidate_enum_forwards:127,other_candidate_forwards:0,projection_additional_calls:0,
+      execution:'Separate root acceptance required; prior closed 882-call experiment is not repeated'},
+    temperature:'Existing candidate configuration unchanged; no tuning or calibration fitting',
     test:'SEALED_NOT_OPENED',pretraining_contamination:'UNKNOWN',model_execution:'CLOSED until root accepts fresh spec/producer manifest'};
 }
 
@@ -62,6 +69,7 @@ export function scoreEnum(data,predictions) {
     if(!p||!byInput.has(p.sample_id)||byPrediction.has(p.sample_id)||!STATUSES.includes(p.status)
       ||![p.model_id,p.checkpoint,p.input_identity].every(v=>typeof v==='string'&&v.length)) throw new Error('ENUM_PREDICTION_JOIN');
     if(p.input_identity!==inputIdentity(byInput.get(p.sample_id))) throw new Error('ENUM_INPUT_IDENTITY_MISMATCH');
+    if(data.candidate&&(p.model_id!==data.candidate.model_id||p.checkpoint!==data.candidate.checkpoint)) throw new Error('ENUM_MODEL_CHANGED');
     byPrediction.set(p.sample_id,p);
   }
   if(new Set(predictions.map(p=>encode([p.model_id,p.checkpoint]))).size>1) throw new Error('MIXED_ENUM_MODEL');
@@ -98,7 +106,7 @@ export function scoreEnum(data,predictions) {
   });
   if(new Set(projected.map(r=>r.case_id)).size!==projected.length) throw new Error('DUPLICATE_PROJECTION_VARIANT');
   const baseline=new Map(data.baseline.map(r=>[r.case_id,r]));
-  const pair=rs=>{const paired=rs.map(r=>{const old=baseline.get(r.base_case_id);if(!old||old.source_id!==r.source_id) throw new Error('ORIGINAL_TYPED_NATIVE_JOIN');
+  const pair=rs=>{const paired=rs.map(r=>{const old=baseline.get(r.base_case_id);if(!old||old.source_id!==r.source_id) throw new Error('ORIGINAL_MODEL_NATIVE_JOIN');
     return {...r,previous_correct:old.correct,difference:Number(r.correct)-Number(old.correct)};});
     return {count:paired.length,improved:paired.filter(r=>r.difference===1).length,regressed:paired.filter(r=>r.difference===-1).length,
       accuracy_difference:mean(paired.map(r=>r.difference)),interval95:clusteredInterval(paired,r=>r.difference)};};
@@ -112,7 +120,7 @@ export function scoreEnum(data,predictions) {
       selected_choice_argmax_disagreements:served.filter(r=>r.argmax_disagreement).length,probability_mass_corrections:served.filter(r=>r.mass_error>1e-12).length,
       comparison:'Categorical option-space losses; not binary loss-space equivalents'},
     intervals:{native:clusteredInterval(records,r=>Number(r.correct)),primary:clusteredInterval(primary,r=>Number(r.correct)),auxiliary:clusteredInterval(auxiliary,r=>Number(r.correct))},
-    paired_original_typed_binary:{native:pair(records),primary:pair(primary),auxiliary:pair(auxiliary),original_report_sha256:ORIGINAL},
+    paired_original_binary:{native:pair(records),primary:pair(primary),auxiliary:pair(auxiliary),original_report_sha256:data.candidate?.original_report_sha256??null},
     code_projection:{cases:projected.length,served:projected.filter(r=>r.status==='ok').length,exact_set_accuracy:mean(projected.map(r=>Number(r.correct))),
       interval95:clusteredInterval(projected,r=>Number(r.correct)),policy_violations:0,policy_semantics:'by construction; no raw learned-rule gate',additional_model_calls:0,trace:projected},
     controls:Object.fromEntries(['none','first_lexicographic_candidate'].map(control=>{const correct=data.inputs.map(row=>{const key=control==='none'?'none':Object.keys(row.option_to_tool).filter(k=>k!=='none').sort()[0];return {category:row.source_category,correct:key===byReference.get(row.sample_id).target_option_id};});
@@ -122,15 +130,14 @@ export function scoreEnum(data,predictions) {
 }
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href) {
-  const {values}=parseArgs({options:{root:{type:'string'},original:{type:'string'},freeze:{type:'boolean'},out:{type:'string'},spec:{type:'string'},predictions:{type:'string'},'prediction-sha':{type:'string'}}});
+  const {values}=parseArgs({options:{model:{type:'string',default:'typed'},root:{type:'string'},original:{type:'string'},freeze:{type:'boolean'},out:{type:'string'},spec:{type:'string'},predictions:{type:'string'},'prediction-sha':{type:'string'}}});
   if(!values.root||!values.original||!values.out) throw new Error('ENUM_ROOT_ORIGINAL_FRESH_OUTPUT_REQUIRED');
-  const data=loadPrototype(values.root,values.original),spec=analysisSpec();let report=spec;
+  const data=loadPrototype(values.root,values.original,values.model),spec=analysisSpec(values.model);let report=spec;
   if(!values.freeze) {
     if(!values.spec||!values.predictions||!values['prediction-sha']) throw new Error('FROZEN_ENUM_SPEC_PREDICTIONS_REQUIRED');
     if(encode(JSON.parse(fs.readFileSync(values.spec,'utf8')))!==encode(spec)) throw new Error('ENUM_SPEC_CHANGED');
     if(digest(fs.readFileSync(values.predictions,'utf8'))!==values['prediction-sha']) throw new Error('ENUM_PREDICTIONS_CHANGED');
     const predictions=rows(values.predictions);
-    if(predictions.some(p=>p.model_id!=='tool-selection/typed'||p.checkpoint!==spec.typed_checkpoint)) throw new Error('ENUM_TYPED_MODEL_CHANGED');
     report={...scoreEnum(data,predictions),spec_sha256:digest(fs.readFileSync(values.spec,'utf8')),predictions_sha256:values['prediction-sha']};
   }
   fs.writeFileSync(values.out,JSON.stringify(report,null,2)+'\n',{flag:'wx',mode:0o600});

@@ -1030,7 +1030,7 @@ Tests/specifications and the sealed test split are unchanged. The current source
 passes syntax checks for 247 JS modules; the accepted six enum and five producer
 tests supplement the existing valid repository gate. Both GPU owners are released.
 
-**Next bounded representation test — CLEF4-ENUM r1, preparation only:** the
+**Next bounded representation test — CLEF4-ENUM r1, accepted for execution:** the
 completed Clef4 primary result and the typed model's representation improvement
 justify testing the existing Clef4 weights on the identical 127 enum inputs.
 This changes representation, not state, gold, weights, temperature or split.
@@ -1038,9 +1038,17 @@ CPU admission passed 127/127 losslessly at 301–944 tokens with unchanged produ
 `ef877cbb1524a16368c17be3ef4a04a63cf2ef018f97f645e5c2cff9c468b267`;
 the new manifest is
 `451b891f730f5ba5c38ca80bc503ab02c59ce3437d57ec3a33c587016925629a`.
-No GPU/model call has run. Root will first preserve the completed typed scorer
-revision in Git, then freeze the same enum screen and a paired Clef4 binary
-baseline in the reused scorer before opening this arm. Additional budget is
+The completed typed scorer/results were committed and pushed as `cd55ee2`, with
+identical remote readback. The reused enum scorer now binds each selected model
+to its own original binary report and rejects a different model/checkpoint.
+Seven focused tests passed. Scorer
+`bcdf7eeb7bd8a106cc8d3241e88e116d2ec18e0d8df3180540061f0bb166c892`
+and pre-inference specification
+`28c54e4fcb58a4ffbae30b7ec287f1faacfe496d26de168dc5ead7f88c6a05f8`
+are frozen; a CPU-only empty-prediction preflight verifies all 127 origins and
+287 variants against the original Clef4 report. The unchanged enum screen still
+requires full coverage and at least 90% in both primary and auxiliary slices.
+Root accepts exactly this run; no GPU/model call preceded this freeze. Additional budget is
 **127 forwards once**, existing local assets only, under the same 14 GiB sampled
 combined-Metal boundary; stop on the first structural/nonfinite/inference error.
 A failed no-call screen will not trigger another prompt-tuning or training retry.
@@ -1050,6 +1058,29 @@ for these 127 origins, not all 755 fields including diagnostic policy variants.
 Code projection adds zero calls. A jointly batched binary request could also use
 one forward per origin and has not been measured here; therefore this test alone
 cannot establish a speed win over an optimized Clef client, or whole-task savings.
+
+**CLEF4-ENUM r1 result — hypothesis rejected, no further retry:** the single
+127-call run exited 0; original PID 64301 was verified absent and GPU ownership
+released. Completion/prediction hashes are
+`bcbf5d1e7a37eb5d5c419e323f50cead85701eb0ec0bf67ae1f36e71bb6d0cc7` /
+`d648e6fb6d4d7ea9aed5aa58cb435408ada4cdde7e84c62b1705c42ed1ee96d9`.
+One frozen score retained **80/80 primary** but returned **23/47 auxiliary**,
+compared with 24/47 in binary form: zero native improvements and one regression.
+Full coverage and primary passed; the auxiliary screen failed. Code projection
+is 263/287 correct with zero policy violations by construction. The report/score
+receipt hashes are
+`621a8583d77488a1b555b9ff44eb42d7d46ccaca8e48bf036da68fd733c593c5` /
+`6ffb48807536ec2347689f1a61415386e9f336a4d442a151ec8be5e50ab0f6fe`.
+Categorical NLL/Brier/ECE are 0.683664/0.335462/0.142773; this is not the binary
+loss space. All-request median/p95 is 1,567.871/2,501.775 ms (N=127), separate
+load 3.368 seconds and full stage 208.877 seconds. Sampled driver maximum is
+8,575,647,744 bytes; overlapping MLX allocator peak is 8,809,414,854 bytes.
+The two completed amendments made 1,009 calls in total, with no paid requests,
+training, prompt tuning, test access or operational activation. The public
+aggregate preserves all six prior arms unchanged and appends this seventh arm.
+The semantic selection finding remains useful, but changing representation did
+not solve the no-call failure. This node is CLOSED/NO-GO; A/B/C, calibration,
+new-checkpoint qualification and native task adoption remain unestablished.
 
 The parallel three-avenue public-reference search found one additional explicitly
 licensed archive: [evalsafe-onet at

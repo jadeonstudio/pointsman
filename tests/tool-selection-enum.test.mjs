@@ -22,12 +22,12 @@ test('two-to-five actual categorical choices and exact mapping score correctly',
   for(let count=2;count<=5;count++) {
     const data=fixture(count),r=scoreEnum(data,[prediction(data)]);
     assert.equal(r.primary.exact_set_accuracy,1);assert.equal(r.categorical_metrics.nll,0);assert.equal(r.categorical_metrics.brier,0);
-    assert.equal(r.code_projection.exact_set_accuracy,1);assert.equal(r.paired_original_typed_binary.primary.improved,1);
+    assert.equal(r.code_projection.exact_set_accuracy,1);assert.equal(r.paired_original_binary.primary.improved,1);
   }
   const none=fixture(2,'none'),r=scoreEnum(none,[prediction(none)]);
   assert.equal(r.auxiliary.exact_set_accuracy,1);assert.deepEqual(r.code_projection.trace[0].selected_tools,[]);
   const spec=analysisSpec();assert.deepEqual(spec.research_screen,{coverage:1,primary_exact_set_at_least:.9,auxiliary_exact_set_at_least:.9});
-  assert.equal(spec.budget.total_new_forwards,882);assert.equal(spec.test,'SEALED_NOT_OPENED');
+  assert.equal(spec.budget.candidate_enum_forwards,127);assert.equal(spec.test,'SEALED_NOT_OPENED');
 });
 
 test('missing and unserved origins fail every sibling even when denied set is empty',()=>{
@@ -70,4 +70,18 @@ test('input binding, reference mapping and code projection lineage refuse corrup
     assert.equal(trace.base_prediction_id,data.inputs[0].sample_id);assert.equal(trace.probabilities,null);assert.equal(trace.confidence,null);assert.equal(trace.additional_model_calls,0);
   }
   assert.equal(r.code_projection.policy_violations,0);assert.match(r.code_projection.policy_semantics,/by construction/);
+});
+
+
+test('candidate identity prevents pairing predictions from another model or checkpoint',()=>{
+  const data=fixture(),p=prediction(data);
+  data.candidate=analysisSpec('clef4').candidate;
+  assert.throws(()=>scoreEnum(data,[p]),/ENUM_MODEL_CHANGED/);
+  p.model_id=data.candidate.model_id;p.checkpoint=data.candidate.checkpoint;
+  const scored=scoreEnum(data,[p]);
+  assert.equal(scored.primary.correct,1);
+  assert.equal(scored.paired_original_binary.original_report_sha256,data.candidate.original_report_sha256);
+  p.checkpoint=analysisSpec('typed').candidate.checkpoint;
+  assert.throws(()=>scoreEnum(data,[p]),/ENUM_MODEL_CHANGED/);
+  assert.throws(()=>analysisSpec('unknown'),/ENUM_CANDIDATE_UNSUPPORTED/);
 });

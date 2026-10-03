@@ -195,8 +195,30 @@ scorer has six focused tests, and the producer has five. See the complete
 aggregate and closed artifact hashes in [evidence.json](evidence.json), and the
 accepted specification identities in [PLAN.md](../../PLAN.md).
 
-The next Clef4 enum proposal is separate and has completed CPU admission only.
+The subsequent Clef4 enum arm also completed 127/127 requests. It retained
+**80/80 primary**, but no-call accuracy fell from 24/47 to **23/47**, with no
+improved cases and one regression. It therefore fails the same enum screen;
+changing representation did not solve the no-call error. Code projection gives
+263/287 correct variants. Categorical NLL/Brier/ECE are
+0.683664/0.335462/0.142773. Observed median/p95 is 1,567.871/2,501.775 ms (N=127),
+with separate loading of 3.368 seconds and a full stage of 208.877 seconds.
+This closed arm adds 127 calls to the previous 882; no further prompt tuning,
+training or model activation follows from its failed screen.
+
 Its 127 requests must be compared with the 283 original all-allowed binary
 fields, not the 755 fields including diagnostic policy variants. A joint binary
 request could also share the state in one forward per origin and has not been
 measured; no optimized-client or whole-task speedup is established here.
+
+The original typed enum scorer/specification is preserved at `cd55ee2`. Version
+2 adds `--model typed|clef4` and verifies the matching original report and
+checkpoint before paired comparisons; its seven focused tests passed. The old
+report remains unchanged. Score a closed enum arm with the matching frozen v2
+specification and source revision:
+
+```sh
+node training/tool-selection/evaluate-enum.mjs --model "$MODEL_NAME" \
+  --root "$ENUM_PROTOTYPE" --original "$ORIGINAL_MODEL_REPORT" --spec "$ENUM_SPEC" \
+  --predictions "$PREDICTION_OUTPUT/predictions.jsonl" \
+  --prediction-sha "$CLOSED_PREDICTIONS_SHA" --out "$FRESH_DEV_REPORT"
+```

@@ -23,7 +23,9 @@
     "binary_source": "a645a289198e94788add25e187c29ec92e39159dd8b603e8d0db165518e25dd2",
     "binary_spec": "ba3cfedf5ebaa67aff0b93744f21d5627f0d78291b27479fa78f1bc601ee16e3",
     "enum_source": "bc30698e1045e0cd11c9b7f894f4e1677f70345c9f56cb46133bb4c698c50dbd",
-    "enum_spec": "0c5cd98005134d05150f7685a6b7de78966953afe7800dccf142da4ccbcdbf7e"
+    "enum_spec": "0c5cd98005134d05150f7685a6b7de78966953afe7800dccf142da4ccbcdbf7e",
+    "enum_v2_source": "bcdf7eeb7bd8a106cc8d3241e88e116d2ec18e0d8df3180540061f0bb166c892",
+    "clef4_enum_spec": "28c54e4fcb58a4ffbae30b7ec287f1faacfe496d26de168dc5ead7f88c6a05f8"
   },
   "arms": [
     {
@@ -488,6 +490,83 @@
         "torch_allocator_peak_bytes": "UNKNOWN: MPS exposes no peak counter here"
       },
       "dtype": "torch.float16"
+    },
+    {
+      "arm": "clef4_enum",
+      "representation": "categorical127_origins",
+      "checkpoint": "ef744cdfbba595a68a082368f047d6472a6e5ef576c97c074fb15d3291001b97",
+      "producer_source_sha256": "ef877cbb1524a16368c17be3ef4a04a63cf2ef018f97f645e5c2cff9c468b267",
+      "status": "COMPLETE",
+      "producer_exit_code": 0,
+      "attempted_calls": 127,
+      "hashes": {
+        "completion.json": "bcbf5d1e7a37eb5d5c419e323f50cead85701eb0ec0bf67ae1f36e71bb6d0cc7",
+        "manifest.json": "451b891f730f5ba5c38ca80bc503ab02c59ce3437d57ec3a33c587016925629a",
+        "predictions.jsonl": "d648e6fb6d4d7ea9aed5aa58cb435408ada4cdde7e84c62b1705c42ed1ee96d9",
+        "report": "621a8583d77488a1b555b9ff44eb42d7d46ccaca8e48bf036da68fd733c593c5",
+        "scoring_receipt": "6ffb48807536ec2347689f1a61415386e9f336a4d442a151ec8be5e50ab0f6fe"
+      },
+      "quality": {
+        "primary_correct": 80,
+        "primary_total": 80,
+        "auxiliary_correct": 23,
+        "auxiliary_total": 47,
+        "native_correct": 103,
+        "native_total": 127,
+        "served": 127,
+        "research_status": "ENUM_RESEARCH_SCREEN_NO_GO",
+        "nll": 0.6836639246985239,
+        "brier": 0.33546174177504545,
+        "ece": 0.14277349184325366,
+        "paired_native_vs_clef4_binary": {
+          "count": 127,
+          "improved": 0,
+          "regressed": 1,
+          "accuracy_difference": -0.007874015748031496,
+          "interval95": {
+            "interval95": [
+              -0.03225806451612903,
+              0
+            ],
+            "draws": 2000,
+            "seed": 42,
+            "components": 76,
+            "origins": 127
+          }
+        }
+      },
+      "code_projection": {
+        "correct": 263,
+        "cases": 287,
+        "served": 287,
+        "policy_violations": 0,
+        "by_construction": true,
+        "additional_model_calls": 0
+      },
+      "timing": {
+        "all_requests": {
+          "count": 127,
+          "median": 1567.8705000318587,
+          "p95": 2501.775125041604
+        },
+        "stage_seconds": 208.877283,
+        "load_seconds": 3.36813808279112,
+        "score_window_utc": [
+          "2026-10-03T13:54:19.816818+00:00",
+          "2026-10-03T13:54:19.961917+00:00"
+        ]
+      },
+      "memory": {
+        "samples": 255,
+        "maximum_sampled_driver_bytes": 8575647744,
+        "maximum_sampled_torch_current_bytes": 243526656,
+        "mlx_allocator_peak_bytes": 8809414854,
+        "torch_allocator_peak_bytes": "UNKNOWN: MPS exposes no peak counter here"
+      },
+      "dtype": {
+        "embedding": "mlx.core.bfloat16",
+        "head": "torch.bfloat16"
+      }
     }
   ],
   "dev_controls": {
@@ -541,7 +620,8 @@
     "clef4_warm": "N754 excludesfirstonly median1761.878208ms/p952306.842417ms; no inventedwarmenumstat",
     "enum": "N127 allrequests median109.329459ms/p95171.949375ms",
     "memory": "sampled MPS driver maximum and MLX allocator peak overlap; never sum; trueTorchpeak unavailable",
-    "speed_or_task_savings": "NOT_ESTABLISHED; sharedmachine observations, distinct127-vs755 workloads"
+    "speed_or_task_savings": "NOT_ESTABLISHED; sharedmachine observations, distinct127-vs755 workloads",
+    "request_count_comparison": "127 enum requests versus 283 original all-allowed binary fields; remaining 472 fields are policy diagnostics. Optimized joint-binary baseline not measured."
   },
   "operational_amendment": {
     "clef8": "RootSIGTERMexit143 for sharedmachine contention before qualityunblind;402valid+353missing;attemptbounds402–403; no producercompletion/OOM/timeout/intrinsicaccuracyfailure claim",
@@ -551,6 +631,12 @@
       "typed_enum": 127,
       "total": 882,
       "other_enum_arms": 0
+    },
+    "additional_clef4_enum": {
+      "calls": 127,
+      "attempts": 1,
+      "screen": "NO_GO: no-call did not improve",
+      "further_prompt_tuning_or_training": "CLOSED for this node"
     }
   },
   "conclusions": {
@@ -562,6 +648,7 @@
     "Jev_calls": 0,
     "Jev_equivalence": "NOT_ESTABLISHED",
     "task_AST_execution": "NOT_MEASURED",
-    "critical1percent_floor": "NOT_ESTABLISHED"
+    "critical1percent_floor": "NOT_ESTABLISHED",
+    "clef4_enum": "Primary80/80 preserved; auxiliary23/47 versus24/47, no improvements and one regression. No-call hypothesis failed; no promotion or additional prompt/training retry."
   }
 }
