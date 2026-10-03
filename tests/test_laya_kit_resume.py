@@ -242,7 +242,7 @@ if HAVE_TORCH_STACK:
             super().__init__()
             self.emb = torch.nn.Embedding(vocab, d)
             self.config = types.SimpleNamespace(
-                save_pretrained=lambda path: os.makedirs(path, exist_ok=True))
+                save_pretrained=lambda path: (os.makedirs(path, exist_ok=True), Path(path, "tokenizer_config.json").write_text('{"tokenizer_class":"PreTrainedTokenizerFast"}')))
 
         def gradient_checkpointing_enable(self, **_kwargs):
             pass
@@ -313,7 +313,7 @@ class MainLocalResume(unittest.TestCase):
         ns = fresh_script_ns()
         ns['build_model_with_encoder_dropout'] = lambda cfg, encoder_dir, dropout: (TinyDecisionModel(), None)
         ns['load_file'] = lambda path: {k: v.clone() for k, v in self.base_weights.items()}
-        tok = types.SimpleNamespace(pad_token_id=0, save_pretrained=lambda path: os.makedirs(path, exist_ok=True))
+        tok = types.SimpleNamespace(pad_token_id=0, save_pretrained=lambda path: (os.makedirs(path, exist_ok=True), Path(path, "tokenizer_config.json").write_text('{"tokenizer_class":"PreTrainedTokenizerFast"}')))
         ns['AutoTokenizer'] = types.SimpleNamespace(from_pretrained=lambda path: tok)
         # Large LRs so the tiny model's calibration agreement actually moves between epochs.
         ns['LR_ENCODER'] = 0.05

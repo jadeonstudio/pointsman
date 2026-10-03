@@ -13,7 +13,7 @@ import { fail } from '../constants.mjs';
 import { HASH, only } from './schema.mjs';
 import { loadProviderConfig, validateProviderConfig } from '../inference.mjs';
 import { LAYA_RUNTIME_VERSION, MODEL_RE, layaRoot, checkpointsDir, candidatesDir, publishedDir,
-  loadCandidate, loadQualification, registerCheckpoint as defaultRegisterCheckpoint } from './laya-lifecycle.mjs';
+  loadCandidate, loadQualification, operationalFamiliesPassed, registerCheckpoint as defaultRegisterCheckpoint } from './laya-lifecycle.mjs';
 
 const REPO_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,95}\/[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/;
 const REVISION_RE = /^[0-9a-f]{40}$/i;
@@ -39,6 +39,11 @@ export function packageCandidate(home, { candidateHash, outDir, repo } = {}) {
   const candidate = loadCandidate(home, candidateHash);
   const qualification = loadQualification(home, candidateHash);
   if (!qualification || !qualification.qualified || !qualification.purposes.length) fail('NOT_QUALIFIED');
+  if (!operationalFamiliesPassed(qualification)) fail('NO_QUALIFIED_DECISION_FAMILY');
+  validateProviderConfig({ version: 1, provider: 'laya', laya: { ...candidate, qualification: {
+    checkpoint: qualification.checkpoint, calibrationVersion: qualification.calibrationVersion, purposes: qualification.purposes,
+    minConfidence: qualification.minConfidence, minChoiceProbability: qualification.minChoiceProbability, noulCertainty: qualification.noulCertainty,
+    ...(qualification.decisionIdentity ? { decisionIdentity: qualification.decisionIdentity } : {}) } } });
   let outStat = null;
   try { outStat = fs.lstatSync(outDir); } catch (e) { if (e.code !== 'ENOENT') throw e; }
   if (outStat) {
@@ -66,9 +71,11 @@ export function packageCandidate(home, { candidateHash, outDir, repo } = {}) {
   const precision = qualification.precision ?? candidate.precision ?? 'fp32';
   const manifestQualification = { checkpoint: qualification.checkpoint, calibrationVersion: qualification.calibrationVersion,
     purposes: qualification.purposes, minConfidence: qualification.minConfidence, minChoiceProbability: qualification.minChoiceProbability,
-    noulCertainty: qualification.noulCertainty, precision, ...(qualification.routeGate ? { routeGate: qualification.routeGate } : {}) };
+    noulCertainty: qualification.noulCertainty, precision, ...(qualification.routeGate ? { routeGate: qualification.routeGate } : {}),
+    ...(qualification.decisionIdentity ? { decisionIdentity: qualification.decisionIdentity } : {}) };
   const evaluation = { dataset_version: qualification.dataset_version, holdout: { name: qualification.holdout, sha256: qualification.holdout_sha256 },
-    route_decision: qualification.evidence?.route?.decision ?? null, by_question_test: qualification.by_question?.test ?? {} };
+    route_decision: qualification.evidence?.route?.decision ?? null, by_question_test: qualification.by_question?.test ?? {},
+    ...(qualification.decisionIdentity ? { operationalEligible: qualification.operationalEligible, familyQualification: qualification.familyQualification } : {}) };
   const manifest = { format: 'pointsman-model-v1', model: candidate.model, checkpoint: candidateHash, runtimeVersion: candidate.runtimeVersion,
     precision, inputFit: candidate.inputFit ?? 'lossless', files, qualification: manifestQualification, evaluation, generated_at: new Date().toISOString() };
   fs.writeFileSync(path.join(outDir, 'pointsman.json'), JSON.stringify(manifest, null, 2) + '\n', { mode: 0o600 });
@@ -99,7 +106,9 @@ function validateManifest(m) {
   const dummyAbs = path.join(os.tmpdir(), 'pointsman-manifest-check', randomUUID());
   try {
     validateProviderConfig({ version: 1, provider: 'jev', laya: { python: dummyAbs, modelPath: dummyAbs, model: m.model,
-      checkpoint: m.checkpoint, runtimeVersion: m.runtimeVersion, device: 'cpu', precision: m.precision, qualification: m.qualification } });
+      checkpoint: m.checkpoint, runtimeVersion: m.runtimeVersion, device: 'cpu', precision: m.precision, inputFit: m.inputFit, qualification: m.qualification } });
+    if (m.qualification.decisionIdentity && !operationalFamiliesPassed({ ...m.qualification,
+      operationalEligible: m.evaluation?.operationalEligible, familyQualification: m.evaluation?.familyQualification })) fail('LAYA_MANIFEST_INVALID');
   } catch { fail('LAYA_MANIFEST_INVALID'); }
 }
 // Manual redirect handling (never `redirect: 'follow'`): the allowed-host check and the Authorization
@@ -204,7 +213,8 @@ export async function pullCandidate(home, { repo, revision, python, device, dryR
     fail('CHECKPOINT_MISMATCH');
   }
   ensureDir(publishedDir(home), true);
-  const published = { repo, revision, qualification: manifest.qualification, evaluation: manifest.evaluation ?? null };
+  const published = { repo, revision, qualification: { ...manifest.qualification,
+    ...(manifest.qualification.decisionIdentity ? { operationalEligible: manifest.evaluation.operationalEligible, familyQualification: manifest.evaluation.familyQualification } : {}) }, evaluation: manifest.evaluation ?? null };
   atomicWrite(path.join(publishedDir(home), `${manifest.checkpoint}.json`), JSON.stringify(published, null, 2) + '\n');
   return { candidate: manifest.checkpoint, repo, revision, files: manifest.files.length, bytes: totalBytes, registered: true };
 }

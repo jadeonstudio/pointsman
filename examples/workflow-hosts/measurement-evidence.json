@@ -10,13 +10,13 @@
     "tests/math.test.mjs": "c38dc5b7b2ad08756b2154fb0457e4b138b3c8cf17aed5b5918e2f97329151c4",
     "log-fixture.mjs": "fd5cb05ae867ba1c47363745c63966df793f8e0bd0f66e5df9c1ea290c276009",
     "run.ndjson": "e77145b918f057d624ffee73c07360c2b9077c1e1feb3fe3d0f159edf114f77b",
-    "test.tap": "1b6a6849e1e9f08c9682a8c26c26e00cd63bc29a825bf8b06cc354eac9899046"
+    "test.tap": "2ae6d832ddbe5ce93a9557f3412328b8853c2b77202f0cc7818a44a5710b07b2"
   },
   "runtimeSourceHashes": {
-    "scripts/workflow-benchmark.mjs": "747577985da3a1f3cb0662b1195c74e56d213dcff04edbef982ebee62d59e49e",
-    "src/workflows.mjs": "a77c4d86f6ee7317ce5ba263c00a2f30605109782493a3b8e51850cae8a86e41",
-    "src/workflow-repo.mjs": "b35c114667aaf77888281d39fff2178be96c67db14806faa9ac95dcaad5539b1",
-    "src/workflow-diagnostics.mjs": "6c81693454db11e3faa539592c1a49330af84268b83175db089663a5be3770cd",
+    "scripts/workflow-benchmark.mjs": "a2a75e37622f376a3166f18da6d626410dfe9582df24f44c4af41134bfb8dafc",
+    "src/workflows.mjs": "c77f37109b649cb00c24a3014f8c58879207abbb1c7a020125c28fe483ffe946",
+    "src/workflow-repo.mjs": "e31a6de57948443b0028efcd843eaa95364e45e1aea1ce0fb64529149afd42ed",
+    "src/workflow-diagnostics.mjs": "3235347faf1905f1644dde3f2bd219b0172fe22b11ffc292c8bfea37c99508ab",
     "src/contracts.mjs": "991fc309892cfafee6aa043cf7d910c2ba0739f9721f3543815e636add6d03b9"
   },
   "fixtureProvenance": "Frozen local repository plus real Node test/TAP and log-fixture execution; controlled fixtures, not natural workloads.",
@@ -40,8 +40,8 @@
       "runs": 5,
       "passed": 5,
       "elapsedMs": {
-        "p50": 0.19304199999999128,
-        "p95": 0.449292000000014
+        "p50": 0.20537500000000364,
+        "p95": 0.4020840000000021
       },
       "actions": [
         5
@@ -57,15 +57,15 @@
       "runs": 5,
       "passed": 5,
       "elapsedMs": {
-        "p50": 46.734167000000014,
-        "p95": 55.094791999999984
+        "p50": 41.676540999999986,
+        "p95": 53.444625
       },
       "actions": [
         4
       ],
       "outputBytes": {
-        "min": 4898,
-        "max": 4899
+        "min": 2334,
+        "max": 2334
       }
     },
     {
@@ -74,8 +74,8 @@
       "runs": 5,
       "passed": 5,
       "elapsedMs": {
-        "p50": 0.10620900000000688,
-        "p95": 0.35845800000001304
+        "p50": 0.10779199999998923,
+        "p95": 0.40629099999999596
       },
       "actions": [
         1
@@ -91,15 +91,15 @@
       "runs": 5,
       "passed": 5,
       "elapsedMs": {
-        "p50": 22.81845800000002,
-        "p95": 26.173333000000014
+        "p50": 19.983667000000082,
+        "p95": 27.803459000000004
       },
       "actions": [
         1
       ],
       "outputBytes": {
-        "min": 11372,
-        "max": 11372
+        "min": 5532,
+        "max": 5533
       }
     },
     {
@@ -108,15 +108,15 @@
       "runs": 5,
       "passed": 5,
       "elapsedMs": {
-        "p50": 0.22658300000000509,
-        "p95": 0.38479200000000446
+        "p50": 0.21637500000002774,
+        "p95": 0.39500000000001023
       },
       "actions": [
         2
       ],
       "outputBytes": {
-        "min": 1875,
-        "max": 1875
+        "min": 1876,
+        "max": 1876
       }
     },
     {
@@ -125,29 +125,59 @@
       "runs": 5,
       "passed": 5,
       "elapsedMs": {
-        "p50": 22.701832999999965,
-        "p95": 23.883542000000006
+        "p50": 22.118792000000013,
+        "p95": 26.04091600000001
       },
       "actions": [
         2
       ],
       "outputBytes": {
-        "min": 7100,
-        "max": 7100
+        "min": 5135,
+        "max": 5136
       }
     }
   ],
   "conclusion": "Prerequisite mechanism evidence only; no task-quality or A-win claim.",
-  "full_report_sha256": "95ef03d16d5fa3d7008b56af9cdd8fad966e24861251433ffd93218e8b1cffb7",
+  "full_report_sha256": "f367fc5b83c84b205336ce755e1288549ce189fe8fe64186ca19bd76362d7e57",
   "verification": {
-    "node_tests": 578,
-    "python_tests": 158,
+    "node_tests": {
+      "total": 597,
+      "full_run_pass": 595,
+      "full_run_fail": 1,
+      "resolution": "The one old purpose-only qualification expectation was migrated to require actual question scope, then passed its focused rerun; production source unchanged after the full gate.",
+      "full_run_tests": 596,
+      "focused_resolution_pass": 1,
+      "added_priority_fixture_pass": 1
+    },
+    "python_tests": 168,
+    "clef_focused_tests": 3,
     "smoke": "PASS_OFFLINE",
     "demos": [
       "fast-path",
       "classifier-design",
       "training-pipeline"
     ],
-    "native_codex": "direct command probe only; provider count UNKNOWN"
-  }
+    "native_codex": "Actual direct MCP run and independent fixture oracle PASS; zero dispatched turn/start, provider count and UI/history UNKNOWN"
+  },
+  "packet_size_comparison": [
+    {
+      "task": "repository",
+      "previous_max_bytes": 4899,
+      "current_max_bytes": 2334,
+      "reduction_percent": 52.4
+    },
+    {
+      "task": "logs",
+      "previous_max_bytes": 11372,
+      "current_max_bytes": 5533,
+      "reduction_percent": 51.3
+    },
+    {
+      "task": "tests",
+      "previous_max_bytes": 7100,
+      "current_max_bytes": 5136,
+      "reduction_percent": 27.7
+    }
+  ],
+  "packet_size_comparison_note": "Same controlled fixtures; compact records and streaming timeline semantics preserve the independent required checks, not every repeated event as a distinct timeline entry."
 }

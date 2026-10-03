@@ -44,6 +44,7 @@ execution and native adapters while retaining existing authority boundaries.
 - New workflow interface: `createWorkflowRunner({engine, root, getPolicy, capabilities}).run(request,{signal})`; `getPolicy()` returns an effective `{mode,maxActions,maxMs,maxDecisionCalls,maxOutputBytes}` policy. Default is OFF. `request` names one fixed recipe plus bounded `inputs`, `acceptance`, `coverage`, optional `snapshot` and `budget`; untrusted request fields never add capabilities or roots.
 - Recipe callback contract: `runDiagnostics(request, ctx)` for `test-diagnose`/`log-triage`; `ctx` supplies trusted `root`, `signal`, `limits`, `stats`, `check()`, async `read(relativePath,role)`, async `listFiles()`, async `decide(request)` and optional async `runRegisteredTest(name)`. `read` returns `{path,text,hash,ref}` or a controlled failure. Recipes return `{status,reason,acceptance,evidence,coverage,needsParent}`; core enforces final identity/budget/mode checks and bounded output.
 - Status and verification counters are updated on node acceptance/failure. No worker runs the whole repository gate independently.
+- Accepted implementation revision: `e48daf321a1e6eaf6e584c048f0f3c9165121a7d`, pushed and verified on `origin/main`; GitHub repository description updated. Actual local evaluation subsequently exposed tokenizer-export compatibility and rounded probability scoring defects; those consumers received focused correction. Tokenizer preparation preserved weights and all 2,000 token sequences; evaluation normalized runtime-valid rounded probability mass without rerunning base/d6. Explicit local workflows can now be enabled without a decision provider; decision calls retain readiness checks.
 
 - [x] Read the supplied article and cross-check the original design against source and official documentation.
 - [x] Record current contracts, host limitations, historical model evidence and the three separate success targets.
@@ -331,13 +332,222 @@ candidate invalidates only downstream claims that consumed it.
 
 ### Accepted implementation evidence — 2026-10-03
 
-- WP01/WP02: common workflow API and three fixed recipes, root-bound CLI/MCP, actual source snapshots, bounded execution and opt-in native contracts implemented. `tests/workflow-consumers.test.mjs` covers the same real fixture through JS/CLI/MCP, cancellation, actual-version native gating and global OFF. `tests/provider-capabilities.test.mjs` covers Score 10 and explicit expanded Jev Choice options. Generic question/family qualification binding remains open; no new semantic family is applied.
+- WP01/WP02: common workflow API and three fixed recipes, root-bound CLI/MCP, actual source snapshots, bounded execution and opt-in native contracts implemented. `tests/workflow-consumers.test.mjs` covers the same real fixture through JS/CLI/MCP, cancellation, actual-version native gating and global OFF. `tests/provider-capabilities.test.mjs` covers Score 10 and explicit expanded Jev Choice options. Bounded family qualification identities now bind actual question/order, state schema/policy, candidate, preprocessing, calibration and runtime. No new semantic family is applied.
+- Log ingestion now streams UTF-8 NDJSON/plain lines and SHA-256 through the same bounded read authority; snapshot freshness also uses incremental hashes. JSON containers and individual long lines remain byte-bounded buffers. Groups retain repetition counts and first/last observations; timeline records first/new signatures and kind transitions, including error recurrence after recovery. Required rare/contrary/parse/clock/correlation evidence remains present or the packet explicitly fails its output budget. The affected workflow/diagnostic checks passed 36 cases; root review additionally checked split-line credential detection and recurring incidents with 3 targeted passing cases.
 - WP03–WP06: independent oracle/provenance schemas, family-disjoint four-way splits, v3 exporter, supervised CE, dev-only epoch selection, calibration-only fitting and explicit prediction collection implemented. Existing legacy captures without rights remain outside the permitted new corpus. New-family prospective confirmation remains open.
-- WP07: one full supervised epoch completed on local MPS: 1,375 train sequences, 688 microsteps, 218.661 seconds in the training routine; total script timestamps span 250 seconds. End-of-epoch MPS driver allocation was 4,607.7 MiB (an observation, not a measured peak). Base/d6/new dev comparison is running; the test remains unopened. Checkpoint promotion has not occurred.
+- WP07: one full supervised epoch completed on local MPS: 1,375 train sequences, 688 microsteps, 218.661 seconds in the training routine; total script timestamps span 250 seconds. End-of-epoch MPS driver allocation was 4,607.7 MiB (an observation, not a measured peak). Base/d6/new dev comparison completed at 53.6%/52.0%/64.0% accuracy (125 rows, one family). The numerical pilot gate passes, but the unchanged recipe is NO-GO for scale: 0/9 combined rule/order counterfactual pairs were both correct, and Korean accuracy fell from 22/41 to 19/41. The test remains unopened. Checkpoint promotion has not occurred.
 - WP11: [controlled measurement summary](examples/workflow-hosts/measurement-evidence.json), 30 executions with 30 independent fixture checks. Purpose-built code batches were faster and smaller than the reusable executor on these small fixtures. Arm three is NONEXECUTABLE until a qualified, useful semantic consumer exists; no cost or parent-request saving is claimed. The inert ambiguous-definition model call was removed for that reason.
-- WP12: [Codex installed protocol evidence](examples/workflow-hosts/codex-probe-evidence.json) proves the direct read-only command path with zero dispatched `turn/start`; provider request readback, actual workflow history and Claude/Gemini native operation remain UNKNOWN.
+- WP12: [Codex installed protocol evidence](examples/workflow-hosts/codex-probe-evidence.json) now includes an actual direct MCP `run` on Codex 0.154.0 in an ephemeral read-only thread, passing definition/caller/test and source-hash checks. It dispatched zero `turn/start` requests; workflow counters show zero decision/network/inference calls. Full provider request readback, native in-flight MCP cancellation, UI/history continuation and Claude/Gemini operation remain UNKNOWN. The first probe had an outdated role-field oracle; only that consumer was corrected before the passing second attempt. An inherited Docker MCP startup failed despite process-local isolation flags; only the owned probe tool was invoked, no global settings changed, and probe processes/temp fixtures were removed.
 - Integration gate: Node **578/578**, Python **158/158**, offline smoke and all three existing demos PASS. Independent bounded source review found no required correctness defects in the new workflow, adapter, split/trainer and prediction boundaries. No operational modes, active checkpoint or native trust state were changed.
+- Training measurement preparation now records actual nonpadding token/sequence presentations, synchronized training time, separate dev/checkpoint/resume phases and process-lifetime peak RSS. Per-rank throughput is not labeled global DDP throughput. Accelerator peak is measured only with a supported reset/read API; installed Torch 2.14 MPS lacks it and reports UNKNOWN. The completed historical runs retain their original missing values. The changed tokenizer/metrics/resume/regularization/local-mode boundaries passed 99 focused checks without another real training run.
 - Node attempts: admission failed once from escaped-Unicode head inflation and passed on the second, lossless transformation hypothesis; no training ran on failed admission. Other measured timings are in the public probe/measurement artifacts; unrecorded per-worker duration is UNKNOWN.
+- Frozen follow-up verification: 595/596 Node cases passed in the complete run. The single remaining old purpose-only qualification expectation was updated to require actual question scope and passed its focused rerun, without another production change. One added priority-wording regression also passed (597 covered Node cases across these runs). Python Laya tests passed 168/168; isolated Clef tests passed 3/3. Syntax, offline smoke and three demos passed. Final workflow measurement passed 30/30 independent fixture checks; direct code batches remained faster/smaller. Do not reinterpret this evidence as a model or whole-task efficiency win.
+
+### Local candidate verdict and next research direction — 2026-10-03
+
+**Oracle interpretation correction:** subsequent Clef error analysis found eight
+Noul rows where overlapping invalid-input/provider-failure conditions lacked an
+explicit first-match priority in the policy text. Keep all original predictions,
+labels, specifications and numbers; their historical accuracy fields measure
+agreement with that frozen oracle, not 125 fully unambiguous gold questions.
+The nine changed-rule Choice pairs and Korean Choice slice are unaffected.
+Future generator revision `independent-workflow-rules-v3-explicit-priority` makes
+the existing priority explicit in English/Korean (also used by mixed inputs),
+without changing oracle logic, family IDs or split assignment. Its source SHA is
+`faea6dec6030215d510b2ae1325620d6e62ddfb2a43b9a0854fa590d764df521`.
+New rows from the same underlying cases would not be independent confirmation.
+
+The three trained Laya candidates have completed their bounded development runs.
+The 568-row curriculum and equal-data/equal-update RLCD comparison use 36 updates
+each; the first pilot used 43. Curriculum CE scored 40.0% accuracy / 0.318053 macro
+F1; RLCD scored 45.6% / 0.325878. CE failed all five preregistered gates; RLCD passed
+only the Korean floor (25/41). Neither recovered the required rule/order or Noul
+negation behavior. A cached, unchanged English-only typed model scored 14/44 on
+the supported English slice. Its overall 32.0% includes unsupported Korean/mixed
+observations and is not a fair statement of its published language coverage.
+
+[The public pilot evidence](training/general-decisions/pilot-evidence.json)
+binds all six candidates to the same 125-row development set. There is only one
+development semantic family, so broad generalization is INCONCLUSIVE. All local
+inference workers were closed. No sealed-test decisions, paid calls, model
+promotion or operational activation occurred. The 20,000-row corpus passed token
+admission but was not trained: the current recipe is **NO-GO for scaling**. Keep
+the original d6 checkpoint and OFF state; this is a research result, not completion
+of the positive superiority gates.
+
+The admitted 20,000-row design has 13,750 train / 1,250 dev / 1,250 calibration /
+3,750 test rows. The first pilot's observed training-routine throughput was 6.288
+question presentations/second; curriculum CE was approximately 6.78 and matched
+RLCD 5.97 using their reported routine durations. A linear workload estimate is
+therefore roughly 34–39 minutes per 13,750-row epoch under the same short inputs,
+batch and hardware. This is an extrapolation, not a confidence interval or a run
+reservation: loading, expanded validation/calibration, contention and resume can
+add time. Dataset rows alone do not imply proportional accelerator memory because
+the micro-batch and token envelope stay fixed; actual peak memory remains UNKNOWN
+for those completed runs. The failed quality gate overrides the tempting runtime
+estimate, so no scale run was started.
+
+The corpus/export, scoring, tokenizer compatibility and resume defects discovered
+during real execution were corrected. Actual completed-epoch resume was exercised
+in the curriculum run. Focused revalidation covers those changed boundaries and
+the compact evidence packets; the earlier 578 Node / 158 Python full gate remains
+the baseline, not a claim that every later revision ran that complete gate again.
+
+### Clef comparison and bounded next experiment — 2026-10-03
+
+**Decision:** prioritize an isolated Clef-Flash feasibility and quality evaluation
+before more Laya training. This does not install a third production provider,
+change the active model, or assert a local speedup. The owner requested this
+parallel comparison and authorized stronger alternatives to the original design.
+
+Cloudflare's [Clef model card](https://huggingface.co/Cloudflare/clef) describes
+27B Clef and reports its own Decision Index run. Selected published percentages:
+
+| Metric | Clef | Clef-Flash | Jev |
+|---|---:|---:|---:|
+| BFCL exact case accuracy | 98.5 | 98.8 | 95.8 |
+| BANKING77 macro F1 | 94.2 | 90.9 | 79.7 |
+| GPQA Diamond accuracy | 48.0 | 51.0 | 78.3 |
+| RAGTruth hallucination F1 | 79.4 | 35.6 | 76.5 |
+| Reported median request latency, ms | 209.3 | 38.8 | 524.1 |
+
+These support a tool-selection/classification candidate, not universal dominance.
+The latency numbers are publisher measurements, not this Mac's measurements or
+controlled whole-agent savings. The exact comparative hardware, network, cache,
+batch conditions and pinned Jev requests were not independently reproduced here.
+The associated workflow scores use consensus reference labels; they are not
+independent human task-success evidence. The [public Decision Index methodology](https://huggingface.co/spaces/multimodalart/jev-decision-index/blob/main/data/methodology.json)
+also distinguishes local compute from hosted round-trip latency and lists excluded
+benchmarks; do not transfer one leaderboard's validity claims to another run.
+
+[Cloudflare's current pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/)
+lists $0.24 per million input tokens for Clef and $0.09 for Flash. [TypeSafe](https://typesafe.ai/)
+lists $42 per billion input tokens ($0.042 per million) for Jev. Thus the hosted
+alternatives are approximately 5.7× and 2.1× Jev's input-token rate, respectively;
+different tokenizers and schema overhead still require per-success measurements.
+No hosted call or entitlement check was made. Under the zero-additional-spend
+constraint, the relevant opportunity is local inference and permitted adaptation.
+
+[Clef-Flash](https://huggingface.co/Cloudflare/clef-flash) is a 9B Qwen3.5-based
+Apache-2.0 release. The official tensor index plus separate head imply about
+19.06 GB of BF16 weights (17.75 GiB), leaving little working room on 24 GiB hardware.
+Four-bit backbone storage is promising, but an ordinary GGUF/MLX conversion is
+not evidence that the joint decision head survives. Its
+[inference implementation](https://huggingface.co/Cloudflare/clef/blob/main/joint_schema_model.py)
+uses final backbone hidden states and output-embedding weights to score all
+allowed options. Preserve that contract and the unquantized head. Default local
+encoding caps input at 16,384 tokens and can truncate state; reject lossy inputs
+in the experiment. Hosted context limits are a separate envelope.
+
+API shape compatibility is not calibration compatibility: Clef's Choice
+confidence is selected probability, while existing Laya confidence uses normalized
+entropy. Never reuse thresholds merely because both return the same JSON keys.
+The publisher tested the release on an H200; MPS correctness, fit, cold/warm
+latency, and energy/resource contention are still unmeasured.
+
+Read-only local feasibility inspection found Torch 2.14.0, Transformers 5.17.0,
+Safetensors 0.8.0 and working host MPS, but no MLX/mlx-lm/accelerate. The official
+loader's `device_map` requires the missing accelerate package. A smaller isolated
+path is the [MLX Qwen3.5 text backbone](https://github.com/ml-explore/mlx-lm/blob/main/mlx_lm/models/qwen3_5.py)
+feeding final hidden states into the unchanged official PyTorch joint head.
+Selectively quantize Linear weights while retaining input/output embeddings and
+head in BF16. Default MLX quantization also includes embeddings, so the exclusion
+must be explicit. Text-only, batch one, no padding and at most 2,048 fully admitted
+tokens is the first proposed test envelope, not a new production capability.
+
+The [MLX interop documentation](https://ml-explore.github.io/mlx/build/html/usage/numpy.html)
+supports Metal DLPack sharing with recent PyTorch. This could avoid duplicating the
+large output embedding; the bridge must first be checked on the installed versions
+with identical hidden inputs and synchronized execution. Estimated weight storage
+is about 8–8.5 GB with BF16 embeddings/head and quantization metadata; activation,
+conversion and application contention costs remain unmeasured. Four-bit weights
+are lossy even when record admission and head transfer are exact. No dependency
+or weight download, Clef inference, or new provider registration occurred during
+this review. Immediate execution is therefore NOT READY; the isolated evaluator
+is a technically justified next candidate, not an already working replacement.
+
+**Follow-on execution:** isolated local preparation is now authorized within the
+original zero-additional-spend implementation goal. First prepare dependencies and
+check tiny BF16 bridge/head equivalence; only then download the pinned public
+Flash weights for selective conversion. Keep the installed Laya environment,
+provider configuration and operational modes unchanged. Evaluate only the original
+125 development rows (curriculum dataset `275d7337…`) using the same input rules and
+the five frozen gates above. This is an additional model-capacity hypothesis after
+the three unsuccessful Laya candidates, not a reset of their retry budget. Abort
+on unsupported required operations, input loss, nonfinite output or uncontrolled
+memory growth; at most three preparation attempts need a concrete new cause/fix.
+Report model requests, conversion/first/warm time and measured memory separately;
+no Jev API comparison or paid cloud resource is part of this run.
+
+**Four-bit result:** the isolated Mac path ran successfully, but the candidate
+failed three of five development gates: frozen-oracle agreement 52.0%, macro F1
+0.413696, rule/order pairs 0/9, Noul negation pairs 13/20 and Korean 14/41. The
+unambiguous Korean Choice subset was 8/28. The nine changed-rule pairs all kept the
+same semantic response: three input-contract, three unknown and three provider
+responses. This is not merely a constant-unknown failure. No adoption follows.
+
+The path preserves BF16 embeddings and the official head, with a 4-bit/group-64
+MLX text backbone. Same-hidden-input bridge/head comparison had zero logit
+difference; this does not prove full-backbone equivalence to publisher BF16.
+Conversion took 26.514 seconds; all 125 requests were complete (284–356 tokens).
+Observed first call was 4,476.579 ms, remaining median 1,082.679 ms and p95
+1,253.997 ms; MLX peak was 8,602,091,386 bytes. Filesystem timing confirms the Node
+CPU gate overlapped the first approximately 40.4 seconds; Python had finished
+before prediction began. Other host load was uncontrolled. These are local
+observations, not a matched-baseline speed claim or a reproduction of the
+publisher's 38.8 ms result.
+
+**One precision ablation:** preserve the original 125 inputs and frozen-oracle
+caveat, official head, upstream weights and option ordering; change only affine
+backbone quantization from 4 to 8 bits at group size 64. Use separate artifacts,
+checkpoint identity and a 14 GiB MLX allocation cap, reuse the verified head
+preflight and preserve the exact executed four-bit source. Do not mix corrected
+priority wording into this experiment. Compare the same five descriptive gates
+and especially the unaffected changed-rule/Korean Choice failures. This tests
+whether four-bit loss explains the rejection; it does not validate the full
+precision publisher model or justify further blind scaling.
+
+**Eight-bit result and decision:** the [frozen eight-candidate aggregate](training/clef-local/evidence.json)
+records 125/125 exact input, ordering, token and option-identity matches between
+the two Flash runs. Eight-bit frozen-oracle agreement was 51.2%, macro F1 0.446195,
+rule/order 0/9, Noul negation 13/20 and Korean 15/41 (unambiguous Korean Choice
+10/28). The same three gates failed. Fifteen class predictions changed, with no
+recovery of the changed-rule failures. Thus four-bit degradation alone does not
+explain this rejection; both local converted candidates are **NO-GO** for adoption.
+This is not a verdict on an untested full-precision Cloudflare endpoint or Jev.
+
+Eight-bit conversion took 31.101 seconds; model/head loading was 3.534 seconds and
+the 125-row loop took 158.303 seconds. First call was 10.677 seconds, remaining
+median 1.208 seconds and p95 1.352 seconds. MLX peak was 11,862,750,856 bytes under
+the 14 GiB process limit. There was no concurrent Node gate in this run, so the
+observed latency difference is not a controlled precision-only speed estimate.
+All workers exited; original four-bit source/artifacts, full upstream hashes and
+the timing erratum are preserved. No further precision sweep, blind scale run,
+promotion or runtime Clef registration follows from these failed gates.
+
+Delivery status: common contracts/workflows, offline learning/evaluation, native
+Codex MCP mechanism and the bounded local comparisons are implemented and tested.
+The goal to close the entire plan remains **incomplete**: no candidate meets the
+new general-decision gates, whole-task A has not passed, and paid/competitive Jev
+comparisons required for B/C remain unavailable under the owner's constraints.
+Keep failed/unknown positive gates open instead of checking them by changing the
+success criteria. Preserve the active d6 checkpoint and global OFF state.
+
+Original experiment sequence, with no production registration or automatic adoption:
+
+1. Check the existing local runtime and a head-preserving quantization path; freeze
+   official Flash revision `17f0b0ad64efb65d273590632833508766b2aae6`
+   and Clef comparison revision `2f3de3dd85f379784083b0814d997ab627200f0c`.
+2. If feasible, verify short-record full-precision/quantized logit agreement and
+   exact schema/order/token admission before benchmarking. If not, record the
+   concrete missing runtime operation or memory bound rather than loading blindly.
+3. Run the existing independent development cases, especially changed-rule,
+   negation, unknown, Korean and candidate-order cases; retain sealed test for a
+   frozen candidate. Report every rejection, timeout and unsupported request.
+4. Measure complete local latency and memory under real host contention; only a
+   model that changes a useful branch enters the executor's third comparison arm.
+   Reassess training after those observations; larger parameter count alone does
+   not establish better task economics.
 
 ### Frozen local pilot — 2026-10-03
 
@@ -346,6 +556,20 @@ The first supervised run is preregistered in private `.pointsman-local/research/
 The immutable multilingual base is `2d115cbafc7a79194d6958794408e727b933887dcd03241d590824c58de67aed`; the existing d6 checkpoint stays unchanged. The publisher's [multilingual model card](https://huggingface.co/convaiinnovations/laya-multilingual) identifies Apache-2.0; private upstream training provenance remains separate from the independently authored adaptation corpus. Use supervised CE, one full epoch, MPS FP32, micro-batch 2, accumulation 16, lossless admission and zero tolerated drops. Select on dev, fit temperature on calibration, keep sealed test unopened. A positive dev accuracy difference, or reduced NLL without accuracy regression, is a useful pilot signal; insufficient independent families remain INCONCLUSIVE. OOM, nonfinite loss or invalid admission stops that run for diagnosis. Maximum three causally justified attempts.
 
 The task-efficiency comparison uses a competent deterministic code batch as its first control. The native structured completion hypothesis is a model request eliminated before a model turn; common MCP still incurs the host's outer turns. Local model contribution is measured only where a qualified decision changes a useful executor action. Unused classification calls are removed. For final task adoption, success noninferiority margin is 0 percentage points, zero observed critical errors with a one-sided 95% upper bound below 1%, at least 20% lower total cost per verified success, and p95 no more than 0.8 of the competent-host baseline. At least 300 independent accepted tasks are required for the critical-error gate, and clustered evidence must meet that effective size; small fixture probes cannot pass A. Final B/C additionally require positive lower clustered 95% bounds versus permitted pinned Jev, minimum 50% applied coverage and the same critical-error ceiling. Those comparisons remain unavailable under the owner's no-paid/no-separate-permission constraint.
+
+### Preregistered curriculum follow-up — 2026-10-03
+
+The first pilot meets its numeric development gate but does not satisfy rule-following/generalization acceptance. In the frozen TRAIN split, 950/1,375 rows (69.1%) have deferred/unknown semantic outcomes; 14 family/class cells have fewer than ten rows. The next bounded hypothesis is that information-bearing rule contrasts and rare-class anchors improve question conditioning more effectively than expanding the same distribution.
+
+Construct a new TRAIN split from 130 target-changing factual cases and 12 additional rare anchors (142 unique cases, 568 rows). Pair-group key construction must hold serialized Choice criteria/order constant for rule-change pairs. Keep original dev/calibration/test rows and family assignments byte-identical, with their original provenance; do not redraw the sealed test. Canonical datasets stay outside Git. Do not duplicate rows or call render variants new independent cases.
+
+Run the same base, supervised CE, lossless input, MPS FP32, batch 2 and accumulation 16 for two epochs: approximately 36 optimizer updates/1,136 question exposures versus the first pilot's 43/1,375. This is a curriculum follow-up with a recorded compute difference, not an equal-update causal attribution. The existing dev-only epoch selector remains unchanged. Before final candidate evaluation, require overall dev accuracy at least 53.6%, macro F1 at least 0.329167, at least 4/9 combined rule/order pairs both correct, at least 5/20 Noul negation pairs both correct, and Korean accuracy at least 22/41. Passing these is research GO, not production qualification or a superiority claim. Failure is NO-GO for this curriculum; inspect the observed error before choosing one justified loss/capacity ablation.
+
+Exercise the real resume path in the same two-epoch run: stop after one completed epoch plus one discarded microstep, retain that completed-epoch checkpoint, then resume epoch two with exactly matching identities. Accept only the completed resumed artifact, never the intermediate partial output. Record actual restored epoch, total completed microsteps, duration and all data/model identities. No new paid calls or automatic promotion are authorized by this experiment.
+
+### Preregistered loss ablation — 2026-10-03
+
+The 568-row curriculum CE candidate failed all five preregistered development gates (40.0% accuracy, F1 0.318053, rule/order 1/9, Noul negation 0/20, Korean 19/41). One existing `rlcd-grpo` loss ablation now uses the exact same dataset, base, two epochs, batch 2, accumulation 16, seed, optimizer schedule, admission and dev/calibration roles as curriculum CE. This matches 568 microsteps/36 optimizer updates and changes only the loss recipe; the CE resume test adds recovery overhead, which is reported separately. Reuse every existing dev prediction for the unchanged baseline inputs. The same five gates apply; no threshold is changed after seeing results. This is the third trained candidate, after the initial CE and curriculum CE candidates. A failed ablation records NO-GO; it does not justify scaling to 20,000 rows or claiming Jev's undisclosed training recipe was reproduced.
 
 ### WP00 — Freeze scope, baseline and acceptance
 
@@ -370,16 +594,16 @@ may be provisional, but final gates cannot be chosen after seeing test results.
 
 ### WP01 — Preserve and version the shared decision contract
 
-**State:** PLANNED. **Depends on:** WP00.
+**State:** CONTRACT ACCEPTED — actual-payload identity and bounded family qualification implemented; model-quality acceptance is separate. **Depends on:** WP00.
 **Owner:** decision-engine maintainer. **Read/write scope when authorized:**
 `src/contracts.mjs`, `src/engine.mjs`, `src/inference.mjs`, existing control/policy
 modules and directly related contract tests. **Output:** one portable contract.
 
 - [x] Reuse `decide`/`decideOrDelegate` and the single Jev transport/credential authority; add no alternate proxy or hidden provider chain.
-- [ ] Define family/question/state-builder/candidate revisions and calibration/runtime identities in the existing policy/evidence path.
+- [x] Define family/question/state-builder/candidate revisions and calibration/runtime identities in the existing policy/evidence path.
 - [x] Preserve Choice confidence versus selected probability, Noul yes probability, and zero-based Score expectation.
 - [x] Resolve the wrapper's 11-level Score allowance against TypeSafe's 10-level maximum in every affected validator/schema/consumer; define migration/rejection behavior explicitly.
-- [ ] Define a portable subset plus explicit provider capability profiles; exploit larger Jev option/question envelopes when verified instead of limiting every provider to the local checkpoint, with bounded frame/response sizes and admission tests.
+- [x] Define a portable subset plus explicit provider capability profiles; exploit larger Jev option/question envelopes when verified instead of limiting every provider to the local checkpoint, with bounded frame/response sizes and admission tests.
 - [x] Preserve detached snapshots and today's atomic `decide` semantics; group independent questions by consumer. Speculative branch heads need a separately versioned selected-group gate with calibration/regression proof, never consumption of an old `apply=false` result.
 - [x] Define consumer abstention for `other`/`insufficient_evidence`; verify original candidate IDs and shortlist recall rather than trusting an invented answer.
 - [x] Preserve OFF/no inference, SHADOW/no consumed answers, sensitive-scope delegation and `authorizesExecution:false`.
@@ -392,19 +616,40 @@ semantics with no duplicate inference path or new authorization authority.
 **Evidence:** focused engine/MCP/control/contract regressions and accepted source
 revision. Existing behavior need not be rewritten to satisfy this checklist.
 
+**Qualification boundary and migration:** new identities admit a maximum of 128
+actual question/state signatures within the 64 KiB provider-config bound. They
+bind question text, criterion order/type, state schema/policy, a versioned actual
+schema-fingerprint builder, candidate/runtime/precision/input-fit and calibration.
+Declared deployment family (for example evidence relevance) is separate from the
+semantic groups used to split independent examples. The qualifier validates the
+existing oracle constructor spec against sample/source revisions, gates each
+deployment family × question type independently and records semantic groups per
+split. Only the evaluated bounded signature union is eligible; arbitrary future
+policies are not qualified. A missing trusted constructor spec produces
+`UNQUALIFIED_GENERIC` and `operationalEligible:false`, even if historical pooled
+purpose statistics still say `qualified:true`. New promotion, adoption and
+packaging refuse that state. The proof and operational evidence survive package,
+pull, comparison, adoption and rollback.
+
+Already-issued legacy artifacts remain readable. Runtime legacy compatibility
+accepts only the frozen d6 route question/order fingerprints and actual route/effort
+producer state shape, not arbitrary requests that declare `purpose:route`.
+Future shared prompt edits cannot silently move those fingerprints. Generic
+purpose-only consumers must obtain a scoped qualification before application.
+
 ### WP02 — Build the shared workflow executor and bind host adapters
 
-**State:** PLANNED. **Depends on:** WP01.
+**State:** IMPLEMENTED, PARTIAL ACCEPTANCE — common consumers passed; native task evidence remains open. **Depends on:** WP01.
 **Owner:** executor/integration maintainer. **Scope:** one fixed-recipe executor
 using existing engine/control modules, MCP/CLI/JS entrypoints, selected host
 adapters and directly affected tests; one writer for shared files. **Output:**
 portable work-segment execution plus host/version capability records.
 
 - [x] Implement one shared execution function with injected capabilities and bounded actions/time/decisions; expose it consistently through MCP/CLI/JS without an arbitrary-code evaluator.
-- [ ] Implement `repo-evidence`: exact search/definition/callers/tests, optional semantic shortlist and complete source-linked evidence packet before parent context ingestion.
+- [x] Implement `repo-evidence`: exact search/definition/callers/tests, optional semantic shortlist and complete source-linked evidence packet before parent context ingestion.
 - [x] Add `test-diagnose`: reporter/signature/source/fixture collection around an existing result or exactly authorized test command; return unresolved cause and affected rerun set.
-- [ ] Add `log-triage`: streaming aggregation/correlation plus original offsets, singleton/first errors, contrary evidence, parse failures and clock uncertainty.
-- [ ] Keep deterministic steps model-free, parallelize independent reads, and invoke Jev only when changed evidence leaves a known branch unresolved; return to parent for generation/new hypotheses.
+- [x] Add `log-triage`: streaming aggregation/correlation plus original offsets, singleton/first errors, contrary evidence, parse failures and clock uncertainty.
+- [x] Keep deterministic steps model-free, parallelize independent reads, and invoke Jev only when changed evidence leaves a known branch unresolved; return to parent for generation/new hypotheses.
 - [x] Return segment status, achieved/missing acceptance, evidence hashes, coverage/omissions and complete counters in one response; enforce cancellation and repeated-action detection inside the loop.
 - [x] Give new executor/native-control features explicit OFF-by-default gates; global OFF preserves the original host path, and installation or qualification does not enable them.
 - [x] Cache only identity-matched results using source/question/model/policy/recipe revisions; start with request-local sharing and only add cross-task reuse when measured repetition warrants it.
@@ -430,13 +675,13 @@ optional native adapters. A prototype existing only on paper is not ACCEPTED.
 
 ### WP03 — Establish permitted data and trustworthy evidence
 
-**State:** PLANNED. **Depends on:** WP00; WP01 identity contract before importing
+**State:** PARTIAL ACCEPTANCE — independent corpus admitted; Jev competitive use unavailable. **Depends on:** WP00; WP01 identity contract before importing
 new captures. **Owner:** data/evidence maintainer. **Scope:** existing training
 schema/store/runner/host paths and private manifests. **Output:** permitted-source
 inventory and question-specific evidence contract.
 
-- [ ] Record source/license/terms/revision, permitted learning/evaluation use, transformations and redistribution limits for every data source/model.
-- [ ] Resolve whether the applicable TypeSafe agreement permits the intended competitor-development comparison or teacher use; until resolved, do not perform those Jev calls.
+- [x] Record source/license/terms/revision, permitted learning/evaluation use, transformations and redistribution limits for every data source/model.
+- [x] Resolve whether the applicable TypeSafe agreement permits the intended competitor-development comparison or teacher use; until resolved, do not perform those Jev calls.
 - [x] Establish independent rule/source gold and permitted local baselines so useful work does not depend on paid Jev access.
 - [x] Keep objective gold, independent adjudication/outcomes and `ai_reference`/teacher labels distinct; preserve historical labeling model identity.
 - [x] Add only required provenance fields to current schemas/exporters; reject forged human/runner trust and invalid question/label associations.
@@ -447,11 +692,15 @@ inventory and question-specific evidence contract.
 
 **Accept when:** every usable row has a valid label basis and permitted use, and
 unresolved rights or missing evidence remain excluded/UNKNOWN. **Evidence:** schema
-and linkage regressions, manifest hashes and approved aggregate diagnostics.
+and linkage regressions, manifest hashes and approved aggregate diagnostics. The
+rights inventory covers only the admitted independently authored corpus and pinned
+local models; uncleared historical captures remain excluded. TypeSafe comparative
+use is resolved as UNAVAILABLE under current permission/budget, not as a successful
+comparison. No external AI verbalization or Jev teacher labels were used.
 
 ### WP04 — Build the general-decision corpus and label oracles
 
-**State:** PLANNED. **Depends on:** WP01, WP03 and the accepted WP02 recipe contract.
+**State:** PILOT CORPUS ACCEPTED — broad curriculum coverage remains open. **Depends on:** WP01, WP03 and the accepted WP02 recipe contract.
 **Owner:** dataset maintainer. **Output:** versioned question-conditioned corpus
 with independent gold, provenance and family/group IDs.
 
@@ -459,10 +708,10 @@ with independent gold, provenance and family/group IDs.
 - [ ] Prioritize independently labeled evidence relevance, next branch, failure class and continue/escalate examples from the actual shared executor; do not start by accumulating unrelated generic tasks.
 - [x] Include Korean, English and mixed language; reserve new languages/domains as explicit unseen slices instead of claiming universal coverage.
 - [x] Add label-key/order/position permutations with semantic invariance and same-state rule changes that require different gold answers.
-- [ ] Include negation, corrections/retractions, exceptions/priority, quoted instructions, contradictory/stale evidence and missing information.
+- [x] Include negation, corrections/retractions, exceptions/priority, quoted instructions, contradictory/stale evidence and missing information.
 - [ ] Construct meaningful `other`/insufficient-evidence examples and measure candidate-set recall; keep exact calculations in code.
 - [x] Use independently reproducible oracles/source gold; audit their correctness and distinguish subjective disagreement from objective error.
-- [ ] If permitted AI verbalization is used, verify factual and logical preservation; exclude unverifiable examples and unjustified soft targets.
+- [x] If permitted AI verbalization is used, verify factual and logical preservation; exclude unverifiable examples and unjustified soft targets.
 - [x] Assign source/template/semantic-family groups before splitting; translations, paraphrases and counterfactual siblings share a group.
 - [x] Record question/evidence/tokenizer/state-builder transformations; identify required evidence lost under current length/head constraints.
 - [x] Review class, option count, difficulty, language and domain balance; do not inflate size with near-duplicate paraphrases.
@@ -473,28 +722,38 @@ an experiment design choice, not proof of sufficient breadth.
 
 ### WP05 — Separate development, calibration and sealed evaluation
 
-**State:** PLANNED. **Depends on:** WP04.
+**State:** IMPLEMENTED, PARTIAL ACCEPTANCE — prospective/unseen-domain confirmation remains open. **Depends on:** WP04.
 **Owner:** dataset/evaluation maintainer. **Scope:** current grouping/export/check
 paths and dataset consumers. **Output:** immutable train/dev/calibration/test
 manifests, existing route regression set and prospective holdout definition.
 
 - [x] Implement four-way splitting without breaking legacy export consumers; version the manifest and validate compatibility explicitly.
-- [ ] Keep source/template/semantic siblings in one split; check exact and near-duplicate leakage after transformations.
+- [x] Keep source/template/semantic siblings in one split; check exact and near-duplicate leakage after transformations.
 - [ ] Hold out complete domain/schema/rule/language/host families and later time periods, not merely renamed templates.
 - [x] Reserve dev for epoch/method/hyperparameter selection and calibration only for temperature/gates.
 - [ ] Seal final test and prospective confirmation data; keep test results out of failure mining and training decisions.
 - [x] Preserve the existing frozen route test as a regression floor; identify its copied holdout as the same sample, not independent confirmation.
 - [x] Include missing-label, reference-only, unsupported-input and timeout accounting in evaluation manifests.
 - [x] Validate split/group/source hashes and counts end to end through exporter, trainer, qualifier and comparison readers.
-- [ ] Define a fresh-test replacement policy when repeated candidate selection consumes the original sealed test.
+- [x] Define a fresh-test replacement policy when repeated candidate selection consumes the original sealed test.
 
 **Accept when:** every data consumer agrees on split identities and roles, and no
 known cross-split family leakage remains. **Stop:** invalid split/provenance before
-any costly training run.
+any costly training run. Exact/normalized and known sibling isolation checks apply
+to the authored corpus; unannotated external paraphrases are not certified.
+
+**Fresh-test policy:** the first use of sealed test results to alter a model,
+threshold, prompt, data recipe or selection makes that test development evidence.
+Retire its confirmation role without deleting its immutable records. Before a
+new superiority claim, freeze a new test/confirmation cohort with distinct factual
+cases and semantic/source families, no descendants of the consumed examples,
+new manifest hashes, and a preregistered single selected candidate. Current test
+results have not been opened; the independent future confirmation cohort has not
+yet been collected.
 
 ### WP06 — Prepare trainer and qualification consumers
 
-**State:** PLANNED. **Depends on:** WP01 and WP05.
+**State:** TRAINER/IDENTITY FOUNDATIONS ACCEPTED — tokenizer, OOD identity, measurements and bounded qualification implemented; no new model qualified. **Depends on:** WP01 and WP05.
 **Owner:** training maintainer. **Scope:** existing training kit and lifecycle,
 not a new framework. **Output:** runnable supervised baseline with independent
 dev/calibration and compatible qualification records.
@@ -505,9 +764,9 @@ dev/calibration and compatible qualification records.
 - [x] Provide CE for Choice, binary/two-option CE for Noul and distributional CE for Score; use soft targets only when justified.
 - [x] Verify trainer and inference share token admission, state fitting, question formatting, option order and truncation treatment.
 - [x] Validate source/model/tokenizer/runtime/device/precision/split fingerprints and save them with resumable checkpoints.
-- [ ] Extend qualification identity to the selected decision family and preprocessing revision rather than automatically inheriting route qualification.
+- [x] Extend qualification identity to the selected decision family and preprocessing revision rather than automatically inheriting route qualification.
 - [x] Test malformed export, wrong split/model identity, resume mismatch and incompatible qualification rejection.
-- [ ] Prepare measurement of actual tokens/second, sequences/second, peak memory, elapsed time and resume overhead without inventing missing metrics.
+- [x] Prepare measurement of actual tokens/second, sequences/second, peak memory, elapsed time and resume overhead without inventing missing metrics.
 
 **Accept when:** offline preparation and small fixture checks cover all consumers;
 the first real run has a fixed input revision, explicit compute budget and clear
@@ -515,7 +774,7 @@ stop conditions. Readiness is not semantic qualification.
 
 ### WP07 — Run the small local learning pilot
 
-**State:** PLANNED. **Depends on:** WP06 and authorized training scope.
+**State:** PILOT MEASURED, SCALE NO-GO — three candidates evaluated; rule generalization gates failed. **Depends on:** WP06 and authorized training scope.
 **Owner:** training runner. **Output:** one bounded pilot report, checkpoint and
 measured throughput/resource record. Starting design: about 2,000 question rows.
 
@@ -523,10 +782,10 @@ measured throughput/resource record. Starting design: about 2,000 question rows.
 - [x] Verify token/head admission and gold integrity on the frozen pilot; do not bypass a failed truncation check merely to start training.
 - [ ] Run the smallest useful supervised experiment; measure memory, throughput, total time and resume behavior.
 - [ ] Confirm learning on dev, including unseen-rule response, label permutation and rule-swap tests, not only familiar route questions.
-- [ ] Compare the permitted base and d6 under the same pilot envelope and report scope-specific regression.
-- [ ] Estimate larger-run duration and memory from measured work with uncertainty; the historical 12.8-hour run is not a forecast.
-- [ ] Diagnose errors as data/oracle, input admission, learning or runtime issues before proposing another run.
-- [ ] Decide GO, NO-GO or INCONCLUSIVE; retry at most three times with a new hypothesis, preserving useful evidence.
+- [x] Compare the permitted base and d6 under the same pilot envelope and report scope-specific regression.
+- [x] Estimate larger-run duration and memory from measured work with uncertainty; the historical 12.8-hour run is not a forecast.
+- [x] Diagnose errors as data/oracle, input admission, learning or runtime issues before proposing another run.
+- [x] Decide GO, NO-GO or INCONCLUSIVE; retry at most three times with a new hypothesis, preserving useful evidence.
 
 **Accept when:** valid learning signal and manageable resource use justify the next
 stage. **Stop:** invalid gold, lost essential evidence, OOD stagnation or unresolved
@@ -534,7 +793,7 @@ runtime integrity. Failed pilots do not trigger automatic dataset/GPU expansion.
 
 ### WP08 — Train the supervised generalization candidate
 
-**State:** PLANNED. **Depends on:** accepted WP07.
+**State:** NO-GO FOR SCALE — token-admitted 20,000-row design retained; the required WP07 generalization signal is absent. **Depends on:** accepted WP07.
 **Owner:** model-training maintainer. **Output:** selected supervised checkpoint
 with dev learning curves and immutable training provenance.
 
@@ -553,18 +812,18 @@ non-positive expected efficiency; changing epoch count alone is not a diagnosis.
 
 ### WP09 — Test only justified loss or capacity changes
 
-**State:** CONDITIONAL. **Depends on:** WP08 and a measured failure/bottleneck.
+**State:** ABLATION COMPLETE, NO-GO — matched-budget RL did not meet the development gate. **Depends on:** observed WP07 curriculum failure; no scale-up prerequisite is asserted.
 **Owner:** bounded research maintainer. **Output:** one selected candidate revision
 or documented SKIPPED decision retaining WP08.
 
-- [ ] Identify the specific gap that warrants an ablation; skip this package if the supervised baseline is adequate.
-- [ ] Compare existing RL/noise-reward recipe against CE using equal data and update budgets, reporting compute as well as quality.
-- [ ] Do not claim the Laya recipe reproduces Jev's undisclosed training; require independent gains rather than the RLCD name.
+- [x] Identify the specific gap that warrants an ablation; skip this package if the supervised baseline is adequate.
+- [x] Compare existing RL/noise-reward recipe against CE using equal data and update budgets, reporting compute as well as quality.
+- [x] Do not claim the Laya recipe reproduces Jev's undisclosed training; require independent gains rather than the RLCD name.
 - [ ] Add ordinal-distribution loss, larger encoder, LoRA or quantization only for the observed error/resource problem, one factor at a time.
 - [ ] If expanding context/options, change admission, input construction, training, inference and calibration together; test evidence at start/middle/end.
 - [ ] Include retrieval shortlist recall when using candidate reduction; do not call it native 255-way classification.
 - [ ] Measure batching/shared-state encoding, cold/warm latency and contention separately; do not infer saved host turns from encoder batching.
-- [ ] Retain the simplest candidate meeting requirements, or record NO-GO; keep new GPU expenditure within separately authorized budget.
+- [x] Retain the simplest candidate meeting requirements, or record NO-GO; keep new GPU expenditure within separately authorized budget.
 
 **Accept when:** a frozen choice is justified by dev evidence and cost, including
 SKIPPED when no added method is useful. Any changed model/preprocessing requires
@@ -572,7 +831,7 @@ new calibration and affected downstream evidence.
 
 ### WP10 — Calibrate and evaluate decision quality and generalization
 
-**State:** PLANNED. **Depends on:** WP05 and frozen WP08/WP09 candidate.
+**State:** PREPARED — sealed test unopened and Jev comparison unavailable. **Depends on:** WP05 and frozen WP08/WP09 candidate.
 **Owner:** evaluation maintainer. **Output:** separate B/C scorecards and
 family/provider qualifications, with UNKNOWN where comparisons are unavailable.
 
@@ -595,7 +854,7 @@ but the Jev-superiority targets UNKNOWN; no overall superiority claim follows.
 
 ### WP11 — Measure task utility and learn routing utility separately
 
-**State:** PLANNED. **Depends on:** WP02, WP03 and a permitted selected provider;
+**State:** PARTIAL MEASUREMENT — deterministic fixture comparison does not demonstrate an efficiency win. **Depends on:** WP02, WP03 and a permitted selected provider;
 new local checkpoints additionally need WP10. Run the initial executor experiment
 before waiting for broad model training. **Owner:** task-runner/evaluation lead.
 **Output:** independent task evidence, A scorecard and, only if justified, a
@@ -621,7 +880,7 @@ release; overall superiority still requires all A/B/C claims to pass.
 
 ### WP12 — Verify native consumption and controlled rollout
 
-**State:** PLANNED. **Depends on:** WP02 and WP11; WP10 additionally for a new local
+**State:** PROTOTYPE VERIFIED — live workflow consumption remains unverified. **Depends on:** WP02 and WP11; WP10 additionally for a new local
 checkpoint, plus the relevant capture/provider/host/operational scope.
 **Owner:** integration lead.
 **Output:** per-host/per-family native evidence and bounded adoption decision.
@@ -644,7 +903,7 @@ grade. No universal host support is inferred from one successful integration.
 
 ### WP13 — Qualify, publish and hand off the accepted result
 
-**State:** PLANNED. **Depends on:** applicable WP10–WP12 acceptances.
+**State:** PARTIAL DELIVERY — implementation pushed; no model promotion. **Depends on:** applicable WP10–WP12 acceptances.
 **Owner:** integration lead and explicit operator. **Output:** scoped release,
 reproducible evidence bundle, updated user documentation and remote readback.
 

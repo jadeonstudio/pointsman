@@ -60,12 +60,439 @@
     "selection_split": "dev"
   },
   "scope": "One independent synthetic-rule pilot; no operational adoption or Jev comparison.",
-  "dev_comparison": "PENDING",
+  "dev_comparison": {
+    "status": "COMPLETE",
+    "evaluated_rows_per_baseline": 125,
+    "effective_families": 1,
+    "base": {
+      "accuracy": 0.536,
+      "macro_f1": 0.329167,
+      "nll": 1.163046,
+      "brier": 0.665461,
+      "first_request_ms": 4709,
+      "remaining_mean_ms": 28.936
+    },
+    "d6": {
+      "accuracy": 0.52,
+      "macro_f1": 0.282408,
+      "nll": 1.109322,
+      "brier": 0.658669,
+      "first_request_ms": 3725,
+      "remaining_mean_ms": 28.386
+    },
+    "probability_mass_normalization": "Runtime-accepted rounded vectors normalized for scoring; 31 base and 21 d6 rows, maximum correction mass 0.0001; predictions were not rerun.",
+    "calibration_or_test_opened_by_collector": false,
+    "generalization_verdict": "INCONCLUSIVE: one held-out dev family",
+    "pilot": {
+      "accuracy": 0.64,
+      "macro_f1": 0.339148,
+      "nll": 0.979537,
+      "brier": 0.549401,
+      "ece": 0.145134,
+      "first_request_ms": 5525,
+      "remaining_mean_ms": 27.575
+    },
+    "base_accuracy_difference": 0.104,
+    "d6_accuracy_difference": 0.12,
+    "numeric_pilot_gate": "PASS",
+    "unchanged_recipe_scale_decision": "NO-GO: rule-change response failed and Korean accuracy regressed",
+    "pilot_checkpoint": "1c0f38d69d6d8b2f513eb622800a9282b9b923bfbdfe9ba9e432f54d7507176c",
+    "diagnostics": {
+      "permutation_semantic_invariance": {
+        "pilot": "42/42",
+        "base": "23/42",
+        "d6": "24/42"
+      },
+      "combined_rule_order_counterfactual_both_correct": {
+        "pilot": "0/9",
+        "base": "4/9"
+      },
+      "noul_negation_both_correct": {
+        "pilot": "5/20",
+        "base": "0/20",
+        "d6": "0/20"
+      },
+      "korean_accuracy": {
+        "pilot": "19/41",
+        "base": "22/41"
+      },
+      "unknown_class_correct": {
+        "pilot": "69/78",
+        "base": "42/78"
+      },
+      "input_contract_class_correct": {
+        "pilot": "10/41",
+        "base": "24/41"
+      }
+    }
+  },
   "upstream_model": "convaiinnovations/laya-multilingual",
   "base_checkpoint": "2d115cbafc7a79194d6958794408e727b933887dcd03241d590824c58de67aed",
   "end_epoch_mps_driver_allocated_mib": 4607.7,
   "peak_memory": "UNKNOWN",
   "training_sequences_per_second": 6.288,
   "token_throughput": "UNKNOWN",
-  "paid_calls": 0
+  "paid_calls": 0,
+  "tokenizer_preparation": {
+    "method": "official Laya metadata compatibility transform",
+    "weights_unchanged": true,
+    "all_2000_question_token_ids_unchanged": true,
+    "prepared_tokenizer_sha256": "b03f7aac1670e5bc1598848c3b7e2056b9570697d1a2882902a86f1418efaae8"
+  },
+  "six_candidate_dev_comparison": {
+    "revision": "fixed-dev-six-candidate-aggregate-v1",
+    "date": "2026-10-03",
+    "source_aggregate_sha256": "4589d13f5f43b99af5227837e013a2a6c3c562a5ca9f929386e19c4187665329",
+    "original_pilot_dataset": "ba27f11ee6e5bf296c536db112db6ecafa961b686c05edcc3d02ea13a728c070",
+    "curriculum_dataset": "275d73372d3ed2d57320072fa6b6c682cf272832c295a0d9eff261e1e1c4c935",
+    "evaluated_rows_per_candidate": 125,
+    "effective_semantic_families": 1,
+    "semantic_family": "failure-contract",
+    "gate": {
+      "accuracy": 0.536,
+      "combined_rule_order_correct": 4,
+      "combined_rule_order_total": 9,
+      "korean_correct": 22,
+      "korean_total": 41,
+      "macro_f1": 0.329167,
+      "noul_negation_correct": 5,
+      "noul_negation_total": 20
+    },
+    "candidates": [
+      {
+        "name": "base",
+        "checkpoint": "2d115cbafc7a79194d6958794408e727b933887dcd03241d590824c58de67aed",
+        "accuracy": 0.536,
+        "macro_f1": 0.329167,
+        "nll": 1.163046,
+        "brier": 0.665461,
+        "ece": 0.235045,
+        "coverage": 1,
+        "status": {
+          "ok": 125
+        },
+        "english": {
+          "correct": 20,
+          "total": 44
+        },
+        "korean": {
+          "correct": 22,
+          "total": 41
+        },
+        "mixed": {
+          "correct": 25,
+          "total": 40
+        },
+        "combined_rule_order": {
+          "both_correct": 4,
+          "gold_change_pairs": 9
+        },
+        "noul_negation": {
+          "both_correct": 0,
+          "pairs": 20
+        },
+        "permutation_semantic_invariance": {
+          "consistent": 23,
+          "pairs": 42
+        },
+        "evaluation_elapsed_ms": 8564.961,
+        "first_request_ms": 4709.161,
+        "remaining_mean_ms": 28.936,
+        "verdict": "REFERENCE_BASELINE"
+      },
+      {
+        "name": "d6",
+        "checkpoint": "d145e848f7827fdd0a643b90727e65a8fe67d5637bf8c6c07ab3d26511edd434",
+        "accuracy": 0.52,
+        "macro_f1": 0.282408,
+        "nll": 1.109322,
+        "brier": 0.658669,
+        "ece": 0.246705,
+        "coverage": 1,
+        "status": {
+          "ok": 125
+        },
+        "english": {
+          "correct": 15,
+          "total": 44
+        },
+        "korean": {
+          "correct": 18,
+          "total": 41
+        },
+        "mixed": {
+          "correct": 32,
+          "total": 40
+        },
+        "combined_rule_order": {
+          "both_correct": 2,
+          "gold_change_pairs": 9
+        },
+        "noul_negation": {
+          "both_correct": 0,
+          "pairs": 20
+        },
+        "permutation_semantic_invariance": {
+          "consistent": 24,
+          "pairs": 42
+        },
+        "evaluation_elapsed_ms": 7511.522,
+        "first_request_ms": 3725.107,
+        "remaining_mean_ms": 28.386,
+        "verdict": "REFERENCE_BASELINE"
+      },
+      {
+        "name": "pilot",
+        "checkpoint": "1c0f38d69d6d8b2f513eb622800a9282b9b923bfbdfe9ba9e432f54d7507176c",
+        "accuracy": 0.64,
+        "macro_f1": 0.339148,
+        "nll": 0.979537,
+        "brier": 0.549401,
+        "ece": 0.145134,
+        "coverage": 1,
+        "status": {
+          "ok": 125
+        },
+        "english": {
+          "correct": 27,
+          "total": 44
+        },
+        "korean": {
+          "correct": 19,
+          "total": 41
+        },
+        "mixed": {
+          "correct": 34,
+          "total": 40
+        },
+        "combined_rule_order": {
+          "both_correct": 0,
+          "gold_change_pairs": 9
+        },
+        "noul_negation": {
+          "both_correct": 5,
+          "pairs": 20
+        },
+        "permutation_semantic_invariance": {
+          "consistent": 42,
+          "pairs": 42
+        },
+        "evaluation_elapsed_ms": 9479.905,
+        "first_request_ms": 5525.336,
+        "remaining_mean_ms": 27.575,
+        "verdict": "AGGREGATE_ONLY_PASS_SCALE_NO_GO"
+      },
+      {
+        "name": "curriculum",
+        "checkpoint": "45eec3ae68fa10bc229e73d2a7ec549080c056fa9a4e69410ae1e44f6fb3ae10",
+        "accuracy": 0.4,
+        "macro_f1": 0.318053,
+        "nll": 1.090211,
+        "brier": 0.633109,
+        "ece": 0.015988,
+        "coverage": 1,
+        "status": {
+          "ok": 125
+        },
+        "english": {
+          "correct": 18,
+          "total": 44
+        },
+        "korean": {
+          "correct": 19,
+          "total": 41
+        },
+        "mixed": {
+          "correct": 13,
+          "total": 40
+        },
+        "combined_rule_order": {
+          "both_correct": 1,
+          "gold_change_pairs": 9
+        },
+        "noul_negation": {
+          "both_correct": 0,
+          "pairs": 20
+        },
+        "permutation_semantic_invariance": {
+          "consistent": 8,
+          "pairs": 42
+        },
+        "evaluation_elapsed_ms": 9229.357,
+        "first_request_ms": 5096.391,
+        "remaining_mean_ms": 28.085,
+        "verdict": "NO_GO_ALL_5_CRITERIA"
+      },
+      {
+        "name": "rlcd",
+        "checkpoint": "44aba7c1d595310137f2e1c7ce8a9d18f6e838880b5ab0d73f2af7c294d43e9d",
+        "accuracy": 0.456,
+        "macro_f1": 0.325878,
+        "nll": 1.08263,
+        "brier": 0.628986,
+        "ece": 0.05268,
+        "coverage": 1,
+        "status": {
+          "ok": 125
+        },
+        "english": {
+          "correct": 19,
+          "total": 44
+        },
+        "korean": {
+          "correct": 25,
+          "total": 41
+        },
+        "mixed": {
+          "correct": 13,
+          "total": 40
+        },
+        "combined_rule_order": {
+          "both_correct": 0,
+          "gold_change_pairs": 9
+        },
+        "noul_negation": {
+          "both_correct": 0,
+          "pairs": 20
+        },
+        "permutation_semantic_invariance": {
+          "consistent": 6,
+          "pairs": 42
+        },
+        "evaluation_elapsed_ms": 10008.727,
+        "first_request_ms": 5697.604,
+        "remaining_mean_ms": 29.354,
+        "verdict": "NO_GO_4_OF_5_CRITERIA"
+      },
+      {
+        "name": "typed",
+        "checkpoint": "56f6474957ea3e5660562efd7e588ee631045a3c6ff557934787ac252fd5350c",
+        "accuracy": 0.32,
+        "macro_f1": 0.295629,
+        "nll": 1.142886,
+        "brier": 0.657875,
+        "ece": 0.064632,
+        "coverage": 1,
+        "status": {
+          "ok": 125
+        },
+        "english": {
+          "correct": 14,
+          "total": 44
+        },
+        "korean": {
+          "correct": 14,
+          "total": 41
+        },
+        "mixed": {
+          "correct": 12,
+          "total": 40
+        },
+        "combined_rule_order": {
+          "both_correct": 0,
+          "gold_change_pairs": 9
+        },
+        "noul_negation": {
+          "both_correct": 3,
+          "pairs": 20
+        },
+        "permutation_semantic_invariance": {
+          "consistent": 14,
+          "pairs": 42
+        },
+        "evaluation_elapsed_ms": 16105.156,
+        "first_request_ms": 5479.858,
+        "remaining_mean_ms": 84.013,
+        "verdict": "BASELINE_ONLY_UNQUALIFIED"
+      }
+    ],
+    "equal_data_update_budgets": {
+      "supervised_ce": {
+        "training_rows": 568,
+        "unique_train_cases": 142,
+        "epochs": 2,
+        "epochs_completed": 2,
+        "question_exposures": 1136,
+        "microsteps": 568,
+        "optimizer_updates": 36,
+        "micro_batch": 2,
+        "grad_accum": 16,
+        "device": "mps",
+        "training_precision": "fp32",
+        "evaluation_precision": "fp16",
+        "selected_epoch": 2,
+        "lr_encoder": 2.5e-05,
+        "lr_head": 0.0001,
+        "reported_training_wall_time_s": 167.649,
+        "resumed_from_epoch": 1
+      },
+      "rlcd_grpo": {
+        "training_rows": 568,
+        "unique_train_cases": 142,
+        "epochs": 2,
+        "epochs_completed": 2,
+        "question_exposures": 1136,
+        "microsteps": 568,
+        "optimizer_updates": 36,
+        "micro_batch": 2,
+        "grad_accum": 16,
+        "device": "mps",
+        "training_precision": "fp32",
+        "evaluation_precision": "fp16",
+        "selected_epoch": 2,
+        "lr_encoder": 2.5e-05,
+        "lr_head": 0.0001,
+        "reported_training_wall_time_s": 190.394,
+        "resumed_from_epoch": null
+      }
+    },
+    "budget_scope": "Curriculum CE and RLCD/GRPO share data, epochs and updates. The initial pilot used 1375 rows/1 epoch/43 updates; the curriculum is not an equal-update comparison against that pilot.",
+    "curriculum_failed_checks": [
+      "accuracy",
+      "macro_f1",
+      "combined_rule_order",
+      "noul_negation",
+      "korean"
+    ],
+    "rlcd_failed_checks": [
+      "accuracy",
+      "macro_f1",
+      "combined_rule_order",
+      "noul_negation"
+    ],
+    "rlcd_minus_curriculum_accuracy": 0.056,
+    "counterfactual_scope": "Identical state/key meanings but option insertion order also changes; combined rule/order probe",
+    "generalization_verdict": "INCONCLUSIVE: one semantic family; singleton bootstrap intervals are not meaningful generalization evidence",
+    "dev_selection_used": true,
+    "dev_is_sealed_confirmation": false,
+    "typed_baseline": {
+      "checkpoint": "56f6474957ea3e5660562efd7e588ee631045a3c6ff557934787ac252fd5350c",
+      "publisher_source": "https://huggingface.co/convaiinnovations/laya-typed-decisions",
+      "license": "Apache-2.0",
+      "parameters": "421M",
+      "language_support": "English only",
+      "temperature_policy": "As-shipped option-bucket temperatures unchanged; not a fitted/calibrated or universal comparison",
+      "non_english_scope": "Observed diagnostic only outside stated publisher language support",
+      "verdict": "BASELINE_ONLY_UNQUALIFIED"
+    },
+    "timing_scope": "First request includes fresh worker startup plus inference; OS/cache coldness and peak memory UNKNOWN. Training time is the measured local-run field; not an end-to-end/resume-overhead estimate.",
+    "baseline_predictions_reused": true,
+    "sealed_test_evaluated": false,
+    "calibration_decisions_during_comparison": false,
+    "model_promoted": false,
+    "paid_calls": 0,
+    "all_owned_workers_closed": true,
+    "conclusion": "Both curriculum CE and same-data/update RLCD/GRPO fail preregistered research gates. Cached English specialist shows no capability gain on this fixed dev representation. No scale-up or broad superiority/quality claim is supported."
+  },
+  "frozen_oracle_caveat": {
+    "ambiguous_priority_rows": 8,
+    "question_type": "noul",
+    "source_rule": "failure-contract",
+    "meaning": "Historical accuracy fields are agreement with the frozen pre-fix oracle, not 125 fully unambiguous gold questions. Eight Noul rows have overlapping input/provider conditions without an explicit first-match priority in the policy text.",
+    "unambiguous_rule_order_pairs_affected": 0,
+    "old_predictions_labels_and_specs_unchanged": true,
+    "future_source_revision": "independent-workflow-rules-v3-explicit-priority",
+    "future_source_sha256": "faea6dec6030215d510b2ae1325620d6e62ddfb2a43b9a0854fa590d764df521",
+    "new_independent_confirmation": false
+  }
 }

@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 
 const excerpt = text => String(text ?? '').slice(0, 700);
 const signature = text => createHash('sha256').update(String(text).replace(/\b[0-9a-f]{8}-[0-9a-f-]{27,}\b/gi, '<id>').replace(/\b\d{4}-\d\d-\d\dT[^\s]+/g, '<time>').trim()).digest('hex');
-const sourceRef = (source, lineStart, lineEnd = lineStart, byteStart = 0, byteEnd = byteStart) => ({ source: source.ref, path: source.path, hash: source.hash, lineStart, lineEnd, byteStart, byteEnd });
+const sourceRef = (source, lineStart, lineEnd = lineStart, byteStart = 0, byteEnd = byteStart) => ({ get source() { return source.ref; }, path: source.path, get hash() { return source.hash; }, lineStart, lineEnd, byteStart, byteEnd });
 function lines(source) {
   let byteStart = 0;
   return source.text.split('\n').map((text, i) => {
@@ -30,32 +30,66 @@ function logEvent(raw, ref, original) {
   const clock = timestamp(object.timestamp ?? object.time ?? object.ts ?? original.match(/\b\d{4}-\d\d-\d\dT[^\s]+/)?.[0]);
   return { kind: error ? 'error' : success ? 'success' : 'other', level: level || 'unknown', code: object.code ?? null, message: excerpt(message), signature: signature(`${level}|${object.code ?? ''}|${message}`), correlations, timestamp: clock.value, clock, ref, snippet: excerpt(original), referenceText: original, excerptTruncated: original.length > 700 };
 }
-function parseLogs(source, check) {
-  const events = [], parseFailures = [], trimmed = source.text.trim();
-  if (trimmed.startsWith('[') || (/^\{/.test(trimmed) && source.text.includes('\n') && /\n\s*"/.test(source.text))) {
-    let records;
-    try {
-      const parsed = JSON.parse(source.text);
-      records = Array.isArray(parsed) ? parsed : parsed.events ?? parsed.logs ?? parsed.records ?? (parsed.message || parsed.msg ? [parsed] : null);
-      if (!Array.isArray(records)) throw new Error('unsupported_json_container');
-    } catch { parseFailures.push({ reason: 'malformed_or_unsupported_json_container', ref: sourceRef(source, 1), snippet: excerpt(source.text) }); return { events, parseFailures }; }
-    records.forEach((raw, i) => {
-      check(); const ref = { ...sourceRef(source, 1, source.text.split('\n').length, 0, Buffer.byteLength(source.text)), recordIndex: i, locator: 'json_record_index_in_source' };
-      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) parseFailures.push({ reason: 'unsupported_json_record', ref, snippet: excerpt(JSON.stringify(raw)) });
-      events.push({ ...logEvent(raw, ref, JSON.stringify(raw)), recordIndex: i });
-    });
-    return { events, parseFailures };
-  }
-  for (const row of lines(source)) {
-    check(); if (!row.text.trim()) continue;
+function logParser(source, check, onEvent, onFailure) {
+  let mode = null, first, container = '', lastLine = 1, lastByte = 0;
+  const line = row => {
+    check(false); if (!row.text.trim()) return;
+    const ref = sourceRef(source, row.lineStart, row.lineEnd, row.byteStart, row.byteEnd);
     let raw = row.text;
     if (/^\s*[\[{]/.test(row.text)) {
       try { raw = JSON.parse(row.text); if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error(); }
-      catch { parseFailures.push({ reason: 'malformed_or_unsupported_json_record', ref: row.ref, snippet: excerpt(row.text) }); events.push({ ...logEvent(row.text, row.ref, row.text), kind: 'parse_failure' }); continue; }
+      catch { onFailure({ reason: 'malformed_or_unsupported_json_record', ref, snippet: excerpt(row.text) }); onEvent({ ...logEvent(row.text, ref, row.text), kind: 'parse_failure' }); return; }
     }
-    events.push(logEvent(raw, row.ref, row.text));
+    onEvent(logEvent(raw, ref, row.text));
+  };
+  const feed = row => {
+    check(false); lastLine = row.lineEnd; lastByte = row.byteEnd;
+    if (mode === 'container') { container += '\n' + row.text; return; }
+    if (mode === 'candidate') {
+      if (!row.text.trim()) { first.text += '\n' + row.text; first.lineEnd = row.lineEnd; first.byteEnd = row.byteEnd; return; }
+      if (/^\s*(?:"|})/.test(row.text)) { mode = 'container'; container = first.text + '\n' + row.text; return; }
+      mode = 'lines'; line(first); first = null;
+    }
+    if (!mode && row.text.trim()) {
+      if (/^\s*\[/.test(row.text)) { mode = 'container'; container = row.text; return; }
+      if (/^\s*\{/.test(row.text)) {
+        try { JSON.parse(row.text); }
+        catch {
+          if (/"(?:events|logs|records)"\s*:\s*\[\s*$/.test(row.text)) { mode = 'container'; container = row.text; return; }
+          if (/^\s*\{\s*(?:"|$)/.test(row.text) && !/}\s*$/.test(row.text)) { mode = 'candidate'; first = row; return; }
+        }
+      }
+      mode = 'lines';
+    }
+    line(row);
+  };
+  return { feed, finish() {
+    check(false);
+    if (mode === 'candidate') { line(first); return; }
+    if (mode !== 'container') return;
+    // Standard JSON.parse needs one bounded container; NDJSON/plain lines never accumulate here.
+    let records;
+    try {
+      const parsed = JSON.parse(container);
+      records = Array.isArray(parsed) ? parsed : parsed.events ?? parsed.logs ?? parsed.records ?? (parsed.message || parsed.msg ? [parsed] : null);
+      if (!Array.isArray(records)) throw new Error('unsupported_json_container');
+    } catch { onFailure({ reason: 'malformed_or_unsupported_json_container', ref: sourceRef(source, 1, lastLine, 0, lastByte), snippet: excerpt(container) }); return; }
+    records.forEach((raw, i) => {
+      check(false); const ref = { ...sourceRef(source, 1, lastLine, 0, lastByte), recordIndex: i, locator: 'json_record_index_in_source' };
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) onFailure({ reason: 'unsupported_json_record', ref, snippet: excerpt(JSON.stringify(raw)) });
+      onEvent({ ...logEvent(raw, ref, JSON.stringify(raw)), recordIndex: i });
+    });
+  } };
+}
+function feedText(text, feed) {
+  let cursor = 0, lineStart = 1, byteStart = 0;
+  for (;;) {
+    const newline = text.indexOf('\n', cursor), end = newline < 0 ? text.length : newline;
+    const row = text.slice(cursor, end), byteEnd = byteStart + Buffer.byteLength(row);
+    feed({ text: row, lineStart, lineEnd: lineStart, byteStart, byteEnd });
+    if (newline < 0) break;
+    cursor = newline + 1; byteStart = byteEnd + 1; lineStart++;
   }
-  return { events, parseFailures };
 }
 const xmlText = text => text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
 function parseTests(source, check) {
@@ -140,14 +174,38 @@ export async function runDiagnostics(request, ctx) {
   const invalid = !supported || (paths !== undefined && (!Array.isArray(paths) || paths.some(p => typeof p !== 'string'))) || (!paths?.length && !inputs.registeredTest);
   const evidence = { sources, parseFailures: [], sourceEvidence: [] };
   const packet = (status, reason, acceptance, needsParent) => {
-    const refs = [...(evidence.groups ?? []).flatMap(g => [g.first, ...(g.last !== g.first ? [g.last] : [])]), ...(evidence.failures ?? []).flatMap(g => [g.first, g.last]), ...(evidence.passed ?? []), ...evidence.parseFailures, ...evidence.sourceEvidence];
-    const excerpts = new Map();
-    for (const record of refs) {
-      const ref = record.ref; if (!ref) continue;
-      const key = `${ref.path}:${ref.lineStart}:${ref.byteStart}:${record.recordIndex ?? ref.recordIndex ?? ''}`;
-      excerpts.set(key, { ref: ref.source ?? ref, path: ref.path, hash: ref.hash, text: record.snippet ?? record.details ?? record.message ?? '', role: record.requestedLine ? 'diagnostic_source' : 'diagnostic_observation', startLine: ref.lineStart, endLine: ref.lineEnd, byteStart: ref.byteStart, byteEnd: ref.byteEnd, ...(ref.recordIndex !== undefined ? { recordIndex: ref.recordIndex, locator: ref.locator } : {}) });
-    }
-    return { status, reason, acceptance, evidence: [...sources.map(s => ({ ref: s.ref, path: s.path, hash: s.hash, text: `Input ${s.path}`, role: 'diagnostic_input' })), ...excerpts.values()], details: { ...evidence, sources: sources.map(({ text, ...s }) => s) }, coverage, needsParent };
+    const spans = [], spanIds = new Map(), sourceIds = new Map(), recordIds = new Map(), records = {};
+    const source = ref => {
+      const key = `${ref.path}@${ref.hash}`;
+      if (!sourceIds.has(key)) {
+        const id = `e${spans.length}`; sourceIds.set(key, id);
+        spans.push({ ref: id, path: ref.path, hash: ref.hash, text: `Input ${ref.path}`, role: 'diagnostic_input', sourceRef: ref.source ?? ref.ref });
+      }
+      return sourceIds.get(key);
+    };
+    const compactRef = (ref, text = '', role = 'diagnostic_observation') => {
+      const sourceRef = source(ref), key = JSON.stringify([sourceRef, ref.lineStart, ref.lineEnd, ref.byteStart, ref.byteEnd, ref.recordIndex, role]);
+      if (!spanIds.has(key)) {
+        const id = `e${spans.length}`; spanIds.set(key, id);
+        spans.push({ ref: id, path: ref.path, hash: ref.hash, text, role, sourceRef, startLine: ref.lineStart, endLine: ref.lineEnd, byteStart: ref.byteStart, byteEnd: ref.byteEnd, ...(ref.recordIndex !== undefined ? { recordIndex: ref.recordIndex, locator: ref.locator } : {}) });
+      }
+      const { source: _source, path: _path, hash: _hash, ...offsets } = ref;
+      return { evidenceRef: spanIds.get(key), ...offsets };
+    };
+    const record = value => {
+      const key = JSON.stringify(value);
+      if (!recordIds.has(key)) {
+        const id = `r${recordIds.size}`; recordIds.set(key, id);
+        records[id] = { ...value, ...(value.ref ? { ref: compactRef(value.ref, value.snippet ?? value.details ?? value.message ?? '', value.requestedLine ? 'diagnostic_source' : 'diagnostic_observation') } : {}) };
+      }
+      return recordIds.get(key);
+    };
+    const details = { ...evidence, recordTableVersion: 1, records, sources: sources.map(s => source({ ...s, source: s.ref })) };
+    for (const key of ['groups', 'failures']) if (evidence[key]) details[key] = evidence[key].map(g => ({ ...g, first: record(g.first), last: record(g.last) }));
+    for (const key of ['timeline', 'contrary', 'passed', 'skipped', 'parseFailures', 'sourceEvidence']) if (evidence[key]) details[key] = evidence[key].map(record);
+    if (evidence.clockUncertainty) details.clockUncertainty = evidence.clockUncertainty.map(value => ({ ...value, ref: compactRef(value.ref) }));
+    if (evidence.correlations) details.correlations = evidence.correlations.map(value => ({ ...value, errors: value.errors.map(ref => compactRef(ref)), successes: value.successes.map(ref => compactRef(ref)) }));
+    return { status, reason, acceptance, evidence: spans, details, coverage, needsParent };
   };
   const coverage = { requested: paths ?? [], read: [], omissions, complete: false, exhaustive: false, scope: 'provided_inputs_only' };
   if (invalid) return packet('needs_parent', 'INVALID_DIAGNOSTIC_INPUT', {}, ['Provide permitted input paths for a supported diagnostic recipe.']);
@@ -159,7 +217,7 @@ export async function runDiagnostics(request, ctx) {
     else if (Array.isArray(result?.resultPaths)) coverage.requested = [...new Set([...(paths ?? []), ...result.resultPaths])];
     else omissions.push({ test: inputs.registeredTest, reason: result?.reason ?? 'registered_test_returned_no_report' });
   }
-  for (const file of [...new Set(coverage.requested)]) {
+  for (const file of workflow === 'log-triage' ? [] : [...new Set(coverage.requested)]) {
     ctx.check(); const source = await ctx.read(file, 'diagnostic_input');
     if (typeof source.text === 'string') sources.push(source);
     else omissions.push({ path: file, reason: source.reason });
@@ -171,30 +229,49 @@ export async function runDiagnostics(request, ctx) {
     if (window && ((!window.from && !window.to) || (window.from && !Number.isFinite(Date.parse(window.from))) || (window.to && !Number.isFinite(Date.parse(window.to))) || (window.from && window.to && Date.parse(window.from) > Date.parse(window.to)))) return packet('needs_parent', 'INVALID_TIME_WINDOW', {}, ['Provide a valid time window.']);
     const groups = new Map(), timeline = [], clockUncertainty = [], correlations = new Map();
     let excluded = 0, parsedCount = 0;
-    for (const source of sources) {
-      const parsed = parseLogs(source, () => ctx.check()); evidence.parseFailures.push(...parsed.parseFailures);
-      let previous;
-      for (const event of parsed.events) {
-        ctx.check(); parsedCount++;
-        if (event.clock.uncertainty) clockUncertainty.push({ ref: event.ref, reason: event.clock.uncertainty });
-        if (previous !== undefined && event.clock.ms < previous) clockUncertainty.push({ ref: event.ref, reason: 'source_clock_moved_backwards' });
+    for (const file of [...new Set(coverage.requested)]) {
+      const source = { path: file }, localGroups = new Map(), localTimeline = [], localClock = [], localCorrelations = new Map(), failures = [];
+      let previous, previousKind, localParsed = 0, localExcluded = 0;
+      const parser = logParser(source, value => ctx.check(value), event => {
+        ctx.check(false); localParsed++;
+        if (event.clock.uncertainty) localClock.push({ ref: event.ref, reason: event.clock.uncertainty });
+        if (previous !== undefined && event.clock.ms < previous) localClock.push({ ref: event.ref, reason: 'source_clock_moved_backwards' });
         if (event.clock.ms !== undefined) previous = event.clock.ms;
-        if (event.clock.ms !== undefined && ((window?.from && event.clock.ms < Date.parse(window.from)) || (window?.to && event.clock.ms > Date.parse(window.to)))) { excluded++; continue; }
+        if (event.clock.ms !== undefined && ((window?.from && event.clock.ms < Date.parse(window.from)) || (window?.to && event.clock.ms > Date.parse(window.to)))) { localExcluded++; return; }
         const { clock, ...record } = event;
-        let group = groups.get(event.signature);
-        if (!group) { group = { signature: event.signature, kind: event.kind, count: 0, first: record, last: record, correlationIds: [] }; groups.set(event.signature, group); }
+        let group = localGroups.get(event.signature);
+        const firstSignature = !group;
+        if (!group) { group = { signature: event.signature, kind: event.kind, count: 0, first: record, last: record, correlationIds: [] }; localGroups.set(event.signature, group); }
         group.count++; group.last = record;
         for (const [key, value] of Object.entries(event.correlations)) {
           const id = `${key}:${value}`; if (!group.correlationIds.includes(id)) group.correlationIds.push(id);
-          if (!correlations.has(id)) correlations.set(id, { id, errors: [], successes: [] });
-          if (event.kind === 'error') correlations.get(id).errors.push(event.ref);
-          if (event.kind === 'success') correlations.get(id).successes.push(event.ref);
+          if (!localCorrelations.has(id)) localCorrelations.set(id, { id, errors: [], successes: [] });
+          if (event.kind === 'error') localCorrelations.get(id).errors.push(event.ref);
+          if (event.kind === 'success') localCorrelations.get(id).successes.push(event.ref);
         }
-        // Preserve incident transitions in original file order; wall clocks are unverified.
-        if (event.kind !== 'other') timeline.push(record);
+        // Repetition is counted in groups; retain first/new incidents and every kind transition, including recurrence.
+        if (event.kind !== 'other' && (firstSignature || event.kind !== previousKind)) localTimeline.push(record);
+        previousKind = event.kind;
+      }, failure => failures.push(failure));
+      const value = await ctx.read(file, 'diagnostic_input', { onLine: parser.feed });
+      if (typeof value.text === 'string') { Object.assign(source, value); feedText(value.text, parser.feed); }
+      else if (value.streamed) Object.assign(source, value);
+      else { omissions.push({ path: file, reason: value.reason }); continue; }
+      parser.finish(); sources.push(source); parsedCount += localParsed; excluded += localExcluded;
+      evidence.parseFailures.push(...failures); timeline.push(...localTimeline); clockUncertainty.push(...localClock);
+      for (const [key, group] of localGroups) {
+        const existing = groups.get(key);
+        if (!existing) groups.set(key, group);
+        else { existing.count += group.count; existing.last = group.last; existing.correlationIds = [...new Set([...existing.correlationIds, ...group.correlationIds])]; }
+      }
+      for (const [key, correlation] of localCorrelations) {
+        if (!correlations.has(key)) correlations.set(key, correlation);
+        else { correlations.get(key).errors.push(...correlation.errors); correlations.get(key).successes.push(...correlation.successes); }
       }
     }
+    coverage.read = sources.map(s => s.path);
     evidence.groups = [...groups.values()]; evidence.timeline = timeline; evidence.parsedCount = parsedCount;
+    evidence.timelineSemantics = 'first_new_signature_and_kind_transitions_repetition_counted_in_groups';
     evidence.clockUncertainty = clockUncertainty; evidence.clockOrdering = 'source_order_only_cross_source_clock_unverified';
     evidence.correlations = [...correlations.values()]; evidence.contrary = timeline.filter(e => e.kind === 'success');
     coverage.excludedByWindow = excluded; coverage.unknownTimestampsRetained = clockUncertainty.filter(x => x.reason !== 'source_clock_moved_backwards').length;

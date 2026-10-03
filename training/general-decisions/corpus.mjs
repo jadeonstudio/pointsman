@@ -8,7 +8,7 @@ import { digest, encode, POLICY_VERSION, targetDistribution, safeContent } from 
 import { createTrainingStore } from '../../src/training/store.mjs';
 import * as datasets from '../../src/training/dataset.mjs';
 
-export const REVISION = 'independent-workflow-rules-v2-state-policy';
+export const REVISION = 'independent-workflow-rules-v3-explicit-priority';
 export const SOURCE_SHA256 = digest(fs.readFileSync(new URL(import.meta.url),'utf8'));
 const yes = (f, key) => f[key] === true;
 const unknown = (f, ...keys) => keys.some(k => f[k] === null);
@@ -66,8 +66,8 @@ export const RULES = [
     labels:['late_ack','transport','unknown_outcome','inspect'], koLabels:['늦은 응답','전송 실패','결과 미확인','확인'],
     decide:f => yes(f,'deadline_expired')&&yes(f,'effect_confirmed') ? 0 : yes(f,'transport_failed')&&yes(f,'input_valid')&&f.effect_confirmed===false ? 1 : yes(f,'deadline_expired')&&yes(f,'request_sent')&&f.effect_confirmed!==true ? 2 : 3 },
   { id:'failure-contract', task:'failure-class', purpose:'judge', fields:['input_admitted','question_matches','distribution_valid','result_received','provider_failed','schema_current'],
-    en:'Unadmitted input or outdated schema is an input contract failure. With admitted current input, a received result with wrong question or invalid distribution is an output contract failure. An explicit provider failure without a result is provider failure. Otherwise the origin is unknown.',
-    ko:'허용되지 않은 입력 또는 오래된 스키마는 입력 계약 실패입니다. 현재 허용 입력의 응답에서 질문 불일치나 잘못된 분포가 있으면 출력 계약 실패입니다. 응답 없이 제공자 실패가 명시되면 제공자 실패입니다. 그 외 원인은 미확인입니다.',
+    en:'Apply these rules in order; the first matching rule wins. Unadmitted input or outdated schema is an input contract failure. With admitted current input, a received result with wrong question or invalid distribution is an output contract failure. An explicit provider failure without a result is provider failure. Otherwise the origin is unknown.',
+    ko:'아래 규칙을 순서대로 적용하며 처음 성립한 규칙의 결과를 선택합니다. 허용되지 않은 입력 또는 오래된 스키마는 입력 계약 실패입니다. 현재 허용 입력의 응답에서 질문 불일치나 잘못된 분포가 있으면 출력 계약 실패입니다. 응답 없이 제공자 실패가 명시되면 제공자 실패입니다. 그 외 원인은 미확인입니다.',
     labels:['input_contract','output_contract','provider','unknown'], koLabels:['입력 계약','출력 계약','제공자','미확인'],
     decide:f => f.input_admitted===false||f.schema_current===false ? 0 : yes(f,'input_admitted')&&yes(f,'schema_current')&&yes(f,'result_received')&&(f.question_matches===false||f.distribution_valid===false) ? 1 : yes(f,'provider_failed')&&f.result_received===false ? 2 : 3 },
   { id:'failure-conflict', task:'failure-class', purpose:'judge', fields:['sources_disagree','same_revision','same_scope','trusted_primary','tool_error','reproduced'],

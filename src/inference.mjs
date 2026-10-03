@@ -10,12 +10,72 @@ import { ControlError, fail, isObject } from './constants.mjs';
 import { normalizeResponse } from './contracts.mjs';
 import { only, text, HASH, digest, fraction } from './training/schema.mjs';
 
+// Issued d6 qualification binds these accepted heads; editing routing prompts must not move this boundary.
+const LEGACY_ROUTE_QUESTION_HASH = '90488a1bf3dd3c99c37b5b26accc4271e6a6378ac706d395c56715c30187ede6';
+const LEGACY_ROUTE_ORDER_HASH = 'cbb075c5d49612ca78dc1c3f843d57b76c6ae83261300708f1855474573f82f1';
+
+export const MAX_PROVIDER_BYTES = 65536;
+const SCOPE_FIELDS = ['purpose', 'familyId', 'familyRevision', 'stateBuilderRevision', 'questionId', 'questionType', 'questionHash', 'stateSchemaHash', 'statePolicyHash', 'threshold'];
+function stateShape(value) {
+  if (value === null || typeof value === 'boolean') return 'nullable-boolean';
+  if (Array.isArray(value)) return { array: [...new Set(value.map(v => JSON.stringify(stateShape(v))))].sort() };
+  if (isObject(value)) return Object.fromEntries(Object.keys(value).sort().map(k => [k, stateShape(value[k])]));
+  return typeof value;
+}
+/** Hash actual payload structure and policy, not a caller's claimed family label. */
+export function decisionScope(request, questionId) {
+  const q = request.questions[questionId];
+  return { purpose: request.purpose, questionId, questionType: q.type,
+    questionHash: digest({ question: q, criterionOrder: q.type === 'choice' ? Object.keys(q.criteria) : null }),
+    stateSchemaHash: digest(stateShape(request.state)), statePolicyHash: digest(isObject(request.state) ? request.state.policy ?? null : null) };
+}
+export function validateDecisionIdentity(identity, laya, policy) {
+  only(identity, ['version', 'checkpoint', 'runtimeVersion', 'precision', 'inputFit', 'calibrationVersion', 'scopes'], ['version', 'checkpoint', 'runtimeVersion', 'precision', 'inputFit', 'calibrationVersion', 'scopes']);
+  if (identity.version !== 1 || identity.checkpoint !== laya.checkpoint || identity.runtimeVersion !== laya.runtimeVersion ||
+      identity.precision !== (laya.precision ?? 'fp32') || identity.inputFit !== (laya.inputFit ?? 'lossless') ||
+      identity.calibrationVersion !== policy.calibrationVersion || !Array.isArray(identity.scopes) || identity.scopes.length > 128) fail('INVALID_PROVIDER_CONFIG');
+  const seen = new Set();
+  for (const scope of identity.scopes) {
+    only(scope, SCOPE_FIELDS, SCOPE_FIELDS);
+    if (!policy.purposes.includes(scope.purpose)) fail('INVALID_PROVIDER_CONFIG');
+    for (const key of ['familyId', 'familyRevision', 'stateBuilderRevision', 'questionId']) text(scope[key], 200);
+    for (const key of ['questionHash', 'stateSchemaHash', 'statePolicyHash']) if (!HASH.test(scope[key])) fail('INVALID_PROVIDER_CONFIG');
+    if (!['choice','noul','score'].includes(scope.questionType) || scope.stateBuilderRevision !== `payload-state-schema-v1:${scope.stateSchemaHash}`) fail('INVALID_PROVIDER_CONFIG');
+    if (!Number.isFinite(scope.threshold) || scope.threshold < .5 || scope.threshold > 1) fail('INVALID_PROVIDER_CONFIG');
+    const signature = digest(Object.fromEntries(['purpose','questionId','questionHash','stateSchemaHash','statePolicyHash'].map(k => [k, scope[k]])));
+    if (seen.has(signature)) fail('INVALID_PROVIDER_CONFIG'); seen.add(signature);
+  }
+  return identity;
+}
+function legacyRoute(request) {
+  if (request.purpose !== 'route' || digest(request.questions) !== LEGACY_ROUTE_QUESTION_HASH ||
+      digest(Object.fromEntries(Object.entries(request.questions).filter(([,q]) => q.type === 'choice').map(([id,q]) => [id,Object.keys(q.criteria)]))) !== LEGACY_ROUTE_ORDER_HASH ||
+      !isObject(request.state) || typeof request.state.task !== 'string' || !isObject(request.state.context) ||
+      Object.keys(request.state).sort().join() !== 'context,task') return false;
+  const c = request.state.context;
+  return Object.keys(c).sort().join() === 'complete,exhaustive,highImpact,modelLocked,previousFailures,scope' &&
+    ['complete','exhaustive','highImpact','modelLocked'].every(k => typeof c[k] === 'boolean') &&
+    Number.isInteger(c.previousFailures) && c.previousFailures >= 0 && c.previousFailures <= 100 &&
+    ['local','repository','cross-module','unknown'].includes(c.scope);
+}
+function matchingScopes(policy, laya, request) {
+  if (!policy?.purposes.includes(request.purpose)) return null;
+  if (!policy.decisionIdentity) return legacyRoute(request) ? [] : null;
+  validateDecisionIdentity(policy.decisionIdentity, laya, policy);
+  const matches = Object.keys(request.questions).map(name => {
+    const actual = decisionScope(request, name);
+    return policy.decisionIdentity.scopes.find(s => Object.entries(actual).every(([k,v]) => s[k] === v));
+  });
+  return matches.every(Boolean) ? matches : null;
+}
+
 export function loadProviderConfig(home) {
-  const source = readText(path.join(home, 'providers.json'), { optional: true, privateFile: true, maxBytes: 8192 });
+  const source = readText(path.join(home, 'providers.json'), { optional: true, privateFile: true, maxBytes: MAX_PROVIDER_BYTES });
   return validateProviderConfig(source === null ? { version: 1, provider: 'jev', laya: null } : JSON.parse(source));
 }
 /** The single providers.json contract; the Laya lifecycle validates what it writes with this same function. */
 export function validateProviderConfig(c) {
+  if (Buffer.byteLength(JSON.stringify(c) ?? '') > MAX_PROVIDER_BYTES) fail('INVALID_PROVIDER_CONFIG');
   only(c, ['version', 'provider', 'laya'], ['version', 'provider']);
   if (c.version !== 1 || !['jev', 'laya'].includes(c.provider)) fail('INVALID_PROVIDER_CONFIG');
   c.laya ??= null;
@@ -36,13 +96,14 @@ export function validateProviderConfig(c) {
     // 'task-head' opts into worker.fit_task_head() truncating only state.task (see workers/laya_worker.py).
     l.inputFit ??= 'lossless'; if (!['lossless', 'task-head'].includes(l.inputFit)) fail('INVALID_PROVIDER_CONFIG');
     if (l.qualification != null) {
-      only(l.qualification, ['checkpoint', 'calibrationVersion', 'purposes', 'minConfidence', 'minChoiceProbability', 'noulCertainty', 'precision', 'routeGate'],
+      only(l.qualification, ['checkpoint', 'calibrationVersion', 'purposes', 'minConfidence', 'minChoiceProbability', 'noulCertainty', 'precision', 'routeGate', 'decisionIdentity'],
         ['checkpoint', 'calibrationVersion', 'purposes', 'minConfidence', 'minChoiceProbability', 'noulCertainty']);
       if (l.qualification.checkpoint !== l.checkpoint || !Array.isArray(l.qualification.purposes) ||
           l.qualification.purposes.some(x => !['route', 'select', 'retry', 'review', 'judge', 'escalate'].includes(x))) fail('INVALID_PROVIDER_CONFIG');
       if (l.qualification.precision != null && l.qualification.precision !== l.precision) fail('INVALID_PROVIDER_CONFIG');
       text(l.qualification.calibrationVersion, 80);
       for (const k of ['minConfidence', 'minChoiceProbability', 'noulCertainty']) { fraction(l.qualification[k]); if (l.qualification[k] < .5) fail('INVALID_PROVIDER_CONFIG'); }
+      if (l.qualification.decisionIdentity) validateDecisionIdentity(l.qualification.decisionIdentity, l, l.qualification);
       if (l.qualification.routeGate != null) {
         const g = l.qualification.routeGate;
         only(g, ['method', 'tierCoverage', 'maxHostProbability'], ['method', 'tierCoverage', 'maxHostProbability']);
@@ -52,6 +113,8 @@ export function validateProviderConfig(c) {
     }
   }
   if (c.provider === 'laya' && !c.laya) fail('LAYA_NOT_CONFIGURED');
+  // Writers use pretty JSON; reject before an owned write could create an unreadable config.
+  if (Buffer.byteLength(JSON.stringify(c, null, 2) + '\n') > MAX_PROVIDER_BYTES) fail('INVALID_PROVIDER_CONFIG');
   return c;
 }
 export function selectProvider(home, provider) {
@@ -79,9 +142,11 @@ export function normalizeInference(provider, raw, request, config, settings) {
   if (!identity || identity.checkpoint !== l.checkpoint || identity.runtime_version !== l.runtimeVersion || identity.model !== l.model ||
       typeof identity.device !== 'string' || identity.device.split(':')[0] !== l.device || identity.precision !== expectedPrecision) fail('LAYA_IDENTITY_MISMATCH');
   const policy = l.qualification;
+  const scopes = matchingScopes(policy, l, request);
+  const threshold = scopes?.length ? Math.min(...scopes.map(s => s.threshold)) : undefined;
   // Canonical shape validation is shared; probability meaning and acceptance are provider-specific.
   const n = normalizeResponse({ ...raw, model: identity.model }, request, { ...config,
-    minConfidence: policy?.minConfidence ?? 1, minChoiceProbability: policy?.minChoiceProbability ?? 1, noulCertainty: policy?.noulCertainty ?? 1 });
+    minConfidence: threshold ?? policy?.minConfidence ?? 1, minChoiceProbability: threshold ?? policy?.minChoiceProbability ?? 1, noulCertainty: threshold ?? policy?.noulCertainty ?? 1 });
   // The training decision record's provenance (src/training/schema.mjs validateProvenance) only
   // allows the listed keys with STRING values -- an `input_fit` object there would make every
   // captured laya decision fail INVALID_TRAINING_SCHEMA. The configured MODE ('lossless' vs
@@ -90,8 +155,13 @@ export function normalizeInference(provider, raw, request, config, settings) {
   // how much) is carried outside provenance on the normalized result as `inputFit` below.
   const preprocessingVersion = (l.inputFit ?? 'lossless') === 'task-head'
     ? 'official-laya-0.3.4-task-head-v1' : 'official-laya-0.3.4-lossless-v1';
-  return { ...n, eligible: Boolean(policy?.purposes.includes(request.purpose)) && n.eligible,
-    qualified: Boolean(policy?.purposes.includes(request.purpose)), inputFit: normalizeInputFit(raw.input_fit),
+  const scopePasses = scopes?.every(s => {
+    const a = n.answers[s.questionId], t = s.threshold;
+    return a.type === 'choice' ? a.confidence >= t && a.selectedProbability >= t :
+      a.type === 'noul' ? Math.max(a.probabilityTrue, 1 - a.probabilityTrue) >= t : a.confidence >= t;
+  }) ?? false;
+  return { ...n, eligible: scopes !== null && n.eligible && scopePasses,
+    qualified: scopes !== null, inputFit: normalizeInputFit(raw.input_fit),
     provenance: { provider, model: identity.model,
       model_version: identity.checkpoint, checkpoint: identity.checkpoint, runtime_version: identity.runtime_version,
       preprocessing_version: preprocessingVersion, confidence_semantics: 'choice-score-normalized-entropy;noul-probability',

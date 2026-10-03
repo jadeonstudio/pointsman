@@ -21,7 +21,7 @@ def sha(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-def inspect_export(export_dir, model_dir, diagnose_only=False):
+def inspect_export(export_dir, model_dir, diagnose_only=False, splits=None):
     from transformers import AutoTokenizer
     from laya.agent import Agent
     from laya.common import serialize_state, render_options, build_sequence, QTYPES
@@ -36,9 +36,10 @@ def inspect_export(export_dir, model_dir, diagnose_only=False):
               "tokenizer_sha256": trainer.directory_sha256(model_dir / "tokenizer"), "trainer_sha256": sha(ROOT / "training/laya-kit/train_from_export.py"),
               "worker_sha256": sha(ROOT / "workers/laya_worker.py"), "export_manifest_sha256": sha(export_dir / "manifest.json"),
               "max_len": cfg["max_len"], "head_max_len": cfg["head_max_len"], "splits": {}, "diagnose_only": diagnose_only,
+              "split_scope": splits or ["train", "dev", "calibration", "test"],
               "weights_loaded": False, "inference_executed": False, "training_executed": False}
     total_failed = 0
-    for split in ("train", "dev", "calibration", "test"):
+    for split in splits or ("train", "dev", "calibration", "test"):
         file = export_dir / f"{split}.jsonl"
         if sha(file) != manifest["split_files"][split]["sha256"]:
             raise ValueError("EXPORT_MANIFEST_MISMATCH")
@@ -89,8 +90,9 @@ if __name__ == "__main__":
     parser.add_argument("--model-dir", required=True, type=Path)
     parser.add_argument("--diagnose-only", action="store_true")
     parser.add_argument("--out", type=Path)
+    parser.add_argument("--split", choices=("train", "dev", "calibration", "test"), help="Check one changed split; default checks all four")
     args = parser.parse_args()
-    result = inspect_export(args.export_dir, args.model_dir, args.diagnose_only)
+    result = inspect_export(args.export_dir, args.model_dir, args.diagnose_only, [args.split] if args.split else None)
     text = json.dumps(result, sort_keys=True)
     if args.out:
         args.out.write_text(text + "\n")

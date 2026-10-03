@@ -33,6 +33,7 @@ notebooks/laya_finetune_typed_decisions_2xT4_kaggle.ipynb
 """
 import argparse
 import importlib.util
+import inspect
 import platform
 import hashlib
 import json
@@ -93,6 +94,18 @@ def verify_export_manifest(export_dir: Path) -> dict:
     if manifest.get("loader") != expected_loader:
         die("export loader contract mismatch")
     return manifest
+
+
+def prepare_exported_tokenizer(checkpoint_dir, with_hash=True):
+    """Apply the pinned Laya cross-version fix to a mutable export, never a registered asset."""
+    from pathlib import Path
+    from laya.agent import _fix_tokenizer_config
+    _fix_tokenizer_config(str(checkpoint_dir))
+    config = json.loads((Path(checkpoint_dir) / "tokenizer" / "tokenizer_config.json").read_text(encoding="utf-8"))
+    if config.get("tokenizer_class") in (None, "TokenizersBackend") or isinstance(config.get("extra_special_tokens"), list):
+        die("TOKENIZER_PREPARATION_REQUIRED: official export preparation did not produce a runtime-compatible tokenizer")
+    return {"method": "laya-0.3.4-official-tokenizer-config-fix",
+            **({"tokenizer_sha256": directory_sha256(Path(checkpoint_dir) / "tokenizer")} if with_hash else {})}
 
 
 def selection_split(manifest, select_best_epoch):
@@ -1013,6 +1026,38 @@ def make_epoch_end_fn(model, dev_items, tok, device, *, autocast_device, autocas
     return epoch_end_fn
 
 
+def synchronize_measurement_device(device):
+    if device.type == "cuda":
+        torch.cuda.synchronize(device)
+    elif device.type == "mps":
+        torch.mps.synchronize()
+
+
+def accelerator_peak_memory(device, reset=False):
+    backend = getattr(torch, device.type, None) if device.type in ("cuda", "mps") else None
+    if backend is None or not callable(getattr(backend, "reset_peak_memory_stats", None)) or not callable(getattr(backend, "max_memory_allocated", None)):
+        return {"status": "UNKNOWN", "allocated_bytes": None, "reason": "UNSUPPORTED_PEAK_API", "scope": "current_invocation_training_loop"}
+    try:
+        if reset:
+            backend.reset_peak_memory_stats(device) if device.type == "cuda" else backend.reset_peak_memory_stats()
+            return {"status": "MEASURING"}
+        value = backend.max_memory_allocated(device) if device.type == "cuda" else backend.max_memory_allocated()
+        return {"status": "measured", "allocated_bytes": int(value), "scope": "current_invocation_training_loop_including_dev_and_checkpoint_callbacks"}
+    except Exception:
+        return {"status": "UNKNOWN", "allocated_bytes": None, "reason": "PEAK_API_FAILED", "scope": "current_invocation_training_loop"}
+
+
+def process_peak_rss():
+    if sys.platform not in ("darwin", "linux"):
+        return {"status": "UNKNOWN", "bytes": None, "scope": "current_process_lifetime", "reason": "UNSUPPORTED_RUSAGE_UNITS"}
+    try:
+        import resource
+        value = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        return {"status": "measured", "bytes": int(value if sys.platform == "darwin" else value * 1024), "scope": "current_process_lifetime", "observed_at": "training_loop_end", "source": "resource.getrusage(RUSAGE_SELF).ru_maxrss"}
+    except (ImportError, AttributeError, OSError):
+        return {"status": "UNKNOWN", "bytes": None, "scope": "current_process_lifetime", "reason": "UNSUPPORTED_RUSAGE"}
+
+
 def run_training_loop(forward_fn, items, params_for_clip, optimizer, scheduler, tok, *,
                        device, epochs, micro_batch, grad_accum, group_size, sigma_start, sigma_end,
                        rank, world_size, use_scaler, scaler, autocast_device, autocast_dtype,
@@ -1035,13 +1080,43 @@ def run_training_loop(forward_fn, items, params_for_clip, optimizer, scheduler, 
     checkpoint_fn(epoch, global_step, elapsed_s) runs after each COMPLETED
     epoch, after epoch_end_fn; never for a --max-steps partial epoch. The
     defaults (0, 0, None) are the unchanged pre-resume loop."""
-    t0 = time.time()
+    synchronize_measurement_device(device)
+    peak_started = accelerator_peak_memory(device, reset=True)
+    t0 = time.perf_counter()
+    processed_tokens, processed_sequences = 0, 0
+    dev_callback_s, checkpoint_write_s, shuffle_replay_s = 0.0, 0.0, 0.0
+
+    def finish_loop(stopped_early):
+        synchronize_measurement_device(device)
+        elapsed = time.perf_counter() - t0
+        active = max(0.0, elapsed - dev_callback_s - checkpoint_write_s - shuffle_replay_s)
+        measurements = {"scope": "current_invocation_rank_local_training_loop", "rank": rank, "world_size": world_size,
+            "processed_nonpadding_tokens": processed_tokens, "processed_sequences": processed_sequences,
+            "forward_nonpadding_token_presentations": processed_tokens * (2 if rdrop_alpha > 0 else 1),
+            "training_elapsed_s": active, "loop_elapsed_s": elapsed,
+            "tokens_per_second": processed_tokens / active if active > 0 and processed_tokens else None,
+            "sequences_per_second": processed_sequences / active if active > 0 and processed_sequences else None,
+            "rate_definition": "nonpadding input token/sequence presentations across executed microbatches divided by synchronized loop elapsed excluding dev/checkpoint callbacks and replayed prior-epoch shuffles; includes current-epoch shuffling, collation, optimizer, logging; never global DDP throughput",
+            "dev_callback_s": dev_callback_s, "checkpoint_write_s": checkpoint_write_s, "resume_shuffle_replay_s": shuffle_replay_s,
+            "accelerator_peak_memory": accelerator_peak_memory(device) if peak_started["status"] == "MEASURING" else peak_started,
+            "process_peak_rss": process_peak_rss()}
+        return {"epochs_completed": epochs_completed, "global_step": global_step,
+                "elapsed_s": elapsed, "stopped_early": stopped_early, "measurements": measurements}
+
+    def timed_callback(callback, *args):
+        synchronize_measurement_device(device)
+        began = time.perf_counter()
+        callback(*args)
+        synchronize_measurement_device(device)
+        return time.perf_counter() - began
     global_step = start_global_step
     epochs_completed = start_epoch
     for epoch in range(epochs):
+        shuffle_started = time.perf_counter()
         random.seed(42 + epoch + rank)
         random.shuffle(items)
         if epoch < start_epoch:
+            shuffle_replay_s += time.perf_counter() - shuffle_started
             continue
         epoch_loss, n_batches = 0.0, 0
         optimizer.zero_grad(set_to_none=True)
@@ -1098,6 +1173,8 @@ def run_training_loop(forward_fn, items, params_for_clip, optimizer, scheduler, 
                     torch.mps.empty_cache()
 
             epoch_loss += loss.item() * grad_accum
+            processed_sequences += len(chunk)
+            processed_tokens += sum(len(item["ids"]) for item in chunk)
             n_batches += 1
             global_step += 1
 
@@ -1113,22 +1190,20 @@ def run_training_loop(forward_fn, items, params_for_clip, optimizer, scheduler, 
                 if mem_log_fn:
                     mem_log_fn(epoch)
                 if epoch_end_fn:
-                    epoch_end_fn(epoch)
-                return {"epochs_completed": epochs_completed, "global_step": global_step,
-                        "elapsed_s": time.time() - t0, "stopped_early": True}
+                    dev_callback_s += timed_callback(epoch_end_fn, epoch)
+                return finish_loop(True)
 
         epochs_completed = epoch + 1
         if mem_log_fn:
             mem_log_fn(epoch)
         if epoch_end_fn:
-            epoch_end_fn(epoch)
+            dev_callback_s += timed_callback(epoch_end_fn, epoch)
         if rank == 0:
-            print(f"=== {log_prefix} Epoch {epoch+1}/{epochs} Completed in {time.time()-t0:.1f}s | Avg Loss: {epoch_loss/max(1, n_batches):.4f} ===")
+            print(f"=== {log_prefix} Epoch {epoch+1}/{epochs} Completed in {time.perf_counter()-t0:.1f}s | Avg Loss: {epoch_loss/max(1, n_batches):.4f} ===")
         if checkpoint_fn:
-            checkpoint_fn(epoch, global_step, time.time() - t0)
+            checkpoint_write_s += timed_callback(checkpoint_fn, epoch, global_step, time.perf_counter() - t0)
 
-    return {"epochs_completed": epochs_completed, "global_step": global_step,
-            "elapsed_s": time.time() - t0, "stopped_early": False}
+    return finish_loop(False)
 
 
 def finalize_and_save(model, tok, calib_items, output_dir, model_name, base_model_dir_name,
@@ -1171,6 +1246,8 @@ def finalize_and_save(model, tok, calib_items, output_dir, model_name, base_mode
     else:
         model.encoder.config.save_pretrained(os.path.join(output_dir, "encoder"))
     tok.save_pretrained(os.path.join(output_dir, "tokenizer"))
+    # Metadata hashing in outer main() happens after the same official preparation helper.
+    prepare_exported_tokenizer(output_dir, with_hash=False)
 
     cfg["fine_tuned"] = True
     cfg["model_name"] = model_name
@@ -1408,7 +1485,7 @@ def main_ddp():
         select_best_epoch=select_best_epoch, best_state=best_state, epoch_agreements=epoch_agreements,
         log_prefix="[ddp]")
 
-    run_training_loop(
+    result = run_training_loop(
         ddp_model, my_items, list(ddp_model.parameters()), optimizer, scheduler, tok,
         device=device, epochs=EPOCHS, micro_batch=MICRO_BATCH, grad_accum=GRAD_ACCUM, group_size=GROUP_SIZE,
         sigma_start=SIGMA_START, sigma_end=SIGMA_END, rank=rank, world_size=world_size,
@@ -1429,11 +1506,15 @@ def main_ddp():
                            exporter_version, cfg, device=device, autocast_device="cuda",
                            autocast_dtype=torch.float16, autocast_enabled=True)
         write_epoch_selection_metadata(output_dir, select_best_epoch, selected_epoch, epoch_agreements)
+        with open(os.path.join(output_dir, "ddp_training_run.json"), "w") as f:
+            json.dump(result["measurements"], f, indent=2)
 
     dist.destroy_process_group()
 
 
 def main_local():
+    local_started = time.perf_counter()
+    resume_checkpoint_restore_s, resume_rng_restore_s = 0.0, 0.0
     # pointsman-change: --local mode (Apple Silicon MPS, or CPU) -- single process,
     # no torchrun/NCCL/DDP. Reuses run_training_loop()/finalize_and_save() with
     # world_size=1/rank=0 and forward_fn=model (no DDP wrapper) so the loss,
@@ -1523,10 +1604,7 @@ def main_local():
           f"rdrop_alpha={rdrop_alpha if rdrop_alpha > 0 else 'off'}")
 
     def mem_log_fn(epoch):
-        # pointsman-change: memory-safety logging (spec: log peak MPS memory per
-        # epoch). torch.mps has no peak-tracking counter as of this torch
-        # version -- driver_allocated_memory() is the best-effort proxy
-        # logged here, not a true high-water mark.
+        # End-of-epoch allocator snapshot only; accelerator peak is measured separately or UNKNOWN.
         if device_name == "mps" and hasattr(torch, "mps"):
             try:
                 mib = torch.mps.driver_allocated_memory() / (1024 * 1024)
@@ -1545,7 +1623,11 @@ def main_local():
     saved = {"epoch_dir": None, "epochs": 0}
     rng = None
     if resume_from is not None:
+        synchronize_measurement_device(device)
+        restore_started = time.perf_counter()
         state, rng = load_resume_checkpoint(resume_from, run_config, model, optimizer, scheduler)
+        synchronize_measurement_device(device)
+        resume_checkpoint_restore_s = time.perf_counter() - restore_started
         start_epoch, start_global_step = state["epochs_completed"], state["global_step"]
         prior_elapsed_s = state["train_elapsed_s"]
         epoch_agreements.extend(state["epoch_agreements"])
@@ -1572,10 +1654,16 @@ def main_local():
     # an interrupted+resumed run can be checked against an uninterrupted one; a resumed
     # run restores the saved RNG states instead.
     if rng is not None:
+        synchronize_measurement_device(device)
+        restore_started = time.perf_counter()
         restore_rng_states(rng, device)
+        synchronize_measurement_device(device)
+        resume_rng_restore_s = time.perf_counter() - restore_started
         del rng
     else:
         torch.manual_seed(TRAIN_SEED)
+    synchronize_measurement_device(device)
+    local_startup_elapsed_s = time.perf_counter() - local_started
     result = run_training_loop(
         model, my_items, list(model.parameters()), optimizer, scheduler, tok,
         device=device, epochs=epochs, micro_batch=micro_batch, grad_accum=grad_accum, group_size=GROUP_SIZE,
@@ -1609,6 +1697,11 @@ def main_local():
     # main() reads back and folds into training_metadata.json (device/local
     # mode/grad_accum/wall time -- the official notebook has no such metadata).
     metadata_path = os.path.join(output_dir, "local_training_run.json")
+    prior_invocations = []
+    if os.path.isfile(metadata_path):
+        with open(metadata_path) as f:
+            previous = json.load(f)
+        prior_invocations = previous.get("previous_invocations", []) + [{k: v for k, v in previous.items() if k != "previous_invocations"}]
     with open(metadata_path, "w") as f:
         json.dump({
             "device": device_name, "mode": "local", "grad_accum": grad_accum, "micro_batch": micro_batch,
@@ -1620,6 +1713,12 @@ def main_local():
             "resumed_from_epoch": start_epoch if resume_from is not None else None,
             "dropout": encoder_dropout, "rdrop_alpha": rdrop_alpha if rdrop_alpha > 0 else None,
             "encoder_dropout_check": encoder_dropout_check,
+            "measurements": result["measurements"],
+            "local_startup_elapsed_s": local_startup_elapsed_s,
+            "resume_checkpoint_restore_s": resume_checkpoint_restore_s,
+            "resume_rng_restore_s": resume_rng_restore_s,
+            "previous_invocations": prior_invocations,
+            "earlier_process_measurements": "preserved_if_written_else_UNKNOWN",
         }, f, indent=2)
     print(f"[local] wrote {metadata_path}")
 
@@ -1644,6 +1743,10 @@ def main():
 if __name__ == "__main__":
     main()
 '''
+# Keep the generated standalone trainer on the same preparation implementation.
+TRAIN_DDP_SCRIPT = TRAIN_DDP_SCRIPT.replace("def finalize_and_save(",
+    "KitError = RuntimeError\n" + "\n".join(inspect.getsource(fn) for fn in (die, prepare_exported_tokenizer)) + "\n\ndef finalize_and_save(", 1)
+
 
 
 # ---------------------------------------------------------------------------
@@ -1833,6 +1936,7 @@ def evaluate_checkpoint(output_dir, export_dir, laya_module, device="cuda"):
 
 
 def main():
+    invocation_started = time.perf_counter()
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--export-dir", required=True, help="exports/<version>/laya folder with train/calibration/test.jsonl + manifest.json")
     parser.add_argument("--model-dir", default=None, help="Path to a pre-downloaded convaiinnovations/laya snapshot. If omitted, uses huggingface_hub.snapshot_download (network + model download -- do this on Kaggle, not locally).")
@@ -1963,6 +2067,7 @@ def main():
     calib_items_path = output_dir / "calib_items.pt"
     dev_items_path = output_dir / "dev_items.pt"
     run_match, resume_state, cached_items = None, None, None
+    resume_verify_started = time.perf_counter()
     if args.local:
         run_match = build_resume_match_config(
             export_dir=export_dir, manifest=manifest, resolved_model_dir=resolved_model_dir,
@@ -1970,6 +2075,8 @@ def main():
             grad_accum=resolved_grad_accum, device=args.device, mps_autocast=args.mps_autocast,
             dropout=args.dropout, rdrop_alpha=args.rdrop_alpha, select_best_epoch=args.select_best_epoch, cfg=cfg, method=args.method, input_fit=args.input_fit)
         resume_state = check_resume_request(output_dir, run_match, args.resume)
+    resume_verification_s = time.perf_counter() - resume_verify_started if args.resume else 0.0
+    resume_cache_started = time.perf_counter()
     if resume_state is not None:
         cached_items = load_cached_items_for_resume(train_items_path, calib_items_path, resume_state["info"], torch)
     dev_items, dev_truncated, dev_total = [], 0, 0
@@ -1980,6 +2087,8 @@ def main():
             cached_items = None
         else:
             dev_truncated, dev_total = resume_state["info"]["dev_truncated"], resume_state["info"]["dev_total"]
+    resume_cache_load_s = time.perf_counter() - resume_cache_started if resume_state else 0.0
+    preprocessing_started = time.perf_counter()
     if cached_items is not None:
         train_items, calib_items = cached_items
         info = resume_state["info"]
@@ -1991,6 +2100,7 @@ def main():
         calib_items, calib_truncated, calib_total = preprocess_split(dataset["validation"], tok, cfg, render_options, build_sequence, QTYPES, agent_shim, input_fit=args.input_fit)
         if dev_split:
             dev_items, dev_truncated, dev_total = preprocess_split(dataset["dev"], tok, cfg, render_options, build_sequence, QTYPES, agent_shim, input_fit=args.input_fit)
+    preprocessing_s = time.perf_counter() - preprocessing_started if cached_items is None else 0.0
     run_info = None
     if args.local:
         run_info = {
@@ -2064,6 +2174,7 @@ def main():
             derived_model_name, base_model_dir_name, str(manifest.get("exporter_version") or ""),
             "ddp", select_best_epoch_flag,
         ]
+    preparation_elapsed_s = time.perf_counter() - invocation_started
     print("[train] executing:", " ".join(cmd))
     subprocess.run(cmd, check=True)
 
@@ -2096,6 +2207,7 @@ def main():
         "sealed_test_evaluated": args.evaluate_sealed_test,
         "output_weights_sha256": file_sha256(output_dir / "model.safetensors"),
         "tokenizer_sha256": directory_sha256(output_dir / "tokenizer"),
+        "tokenizer_preparation": "laya-0.3.4-official-tokenizer-config-fix",
         "model_config_sha256": file_sha256(output_dir / "rl_agent_config.json"),
         "runtime": {"python": platform.python_version(), "torch": torch.__version__, "laya": getattr(laya_module, "__version__", LAYA_VERSION_PINNED)},
         "precision": "bf16" if args.local and args.mps_autocast == "bf16" else "fp32" if args.local else "fp16",
@@ -2128,6 +2240,12 @@ def main():
         "metrics": metrics,
         "trained": True,
     }
+    training_metadata["measurement_preparation"] = {"current_invocation_preparation_s": preparation_elapsed_s,
+        "resume_verification_s": resume_verification_s, "resume_cache_load_s": resume_cache_load_s,
+        "preprocessing_s": preprocessing_s, "resume_preprocessing_s": preprocessing_s if resume_state else 0.0,
+        "scope": "outer current process before trainer subprocess; resume phases are measured work, not slowdown relative to fresh run"}
+    if not args.local and (output_dir / "ddp_training_run.json").is_file():
+        training_metadata["training_measurements"] = json.loads((output_dir / "ddp_training_run.json").read_text())
     if args.local:
         local_run_path = output_dir / "local_training_run.json"
         if local_run_path.exists():
@@ -2141,7 +2259,13 @@ def main():
         epoch_selection = json.loads(selection_path.read_text(encoding="utf-8"))
         training_metadata["epoch_selection"] = epoch_selection
         training_metadata["selected_epoch"] = epoch_selection.get("selected_epoch")
-    (output_dir / "training_metadata.json").write_text(json.dumps(training_metadata, indent=2), encoding="utf-8")
+    previous_path = output_dir / "training_metadata.json"
+    if previous_path.is_file():
+        previous = json.loads(previous_path.read_text(encoding="utf-8"))
+        training_metadata["previous_invocations"] = previous.get("previous_invocations", []) + [{k: v for k, v in previous.items() if k != "previous_invocations"}]
+    training_metadata["current_invocation_elapsed_s"] = time.perf_counter() - invocation_started
+    training_metadata["current_invocation_elapsed_scope"] = "outer current process through metadata assembly; includes trainer subprocess and optional sealed-test inference, excludes final metadata write"
+    previous_path.write_text(json.dumps(training_metadata, indent=2), encoding="utf-8")
     print(f"[done] wrote {output_dir / 'training_metadata.json'}")
     return 0
 

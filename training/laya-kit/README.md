@@ -98,6 +98,15 @@ because they are re-exported.
    limits micro-batches, not optimizer updates or full epochs; a bounded smoke
    run is not evidence for full-epoch quality. Resume details are below.
 
+   `training_metadata.json` now retains current-invocation measurements and prior
+   invocation records. Token/sequence rates count actual nonpadding presentations
+   in executed micro-batches; synchronized training time excludes separately
+   measured dev, checkpoint and resume-replay work. DDP rates are rank-local.
+   Process peak RSS covers that process's lifetime; accelerator peak uses a
+   supported reset/read API or reports `UNKNOWN` (including current Torch MPS).
+   Resume phase times measure recovery work, not an invented comparison with a
+   fresh run. Historical runs without these counters keep their missing values.
+
 4. **Register and collect predictions.** Registration copies and fingerprints
    the candidate; it does not activate or promote it. Match the training fit:
    ```sh
@@ -134,6 +143,15 @@ because they are re-exported.
    prospective non-regression gates pass. Failed or missing gates remain
    failed/UNKNOWN. Promotion reuses an existing authorization when it covers
    the action; otherwise that separate operator decision remains pending.
+
+   New qualification includes a bounded `decisionIdentity` and
+   `operationalEligible`. A supported, source-validated oracle constructor is
+   required for generic families; absent evidence yields `UNQUALIFIED_GENERIC`.
+   Historical pooled `qualified` statistics alone cannot promote, adopt or package
+   a new candidate. Runtime matches actual questions, option order and state
+   schema/policy within the evaluated envelope. Already-issued legacy artifacts
+   retain only the frozen canonical route/effort contract. See [the plan's
+   migration boundary](../../PLAN.md#wp01--preserve-and-version-the-shared-decision-contract).
 
 ## Optional CUDA/Kaggle path
 

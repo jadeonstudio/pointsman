@@ -24,15 +24,16 @@ function definition(line, symbol) {
 
 /** Lexical source evidence, not a fabricated complete call graph. Unknown dynamic edges stay explicit. */
 export async function runRepoEvidence(request, ctx) {
-  const input = validate(request.inputs), all = await ctx.listFiles(), omissions = [], evidence = [], seen = new Set();
+  const input = validate(request.inputs), all = await ctx.listFiles(), omissions = [], evidence = [], seen = new Map(), sources = new Map();
   const explicit = new Set([...input.requiredPaths, ...input.uncertainPaths, ...input.counterevidencePaths]);
   const scoped = name => !input.paths.length || input.paths.some(p => name === p || name.startsWith(p.endsWith('/') ? p : `${p}/`));
   const candidates = [...new Set([...all.filter(name => scoped(name) && SOURCE.test(name)), ...explicit])].sort();
   const symbols = Object.fromEntries(input.symbols.map(s => [s, { definitions: [], directCallers: [], tests: [], contracts: [], references: [] }]));
   const add = (file, role, start, end, symbol = null) => {
-    const ref = `${file.ref}:${start}-${end}`, identity = `${ref}:${role}:${symbol}`;
-    if (seen.has(identity)) return ref;
-    seen.add(identity);
+    const identity = `${file.path}:${start}:${end}:${role}:${symbol}`;
+    const ref = `s${evidence.length}`;
+    if (seen.has(identity)) return seen.get(identity);
+    seen.set(identity, ref); sources.set(file.path, file);
     evidence.push({ ref, path: file.path, hash: file.hash, text: file.text.split('\n').slice(start - 1, end).join('\n'), role, startLine: start, endLine: end, ...(symbol ? { symbol } : {}) });
     return ref;
   };
@@ -69,7 +70,20 @@ export async function runRepoEvidence(request, ctx) {
   // No current candidate choice opens another bounded action. Preserve ambiguity without a redundant model call.
   const missing = Object.entries(acceptance).filter(([, status]) => status !== 'met').map(([item]) => item);
   const needsParent = missing.length ? `Resolve missing acceptance: ${missing.join(', ')}.` : omissions.length ? 'Resolve unreadable or refused sources before claiming complete evidence.' : ambiguous.length ? `Resolve multiple definition candidates for ${ambiguous.join(', ')}.` : null;
-  return { status: needsParent ? 'needs_parent' : 'done', reason: needsParent ? 'UNRESOLVED_EVIDENCE' : 'EVIDENCE_COLLECTED', acceptance, evidence,
+  const merged = [], refs = new Map();
+  for (const span of [...evidence].sort((a, b) => a.path.localeCompare(b.path) || a.startLine - b.startLine || a.endLine - b.endLine)) {
+    let target = merged.at(-1);
+    if (!target || target.path !== span.path || span.startLine > target.endLine + 1) {
+      target = { ...span, ref: `e${merged.length}`, roles: [], symbols: [] }; delete target.symbol; merged.push(target);
+    }
+    target.endLine = Math.max(target.endLine, span.endLine);
+    if (!target.roles.includes(span.role)) target.roles.push(span.role);
+    if (span.symbol && !target.symbols.includes(span.symbol)) target.symbols.push(span.symbol);
+    refs.set(span.ref, target.ref);
+  }
+  for (const span of merged) span.text = sources.get(span.path).text.split('\n').slice(span.startLine - 1, span.endLine).join('\n');
+  for (const groups of Object.values(symbols)) for (const [key, values] of Object.entries(groups)) groups[key] = values.map(ref => refs.get(ref));
+  return { status: needsParent ? 'needs_parent' : 'done', reason: needsParent ? 'UNRESOLVED_EVIDENCE' : 'EVIDENCE_COLLECTED', acceptance, evidence: merged,
     coverage: { requested: request.coverage, complete: omissions.length === 0, filesConsidered: candidates.length, filesRead: readCount, scope: input.paths.length ? input.paths : ['.'], omissions,
       limits: ['Lexical direct callers only; dynamic registries, generated and cross-language edges are UNKNOWN.', 'Comments, string references and aliases require parent interpretation.'] },
     details: { symbols, selectedBranch: null, semanticSelection: 'NOT_IMPLEMENTED', dynamicEdges: 'UNKNOWN', requiredPaths: input.requiredPaths, uncertainPaths: input.uncertainPaths, counterevidencePaths: input.counterevidencePaths }, needsParent };

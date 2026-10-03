@@ -55,7 +55,7 @@ async function revision(root, signal) {
   try { return (await git('git', ['rev-parse', '--verify', 'HEAD'], { cwd: root, timeout: 1000, maxBuffer: 1024, signal })).stdout.trim(); }
   catch { if (signal.aborted) stop('DEADLINE'); return null; }
 }
-async function safeBytes(root, relative, maxBytes, signal) {
+async function safeBytes(root, relative, maxBytes, signal, { onLine, hashOnly = false, check = () => {}, onBytes = () => {} } = {}) {
   if (!permitted(relative)) return { path: relative, reason: 'PATH_REFUSED' };
   let file;
   try {
@@ -75,10 +75,53 @@ async function safeBytes(root, relative, maxBytes, signal) {
     if (stat.size > maxBytes) return { path: relative, reason: 'FILE_TOO_LARGE' };
     const real = await fs.realpath(current);
     if (!real.startsWith(root + path.sep)) return { path: relative, reason: 'PATH_REFUSED' };
+    if (onLine || hashOnly) {
+      const digest = createHash('sha256'), decoder = new TextDecoder('utf-8', { fatal: true });
+      let bytesRead = 0, pending = '', byteStart = 0, lineStart = 1, credentialTail = '', assignmentTail = '';
+      const emit = text => {
+        const candidate = credentialTail ? credentialTail + '\n' + text : text;
+        const assignment = assignmentTail ? assignmentTail + '\n' + text : text;
+        if (containsSensitiveData({ text: candidate }) || containsSensitiveData({ text: assignment })) return false;
+        const openAssignment = assignment.match(/\b(api[_-]?key|password|access[_-]?token|refresh[_-]?token|client[_-]?secret)\s*([=:])\s*(["']?)([^\s"',}]{0,5})$/i);
+        assignmentTail = openAssignment ? openAssignment[1] + openAssignment[2] + openAssignment[3] + openAssignment[4] : '';
+        // The existing URL-credential detector can span JSON-escaped newlines. Keep only that unfinished candidate.
+        const openUrl = JSON.stringify(candidate).slice(1, -1).match(/https?:\/\/[^\s/"@]*:[^\s/"@]*$/i);
+        credentialTail = openUrl ? candidate.slice(candidate.lastIndexOf(openUrl[0].startsWith('https:') ? 'https://' : 'http://')) : '';
+        const byteEnd = byteStart + Buffer.byteLength(text);
+        onLine({ text, lineStart, lineEnd: lineStart, byteStart, byteEnd });
+        byteStart = byteEnd + 1; lineStart++; return true;
+      };
+      for (;;) {
+        check(); if (signal.aborted) stop('DEADLINE');
+        const buffer = Buffer.allocUnsafe(8192), chunk = await file.read(buffer, 0, buffer.length, null);
+        if (!chunk.bytesRead) break;
+        bytesRead += chunk.bytesRead; onBytes(chunk.bytesRead);
+        if (bytesRead > maxBytes) return { path: relative, reason: 'FILE_TOO_LARGE', bytesRead };
+        const bytes = buffer.subarray(0, chunk.bytesRead); digest.update(bytes);
+        if (!onLine) continue;
+        if (bytes.includes(0)) return { path: relative, reason: 'NON_TEXT', bytesRead };
+        let text;
+        try { text = decoder.decode(bytes, { stream: true }); }
+        catch { return { path: relative, reason: 'NON_TEXT', bytesRead }; }
+        if (text.includes('\ufffd')) return { path: relative, reason: 'NON_TEXT', bytesRead };
+        pending += text;
+        for (let newline; (newline = pending.indexOf('\n')) !== -1;) {
+          const line = pending.slice(0, newline); pending = pending.slice(newline + 1);
+          if (!emit(line)) return { path: relative, reason: 'SENSITIVE_SOURCE', bytesRead };
+        }
+      }
+      if (onLine) {
+        try { pending += decoder.decode(); }
+        catch { return { path: relative, reason: 'NON_TEXT', bytesRead }; }
+        if (pending.includes('\ufffd')) return { path: relative, reason: 'NON_TEXT', bytesRead };
+        if (!emit(pending)) return { path: relative, reason: 'SENSITIVE_SOURCE', bytesRead };
+      }
+      return { hash: digest.digest('hex'), bytesRead, streamed: Boolean(onLine) };
+    }
     const bytes = await file.readFile({ signal });
     if (bytes.length > maxBytes) return { path: relative, reason: 'FILE_TOO_LARGE' };
     return { bytes };
-  } catch (error) { if (signal.aborted) stop('DEADLINE'); return { path: relative, reason: error.code === 'ENOENT' ? 'FILE_MISSING' : 'PATH_REFUSED' }; }
+  } catch (error) { if (signal.aborted) stop('DEADLINE'); if (['CANCELLED', 'DEADLINE', 'POLICY_CHANGED', 'ENGINE_CHANGED'].includes(error.code)) throw error; return { path: relative, reason: error.code === 'ENOENT' ? 'FILE_MISSING' : 'PATH_REFUSED' }; }
   finally { await file?.close(); }
 }
 
@@ -115,9 +158,10 @@ export function createWorkflowRunner({ engine, root = process.cwd(), getPolicy, 
         })]);
       } finally { combined.removeEventListener('abort', abort); }
     }
-    async function read(relative, _role) {
+    async function read(relative, _role, options = {}) {
       check();
-      if (cache.has(relative)) { stats.cacheHits++; return structuredClone(cache.get(relative)); }
+      const streamed = typeof options.onLine === 'function', cacheKey = streamed ? `stream:${relative}` : options.hashOnly ? `digest:${relative}` : relative;
+      if (cache.has(cacheKey)) { if (streamed) stop('REPEATED_ACTION'); stats.cacheHits++; return structuredClone(cache.get(cacheKey)); }
       if (request.workflow === 'repo-evidence') {
         await listFiles();
         if (!inventory.output.includes(relative)) {
@@ -125,18 +169,21 @@ export function createWorkflowRunner({ engine, root = process.cwd(), getPolicy, 
           cache.set(relative, refused); return refused;
         }
       }
-      action(`read:${relative}`);
-      const raw = await safeBytes(sourceRoot, relative, Math.min(1048576, limits.maxOutputBytes * 8), combined);
+      action(`read:${cacheKey}`);
+      const raw = await safeBytes(sourceRoot, relative, Math.min(1048576, limits.maxOutputBytes * 8), combined, { ...options, check, onBytes: count => { stats.bytesRead += count; } });
       check();
       let value = raw;
-      if (raw.bytes) {
+      if (raw.hash) {
+        files[relative] = raw.hash;
+        value = { path: relative, hash: raw.hash, ref: `${relative}@${raw.hash}`, streamed: raw.streamed };
+      } else if (raw.bytes) {
         stats.bytesRead += raw.bytes.length;
         const text = raw.bytes.toString('utf8'), digest = hash(raw.bytes);
         files[relative] = digest;
         value = raw.bytes.includes(0) || text.includes('\ufffd') ? { path: relative, reason: 'NON_TEXT' } :
           containsSensitiveData({ text }) ? { path: relative, reason: 'SENSITIVE_SOURCE' } : { path: relative, text, hash: digest, ref: `${relative}@${digest}` };
       } else if (raw.reason === 'FILE_MISSING') files[relative] = null;
-      cache.set(relative, value); return structuredClone(value);
+      cache.set(cacheKey, value); return structuredClone(value);
     }
     async function scan(relative = '', output = [], omissions = []) {
       const entries = await fs.readdir(path.join(sourceRoot, relative), { withFileTypes: true });
@@ -232,8 +279,8 @@ export function createWorkflowRunner({ engine, root = process.cwd(), getPolicy, 
       check();
       if (await revision(sourceRoot, combined) !== initialRevision) stop('STALE_SNAPSHOT');
       for (const [relative, digest] of Object.entries(files)) {
-        check(false); const raw = await safeBytes(sourceRoot, relative, 1048576, combined);
-        if ((raw.bytes ? hash(raw.bytes) : raw.reason === 'FILE_MISSING' ? null : 'refused') !== digest) stop('STALE_SNAPSHOT');
+        check(false); const raw = await safeBytes(sourceRoot, relative, 1048576, combined, { hashOnly: true, check });
+        if ((raw.hash ?? (raw.reason === 'FILE_MISSING' ? null : 'refused')) !== digest) stop('STALE_SNAPSHOT');
       }
       // New/deleted paths can add or hide a caller. Recheck inventory without charging duplicate actions.
       if (inventory) {
@@ -254,7 +301,7 @@ export function createWorkflowRunner({ engine, root = process.cwd(), getPolicy, 
       check(); sourceRoot = await fs.realpath(root); initialRevision = await revision(sourceRoot, combined);
       if (request.snapshot && Object.hasOwn(request.snapshot, 'revision') && request.snapshot.revision !== initialRevision) stop('STALE_SNAPSHOT');
       for (const [relative, expected] of Object.entries(request.snapshot?.files ?? {})) {
-        const value = await read(relative, 'snapshot');
+        const value = await read(relative, 'snapshot', request.workflow === 'log-triage' ? { hashOnly: true } : {});
         if ((value.hash ?? (value.reason === 'FILE_MISSING' ? null : 'refused')) !== expected) stop('STALE_SNAPSHOT');
       }
       const ctx = { root: sourceRoot, signal: combined, limits, stats, check: () => check(false), read, listFiles,

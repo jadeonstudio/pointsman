@@ -10,7 +10,7 @@ import { fail, PURPOSES, DEFAULTS, ControlError } from '../constants.mjs';
 import { HASH, MAX_DERIVED_BYTES, digest, encode, only } from './schema.mjs';
 import { readDataset, splitIdentity } from './dataset.mjs';
 import { createTrainingStore } from './store.mjs';
-import { loadProviderConfig, validateProviderConfig, normalizeInference, createLayaClient } from '../inference.mjs';
+import { loadProviderConfig, validateProviderConfig, normalizeInference, createLayaClient, decisionScope, validateDecisionIdentity, MAX_PROVIDER_BYTES } from '../inference.mjs';
 import { validateRequest, wireRequest } from '../contracts.mjs';
 import { loadFeaturePolicy } from '../feature-policy.mjs';
 import { labelTier, tierDistribution, decideTier } from '../routing.mjs';
@@ -344,6 +344,50 @@ function selectThreshold(records, { targetAccuracy, minCoverage, minCalibration,
 }
 
 // --- qualify --------------------------------------------------------------
+export function familyQualification(store, datasetVersion, samples, holdoutSamples, records, params) {
+  const raw = readText(path.join(store.root, 'datasets', datasetVersion, 'oracle_specs.json'), { optional: true, privateFile: true, maxBytes: 65536 });
+  const empty = reason => ({ scopes: [], evidence: { status: 'UNQUALIFIED_GENERIC', reason, families: {} } });
+  if (raw === null) return empty('TRUSTED_CONSTRUCTOR_SPEC_MISSING');
+  const spec = JSON.parse(raw);
+  if (!Array.isArray(spec.rules) || spec.rules.some(r => !r || typeof r.id !== 'string')) fail('DECISION_CONSTRUCTOR_IDENTITY_MISMATCH');
+  const rules = new Map(spec.rules.map(r => [r.id, r]));
+  if (!HASH.test(spec.generator_sha256 ?? '') || typeof spec.revision !== 'string' || rules.size !== spec.rules?.length) fail('DECISION_CONSTRUCTOR_IDENTITY_MISMATCH');
+  const groups = new Map();
+  for (const [split, selected] of [['calibration',samples.filter(s => s.split === 'calibration')], ['test',samples.filter(s => s.split === 'test')], ['holdout',holdoutSamples]]) {
+    selected.forEach((sample, i) => {
+      const rule = rules.get(sample.oracle?.id);
+      if (!rule || sample.oracle.revision !== spec.revision || sample.data_rights?.revision !== spec.generator_sha256 ||
+          sample.lineage?.semantic_family_id !== rule.id || !sample.provenance?.some(p => p.provider === 'host' && p.model === 'independent-rule-oracle' && p.checkpoint === spec.generator_sha256)) fail('DECISION_CONSTRUCTOR_IDENTITY_MISMATCH');
+      if (typeof rule.task !== 'string' || !rule.task || rule.task.length > 100) fail('DECISION_CONSTRUCTOR_IDENTITY_MISMATCH');
+      const key = `${rule.task}:${sample.question.type}`;
+      if (!groups.has(key)) groups.set(key, { family: rule.task, type: sample.question.type, calibration: [], test: [], holdout: [], contracts: new Map(), builders: new Set(), semanticGroups: { calibration: new Set(), test: new Set(), holdout: new Set() } });
+      const g = groups.get(key); g[split].push(records[split][i]); g.semanticGroups[split].add(sample.lineage.semantic_family_id);
+      const actual = decisionScope({ purpose: sample.purpose, state: sample.state, questions: { [sample.question_id]: sample.question } }, sample.question_id);
+      const builder = sample.provenance.find(p => p.provider === 'host' && p.model === 'independent-rule-oracle').preprocessing_version;
+      g.builders.add(builder);
+      g.contracts.set(digest(actual), { ...actual, familyId: rule.task, familyRevision: `${spec.revision}:${spec.generator_sha256}`, stateBuilderRevision: `payload-state-schema-v1:${actual.stateSchemaHash}` });
+    });
+  }
+  const scopes = [], families = {};
+  for (const [key, g] of groups) {
+    const threshold = selectThreshold(g.calibration, params);
+    const test = threshold === null ? null : evalSplit(g.test, threshold), holdout = threshold === null ? null : evalSplit(g.holdout, threshold);
+    const passed = threshold !== null && test.n >= params.minTest && holdout.n >= params.minTest &&
+      test.accuracy >= params.targetAccuracy && holdout.accuracy >= params.targetAccuracy && test.lowerBound >= params.minLowerBound && holdout.lowerBound >= params.minLowerBound;
+    families[key] = { family: g.family, questionType: g.type, threshold, calibration: { n: g.calibration.length }, test, holdout, passed,
+      independentSemanticGroups: Object.fromEntries(Object.entries(g.semanticGroups).map(([k,v]) => [k,[...v].sort()])),
+      sourceBuilderRevisions: [...g.builders].sort(),
+      scope: 'Evaluated bounded signature union only; no arbitrary future policy or universal-family claim.' };
+    if (passed) scopes.push(...[...g.contracts.values()].map(s => ({ ...s, threshold })));
+  }
+  if (scopes.length > 128) fail('DECISION_IDENTITY_TOO_LARGE');
+  return { scopes, evidence: { status: scopes.length ? 'BOUNDED_ENVELOPE_QUALIFIED' : 'UNQUALIFIED_GENERIC', constructor_spec_sha256: digest(raw),
+    constructor_revision: spec.revision, generator_sha256: spec.generator_sha256, families } };
+}
+export function operationalFamiliesPassed(q) {
+  return !q.decisionIdentity || (q.operationalEligible === true && q.familyQualification?.status === 'BOUNDED_ENVELOPE_QUALIFIED' &&
+    Array.isArray(q.decisionIdentity.scopes) && q.decisionIdentity.scopes.length > 0 && q.decisionIdentity.scopes.every(s => q.familyQualification.families?.[`${s.familyId}:${s.questionType}`]?.passed === true));
+}
 export function loadCandidate(home, candidateHash) {
   if (!HASH.test(candidateHash)) fail('INVALID_CANDIDATE_HASH');
   const file = path.join(candidatesDir(home), `${candidateHash}.json`);
@@ -414,6 +458,13 @@ export async function qualifyCandidate(home, { candidateHash, datasetVersion, ho
   const params = { targetAccuracy, minCoverage, minCalibration, minTest, minLowerBound, minThreshold, routeMaxError, routeMaxErrorUpper, routeMinApplied };
   // Must fit the provider contract's 80-character calibrationVersion limit.
   const calibrationVersion = `${datasetVersion.slice(0, 32)}:q-${digest(params).slice(0, 32)}`;
+  const scoped = familyQualification(s, datasetVersion, samples, holdoutSamples,
+    { calibration: calibrationRecords, test: testRecords, holdout: holdoutRecords }, params);
+  for (const scope of scoped.scopes) if (!qualifiedPurposes.includes(scope.purpose)) qualifiedPurposes.push(scope.purpose);
+  const decisionIdentity = { version: 1, checkpoint: candidateHash, runtimeVersion: laya.runtimeVersion, precision: laya.precision ?? 'fp32',
+    inputFit: laya.inputFit ?? 'lossless', calibrationVersion, scopes: scoped.scopes };
+  validateDecisionIdentity(decisionIdentity, laya, { purposes: qualifiedPurposes, calibrationVersion });
+  if (Buffer.byteLength(JSON.stringify(decisionIdentity)) > MAX_PROVIDER_BYTES - 8192) fail('DECISION_IDENTITY_TOO_LARGE');
   const allRecords = [...calibrationRecords, ...testRecords, ...holdoutRecords];
   const result = { checkpoint: candidateHash, qualified: qualifiedPurposes.length > 0, purposes: qualifiedPurposes,
     // A purpose qualified ONLY through the decision gate has no per-answer threshold of its own; if
@@ -425,6 +476,7 @@ export async function qualifyCandidate(home, { candidateHash, datasetVersion, ho
     precision: laya.precision ?? 'fp32', inputFit: laya.inputFit, runtime_version: laya.runtimeVersion, training_identity: trainingIdentity, split_identity: datasetManifest.split_version === 2 ? splitIdentity(samples) : null, holdout_role: holdoutManifest.role, independent_confirmation: holdoutManifest.independent_confirmation, params, evidence, ...(routeGate ? { routeGate } : {}),
     // Per split, never pooled: dev chooses epochs, calibration tunes thresholds; a regression copy is not independent confirmation.
     by_question: { calibration: byQuestionStats(calibrationRecords), test: byQuestionStats(testRecords), holdout: byQuestionStats(holdoutRecords) },
+    decisionIdentity, familyQualification: scoped.evidence, operationalEligible: scoped.scopes.length > 0,
     generated_at: new Date().toISOString(),
     ...labelSourceSummary(allRecords) };
   ensureDir(layaRoot(home), true); ensureDir(qualificationsDir(home), true);
@@ -471,6 +523,7 @@ export async function compareCandidate(home, { candidateHash, holdoutName, layaC
     for (const purpose of PURPOSES) purposes[purpose].active = side(activeByPurpose[purpose] || [], activeUsed.qualification, purpose);
   }
   const report = { active: activeUsed?.checkpoint ?? null, candidate: candidateHash, holdout: holdoutManifest.name,
+    decision_identity_sha256: candidateQual?.decisionIdentity ? digest(candidateQual.decisionIdentity) : null,
     holdout_sha256: holdoutManifest.sha256, holdout_role: holdoutManifest.role, independent_confirmation: holdoutManifest.independent_confirmation, qualification_split_identity: candidateQual?.split_identity ?? null, purposes,
     by_question: { candidate: byQuestionStats(candidateRecords), active: activeRecords ? byQuestionStats(activeRecords) : null },
     generated_at: new Date().toISOString(), ...labelSourceSummary(holdoutSamples) };
@@ -527,6 +580,7 @@ export function promoteCandidate(home, { candidateHash, holdoutName, maxRegressi
   const qualification = loadQualification(home, candidateHash);
   if (!qualification) return { promoted: false, reason: 'PROMOTION_REFUSED', violations: ['QUALIFICATION_NOT_FOUND'] };
   if (qualification.checkpoint !== candidateHash) return { promoted: false, reason: 'PROMOTION_REFUSED', violations: ['QUALIFICATION_CHECKPOINT_MISMATCH'] };
+  if (!operationalFamiliesPassed(qualification)) return { promoted: false, reason: 'PROMOTION_REFUSED', violations: ['NO_QUALIFIED_DECISION_FAMILY'] };
   if (!qualification.qualified || !qualification.purposes.length) return { promoted: false, reason: 'PROMOTION_REFUSED', violations: ['NOT_QUALIFIED'] };
   const currentActive = activeLayaOf(home);
   const comparison = loadComparison(home, currentActive?.checkpoint ?? null, candidateHash, holdoutName);
@@ -534,6 +588,7 @@ export function promoteCandidate(home, { candidateHash, holdoutName, maxRegressi
   if (comparison.candidate !== candidateHash || comparison.active !== (currentActive?.checkpoint ?? null) || comparison.holdout !== holdoutName) {
     return { promoted: false, reason: 'PROMOTION_REFUSED', violations: ['COMPARISON_MISMATCH'] };
   }
+  if (qualification.decisionIdentity && comparison.decision_identity_sha256 !== digest(qualification.decisionIdentity)) fail('QUALIFICATION_IDENTITY_MISMATCH');
   if (qualification.holdout !== holdoutName) return { promoted: false, reason: 'PROMOTION_REFUSED', violations: ['QUALIFICATION_HOLDOUT_MISMATCH'] };
   const violations = [];
   for (const purpose of qualification.purposes) {
@@ -558,7 +613,8 @@ export function promoteCandidate(home, { candidateHash, holdoutName, maxRegressi
   const nextLaya = { ...candidate, ...runtimeSettings(currentConfig.laya),
     qualification: { checkpoint: qualification.checkpoint, calibrationVersion: qualification.calibrationVersion, purposes: qualification.purposes,
       minConfidence: qualification.minConfidence, minChoiceProbability: qualification.minChoiceProbability, noulCertainty: qualification.noulCertainty,
-      precision: qualification.precision ?? candidate.precision ?? 'fp32', ...(qualification.routeGate ? { routeGate: qualification.routeGate } : {}) } };
+      precision: qualification.precision ?? candidate.precision ?? 'fp32', ...(qualification.routeGate ? { routeGate: qualification.routeGate } : {}),
+      ...(qualification.decisionIdentity ? { decisionIdentity: qualification.decisionIdentity } : {}) } };
   const nextConfig = { ...currentConfig, laya: nextLaya }; // provider selection (jev/laya) is never changed here
   validateProviderConfig(structuredClone(nextConfig));
   atomicWrite(file, JSON.stringify(nextConfig, null, 2) + '\n', { expected: old });
@@ -580,6 +636,7 @@ export function adoptCandidate(home, { candidateHash } = {}) {
   const published = loadPublished(home, candidateHash);
   if (!published || !published.qualification) fail('PUBLISHED_RECORD_NOT_FOUND');
   const q = published.qualification;
+  if (!operationalFamiliesPassed(q)) fail('NO_QUALIFIED_DECISION_FAMILY');
   if (q.checkpoint !== candidateHash) fail('PUBLISHED_QUALIFICATION_MISMATCH');
   const candidatePrecision = candidate.precision ?? 'fp32';
   const qualificationPrecision = q.precision ?? candidatePrecision;
@@ -590,7 +647,7 @@ export function adoptCandidate(home, { candidateHash } = {}) {
   const nextLaya = { ...candidate, ...runtimeSettings(currentConfig.laya),
     qualification: { checkpoint: q.checkpoint, calibrationVersion: q.calibrationVersion, purposes: q.purposes,
       minConfidence: q.minConfidence, minChoiceProbability: q.minChoiceProbability, noulCertainty: q.noulCertainty,
-      precision: qualificationPrecision, ...(q.routeGate ? { routeGate: q.routeGate } : {}) } };
+      precision: qualificationPrecision, ...(q.routeGate ? { routeGate: q.routeGate } : {}), ...(q.decisionIdentity ? { decisionIdentity: q.decisionIdentity } : {}) } };
   const nextConfig = { ...currentConfig, laya: nextLaya }; // provider selection (jev/laya) is never changed here
   validateProviderConfig(structuredClone(nextConfig));
   atomicWrite(file, JSON.stringify(nextConfig, null, 2) + '\n', { expected: old });
@@ -627,7 +684,8 @@ export function layaStatus(home) {
     const c = JSON.parse(readText(path.join(dir, f), { privateFile: true, maxBytes: 8192 }));
     const q = loadQualification(home, c.checkpoint);
     const published = loadPublished(home, c.checkpoint);
-    return { checkpoint: c.checkpoint, model: c.model, device: c.device, qualified: q?.qualified ?? null, purposes: q?.purposes ?? [],
+    return { checkpoint: c.checkpoint, model: c.model, device: c.device, qualified: q?.qualified ?? null,
+      operationalEligible: q?.decisionIdentity ? operationalFamiliesPassed(q) : null, purposes: q?.purposes ?? [],
       ...(published ? { published: { repo: published.repo, revision: published.revision } } : {}) };
   }) : [];
   return { active_checkpoint: active?.checkpoint ?? null, candidates, holdouts: listHoldouts(home) };
@@ -661,7 +719,31 @@ function validateTrainingIdentity(laya, manifest) {
       m.tokenizer_sha256 !== directoryDigest(path.join(laya.modelPath,'tokenizer')) ||
       m.runtime?.laya !== laya.runtimeVersion || !m.runtime?.python || !m.runtime?.torch) fail('TRAINING_IDENTITY_MISMATCH');
   return { output_weights_sha256: m.output_weights_sha256, tokenizer_sha256: m.tokenizer_sha256, model_config_sha256: m.model_config_sha256, runtime: m.runtime,
-    dataset: { data_sha256: manifest.data_sha256, split_hashes: manifest.split_hashes, provenance_sha256: manifest.provenance_sha256, group_sha256: manifest.group_sha256 } };
+    dataset: { dataset_version: manifest.dataset_version, data_sha256: manifest.data_sha256, split_hashes: manifest.split_hashes, provenance_sha256: manifest.provenance_sha256, group_sha256: manifest.group_sha256 } };
+}
+
+function predictionTrainingDataset(candidate, store) {
+  const metadata = readText(path.join(candidate.modelPath,'training_metadata.json'), { optional: true, privateFile: false, maxBytes: 1048576 });
+  if (metadata === null) return null;
+  const m = JSON.parse(metadata);
+  if (m.exporter_version !== 'laya-typed-decisions-json-v3') return null;
+  if (!HASH.test(m.export_dataset_version ?? '')) fail('TRAINING_IDENTITY_MISMATCH');
+  let training;
+  try { training = readDataset(store,m.export_dataset_version); } catch { fail('TRAINING_IDENTITY_MISMATCH'); }
+  return { ...training, identity: validateTrainingIdentity(candidate,training.manifest) };
+}
+function predictionOverlap(training, evaluation) {
+  const identities = s => [`sample:${s.sample_id}`, `request:${s.request_hash}`, `state:${digest(s.state)}`, `group:${s.group_id}`,
+    ...(s.task_ids || []).map(x => `task:${x}`), ...Object.entries(s.lineage || {}).filter(([k]) => k !== 'sibling_ids').map(([k,v]) => `${k}:${v}`),
+    ...(s.lineage?.sibling_ids || []).map(x => `sibling:${x}`)];
+  const by_training_split = Object.fromEntries(['train','dev','calibration','test'].map(split => {
+    const rows = training.samples.filter(s => s.split === split), ids = new Set(rows.map(s => s.sample_id)), related = new Set(rows.flatMap(identities));
+    return [split, { exact_samples: evaluation.filter(s => ids.has(s.sample_id)).length,
+      related_samples: evaluation.filter(s => identities(s).some(key => related.has(key))).length }];
+  }));
+  return { training_dataset_version: training.manifest.dataset_version, by_training_split,
+    independent_of_training: by_training_split.train.related_samples === 0,
+    independent_of_training_dataset: Object.values(by_training_split).every(s => s.related_samples === 0) };
 }
 
 // Explicit local evaluation through the existing worker; no training, adoption or fallback.
@@ -671,10 +753,12 @@ export async function collectCandidatePredictions(home, { candidateHash, dataset
   if (split === 'test' && !HASH.test(sealedSpec ?? '')) fail('SEALED_SPEC_REQUIRED');
   if (signal?.aborted) fail('CANCELLED');
   const candidate = loadCandidate(home,candidateHash);
-  const { manifest, samples } = readDataset(store ?? createTrainingStore({home}),datasetVersion);
-  const trainingIdentity = validateTrainingIdentity(candidate,manifest);
+  const trainingStore = store ?? createTrainingStore({home});
+  const { manifest, samples } = readDataset(trainingStore,datasetVersion);
+  const training = predictionTrainingDataset(candidate,trainingStore);
   const selected = samples.filter(s => s.split === split);
   if (!selected.length) fail('EMPTY_SPLIT');
+  const overlap = training ? predictionOverlap(training,selected) : null;
   const rows = [], client = layaClient ?? clientFactory();
   try {
     for (const sample of selected) {
@@ -698,7 +782,7 @@ export async function collectCandidatePredictions(home, { candidateHash, dataset
     return { manifest: { schema_version: 1, dataset_version: datasetVersion, source_data_sha256: manifest.data_sha256,
       split, split_hash: digest(selected.map(s => s.sample_id).sort()), ...(manifest.split_version === 2 ? splitIdentity(samples) : {}),
       model_id: candidate.model, checkpoint: candidateHash, runtime_version: candidate.runtimeVersion, device: candidate.device,
-      precision: candidate.precision, input_fit: candidate.inputFit, training_identity: trainingIdentity, sealed_spec_sha256: sealedSpec ?? null,
+      precision: candidate.precision, input_fit: candidate.inputFit, training_identity: training?.identity ?? null, training_dataset_version: training?.manifest.dataset_version ?? null, overlap, sealed_spec_sha256: sealedSpec ?? null,
       sample_count: rows.length, predictions_sha256: digest(rows), training_executed: false }, rows };
   } finally {
     if (!layaClient) client.close();

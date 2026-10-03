@@ -6,6 +6,7 @@ import { VERSION, MAX_FRAME_BYTES, ControlError, fail } from './constants.mjs';
 import { resolveHome, setMode, getCredential, saveCredential, removeCredential, loadConfig } from './storage.mjs';
 import { createDecisionEngine } from './engine.mjs';
 import { createControlLayer } from './control-layer.mjs';
+import { loadFeaturePolicy } from './feature-policy.mjs';
 import { startMcp } from './mcp.mjs';
 import { installationPlan, applyInstallation, describeHookStatus, layaAgentPlistPath, layaAgentPlist, REPO_ROOT } from './installer.mjs';
 import { readMetrics, readAbMetrics } from './metrics.mjs';
@@ -81,7 +82,10 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
     output(applyInstallation(plan, { dryRun: values['dry-run'] })); return;
   }
   if (['off', 'shadow', 'on'].includes(command)) {
-    if (command !== 'off' && !engine.status().ready) fail(engine.status().provider === 'laya' ? 'LAYA_NOT_READY' : 'NO_API_KEY');
+    // Explicit local workflows need no provider. Decision entrypoints retain their own readiness checks.
+    if (command !== 'off' && !engine.status().ready && loadFeaturePolicy(home).workflow.mode === 'off') {
+      fail(engine.status().provider === 'laya' ? 'LAYA_NOT_READY' : 'NO_API_KEY');
+    }
     setMode(home, command, env); output(engine.status()); return;
   }
   if (command === 'status') { output(engine.status()); return; }

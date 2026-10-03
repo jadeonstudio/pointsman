@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { RULES, oracle, generateCorpus, corpusReport, writeCorpus } from '../training/general-decisions/corpus.mjs';
 import { freezeEvaluation, evaluatePredictions, comparePredictions } from '../training/general-decisions/evaluate.mjs';
+import { buildCurriculum, writeCurriculum } from '../training/general-decisions/curriculum.mjs';
 import { createTrainingStore } from '../src/training/store.mjs';
 import { readDataset } from '../src/training/dataset.mjs';
 import { digest } from '../src/training/schema.mjs';
@@ -34,6 +35,19 @@ test('independent manually specified facts exercise priority, missing facts and 
   assert.equal(oracle('current-evidence',facts),0);
   assert.equal(oracle('current-evidence',facts,true),1,'same-state strict metadata policy must change gold');
   assert.throws(()=>oracle('current-evidence',{...facts,fresh:'unknown'}),/INVALID_ORACLE/);
+});
+
+test('failure-contract policy states existing first-match priority in every language',()=>{
+  const rule=RULES.find(r=>r.id==='failure-contract');
+  assert.ok(rule.en.startsWith('Apply these rules in order; the first matching rule wins. '));
+  assert.ok(rule.ko.startsWith('아래 규칙을 순서대로 적용하며 처음 성립한 규칙의 결과를 선택합니다. '));
+  const overlap={input_admitted:false,question_matches:true,distribution_valid:true,result_received:false,provider_failed:true,schema_current:true};
+  assert.equal(rule.labels[oracle(rule.id,overlap)],'input_contract','first matching rule keeps existing oracle result');
+  assert.equal(rule.labels[oracle(rule.id,overlap,true)],'input_contract','exception is inactive without null');
+  assert.equal(rule.labels[oracle(rule.id,{...overlap,input_admitted:true})],'provider');
+  const fixture=generateCorpus({count:192}).filter(row=>row.oracle.id===rule.id);
+  assert.deepEqual(new Set(fixture.map(row=>row.state.language)),new Set(['en','ko','mixed']));
+  for(const row of fixture){assert.equal(row.state.policy,row.state.language==='en'?rule.en:rule.ko);assert.equal(row.lineage.semantic_family_id,'failure-contract');assert.equal(row.split,'dev','accepted family assignment stays unchanged');}
 });
 
 test('corpus has honest variant counts and immutable family assignment when scaling',()=>{
@@ -81,6 +95,14 @@ test('frozen model-neutral prediction join reports missing/rejected/malformed an
   const spec=freezeEvaluation(rows), perfect=evaluatePredictions(rows,predictions,{spec});
   assert.equal(perfect.metrics.full_envelope_accuracy,1); assert.equal(perfect.metrics.macro_f1,1);
   assert.equal(perfect.metrics.nll,0); assert.equal(perfect.metrics.brier,0);
+  const rounded=structuredClone(predictions); const first=rounded[0];
+  first.probabilities=Object.fromEntries(Object.entries(first.probabilities).map(([key,value])=>[key,value*.9999]));
+  const normalized=evaluatePredictions(rows,rounded,{spec});
+  assert.equal(normalized.metrics.full_envelope_accuracy,1);
+  assert.equal(normalized.metrics.probability_mass_corrections,1);
+  assert.equal(normalized.metrics.malformed_probabilities,0);
+  const invalidMass=structuredClone(predictions); invalidMass[0].probabilities=Object.fromEntries(Object.entries(first.probabilities).map(([key,value])=>[key,value*.9]));
+  assert.equal(evaluatePredictions(rows,invalidMass,{spec}).metrics.malformed_probabilities,1);
   const missing=predictions.slice(1), partial=evaluatePredictions(rows,missing,{spec});
   assert.equal(partial.metrics.status.missing,1); assert.equal(partial.metrics.served_accuracy,1);
   assert.equal(partial.metrics.full_envelope_accuracy,(selected.length-1)/selected.length);
@@ -91,4 +113,29 @@ test('frozen model-neutral prediction join reports missing/rejected/malformed an
   assert.throws(()=>evaluatePredictions(rows,predictions,{spec:{...spec,expected_samples:1}}),/EVALUATION_SPEC_MISMATCH/);
   const comparison=comparePredictions(rows,predictions,predictions,{bootstrap:100});
   assert.deepEqual(comparison.bootstrap_95,[0,0]); assert.equal(comparison.status,'INCONCLUSIVE');
+});
+
+test('TRAIN curriculum selects honest cases and isolates rule changes without changing held bytes',t=>{
+  const source=generateCorpus(),before=JSON.stringify(source),built=buildCurriculum(source);
+  assert.equal(JSON.stringify(source),before,'source corpus must remain untouched');
+  assert.equal(built.report.train_rows,568);assert.equal(built.report.train_unique_cases,142);
+  assert.equal(built.report.informative_cases,130);assert.equal(built.report.additional_rare_anchor_cases,12);
+  assert.equal(built.report.pure_rule_pairs.choice.gold_changes,168);
+  assert.equal(built.report.pure_rule_pairs.noul.gold_changes,60);
+  assert.equal(built.report.pure_rule_pairs.score.gold_changes,32);
+  assert.equal(built.report.corpus.group_leakage,0);assert.equal(built.report.corpus.unreproducible_labels,0);
+  for(const row of source.filter(r=>r.split!=='train'))assert.deepEqual(built.rows.find(r=>r.sample_id===row.sample_id),row);
+  const home=fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(),'pointsman-curriculum-test-')));t.after(()=>fs.rmSync(home,{recursive:true,force:true}));
+  const store=createTrainingStore({home}),original=writeCorpus(store,{count:2000});
+  const sourceManifest=fs.readFileSync(original.manifest,'utf8'),sourceExports=original.export.files.map(p=>[p,fs.readFileSync(p,'utf8')]);
+  const curriculum=writeCurriculum(store,original.dataset_version);
+  assert.equal(curriculum.sample_count,1193);assert.deepEqual(curriculum.report.split_distribution,{train:568,dev:125,calibration:125,test:375});
+  assert.equal(fs.readFileSync(original.manifest,'utf8'),sourceManifest);
+  for(const [p,text] of sourceExports)assert.equal(fs.readFileSync(p,'utf8'),text,'frozen source export must not be rewritten');
+  const next=readDataset(store,curriculum.dataset_version),prior=readDataset(store,original.dataset_version);
+  assert.notEqual(next.manifest.data_sha256,prior.manifest.data_sha256);
+  for(const split of ['dev','calibration','test']){
+    assert.equal(next.manifest.split_hashes[split],prior.manifest.split_hashes[split]);
+    assert.equal(curriculum.report.held[split].identical_row_bytes,true);
+  }
 });

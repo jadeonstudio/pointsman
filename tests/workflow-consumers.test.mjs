@@ -44,11 +44,17 @@ test('CLI and JavaScript consume the same root-bound recipe without a provider',
   const home = tempHome(t), root = source(t);
   const disabled = cli(home, ['run', '--root', root], request);
   assert.equal(disabled.reason, 'OFF'); assert.equal(disabled.stats.actions, 0);
-  setMode(home, 'on', {}); setFeatureMode(home, 'workflow', 'on');
+  cli(home, ['workflow', 'on']);
+  const enabled = cli(home, ['on']);
+  assert.equal(enabled.mode, 'on'); assert.equal(enabled.ready, false);
   const js = await createWorkflowRunner({ root, engine: { status: () => ({ mode: 'on' }) },
     getPolicy: () => workflowPolicy(home, 'on') }).run(request);
   const viaCli = cli(home, ['run', '--root', root], request);
   assert.equal(viaCli.status, 'done'); assert.equal(viaCli.stats.inferenceCalls, 0);
+  const decision = cli(home, ['decide'], { purpose: 'select', risk: 'routine', state: 'Choose a supplied item.', questions: {
+    pick: { type: 'choice', instructions: 'Choose.', criteria: { a: 'first', b: 'second' } },
+  } });
+  assert.equal(decision.apply, false); assert.equal(decision.reason, 'NO_API_KEY');
   assert.deepEqual(comparable(viaCli), comparable(js));
   const outside = cli(home, ['run', '--root', root], { ...request, inputs: { symbols: ['hello'], requiredPaths: ['../external.mjs'] } });
   assert.notEqual(outside.status, 'done');

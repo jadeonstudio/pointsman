@@ -91,3 +91,31 @@ test('prediction collector defaults to dev and requires sealed identity for fina
   fs.writeFileSync(path.join(registered.modelPath,'training_metadata.json'),JSON.stringify({exporter_version:'laya-typed-decisions-json-v3',export_dataset_version:digest('wrong dataset')}));
   await assert.rejects(collectCandidatePredictions(f.home,{candidateHash:registered.checkpoint,datasetVersion:built.dataset_version,store:f.store,clientFactory:()=>{throw Error('must validate identity before constructing client');}}),/TRAINING_IDENTITY_MISMATCH/);
 });
+
+test('trained candidate binds its own training identity while separately evaluating OOD data and overlap',async t=>{
+  const {registerCheckpoint,collectCandidatePredictions}=await import('../src/training/laya-lifecycle.mjs');
+  const f=fixture(t), trained=writeIndependentDataset(f.store,corpus()), original=readDataset(f.store,trained.dataset_version);
+  const ood=writeIndependentDataset(f.store,corpus().map(s=>row('ood-'+s.lineage.semantic_family_id,s.state.variant)));
+  const dir=path.join(f.home,'trained');fs.mkdirSync(dir);fs.mkdirSync(path.join(dir,'tokenizer'));
+  fs.writeFileSync(path.join(dir,'model.safetensors'),'fixture');fs.writeFileSync(path.join(dir,'rl_agent_config.json'),'{}');fs.writeFileSync(path.join(dir,'tokenizer/tokenizer.json'),'{}');
+  const m={exporter_version:'laya-typed-decisions-json-v3',export_dataset_version:trained.dataset_version,
+    export_source_data_sha256:original.manifest.data_sha256,split_hashes:original.manifest.split_hashes,provenance_sha256:original.manifest.provenance_sha256,group_sha256:original.manifest.group_sha256,
+    input_fit:'lossless',calibration_split:'calibration',selection_split:'dev',hyperparameters:{select_best_epoch:true},
+    output_weights_sha256:digest('fixture'),model_config_sha256:digest('{}'),tokenizer_sha256:digest(JSON.stringify([['tokenizer.json',digest('{}')]])),runtime:{python:'fixture',torch:'fixture',laya:'0.3.4'}};
+  fs.writeFileSync(path.join(dir,'training_metadata.json'),JSON.stringify(m));
+  const registered=registerCheckpoint(f.home,{checkpointDir:dir,python:'/usr/bin/python3',device:'cpu',model:'laya/trained',fingerprintImpl:()=>digest('trained-fixture')});
+  let calls=0;const client={async infer(payload,{laya}){calls++;const qid=Object.keys(payload.questions)[0];return{identity:{model:laya.model,checkpoint:laya.checkpoint,runtime_version:laya.runtimeVersion,device:laya.device,precision:'torch.float32'},answers:{[qid]:{type:'choice',choice:'yes',confidence:.99,probabilities:{yes:.99,no:.01}}},usage:{input_tokens:1,output_tokens:0}};}};
+  const packet=await collectCandidatePredictions(f.home,{candidateHash:registered.checkpoint,datasetVersion:ood.dataset_version,store:f.store,layaClient:client});
+  assert.equal(packet.manifest.dataset_version,ood.dataset_version);assert.equal(packet.manifest.training_dataset_version,trained.dataset_version);
+  assert.equal(packet.manifest.source_data_sha256,readDataset(f.store,ood.dataset_version).manifest.data_sha256);
+  assert.equal(packet.manifest.training_identity.dataset.data_sha256,original.manifest.data_sha256);
+  assert.equal(packet.manifest.overlap.independent_of_training_dataset,true);
+  assert.ok(Object.values(packet.manifest.overlap.by_training_split).every(x=>x.related_samples===0));
+  const seen=await collectCandidatePredictions(f.home,{candidateHash:registered.checkpoint,datasetVersion:trained.dataset_version,store:f.store,layaClient:client});
+  assert.equal(seen.manifest.overlap.independent_of_training,true);assert.equal(seen.manifest.overlap.independent_of_training_dataset,false);
+  assert.equal(seen.manifest.overlap.by_training_split.dev.exact_samples,seen.rows.length);
+  const priorCalls=calls;
+  fs.writeFileSync(path.join(registered.modelPath,'training_metadata.json'),JSON.stringify({...m,export_source_data_sha256:digest('wrong original source')}));
+  await assert.rejects(collectCandidatePredictions(f.home,{candidateHash:registered.checkpoint,datasetVersion:ood.dataset_version,store:f.store,layaClient:client}),/TRAINING_IDENTITY_MISMATCH/);
+  assert.equal(calls,priorCalls,'wrong original training identity is rejected before inference');
+});

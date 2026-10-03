@@ -93,12 +93,17 @@ function factsOf(task, result) {
   if (result.facts) return result.facts;
   const d = result.details;
   if (!d) throw new Error(`NO_TASK_EVIDENCE:${result.reason}`);
+  const record = value => {
+    if (typeof value !== 'string') return value;
+    if (d.recordTableVersion !== 1 || !Object.hasOwn(d.records ?? {}, value)) throw new Error(`MISSING_RECORD_ID:${value}`);
+    return d.records[value];
+  };
   if (task.id === 'repository') {
     const paths = refs => unique(refs.map(ref => result.evidence.find(e => e.ref === ref)?.path));
     return { status: result.status, definitions: paths(d.symbols.sum.definitions), callers: paths(d.symbols.sum.directCallers), tests: paths(d.symbols.sum.tests) };
   }
-  if (task.id === 'logs') return { status: result.status, groups: d.groups.map(g => [g.first.message, g.count, g.first.ref.lineStart, g.last.ref.lineStart]), contraryLines: d.contrary.map(x => x.ref.lineStart), parseFailures: d.parseFailures.length, clockUncertainty: d.clockUncertainty.length };
-  return { status: result.status, failures: unique(d.failures.flatMap(g => g.tests)), passed: unique(d.passed.map(t => t.name)), rerunSet: [...d.rerunSet].sort(), cause: d.cause, sources: unique(d.sourceEvidence.map(e => e.path)) };
+  if (task.id === 'logs') return { status: result.status, groups: d.groups.map(g => [record(g.first).message, g.count, record(g.first).ref.lineStart, record(g.last).ref.lineStart]), contraryLines: d.contrary.map(x => record(x).ref.lineStart), parseFailures: d.parseFailures.length, clockUncertainty: d.clockUncertainty.length };
+  return { status: result.status, failures: unique(d.failures.flatMap(g => g.tests)), passed: unique(d.passed.map(t => record(t).name)), rerunSet: [...d.rerunSet].sort(), cause: d.cause, sources: unique(d.sourceEvidence.map(e => record(e).path)) };
 }
 function check(task, result, manifest) {
   const facts = factsOf(task, result);

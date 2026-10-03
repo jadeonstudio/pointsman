@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { createDecisionEngine } from '../src/engine.mjs';
-import { normalizeInference, createLayaClient, validateProviderConfig } from '../src/inference.mjs';
+import { normalizeInference, createLayaClient, validateProviderConfig, decisionScope } from '../src/inference.mjs';
 import { setMode } from '../src/storage.mjs';
 import { DEFAULTS } from '../src/constants.mjs';
 import { startMcp, TOOLS } from '../src/mcp.mjs';
@@ -40,10 +40,15 @@ test('Laya readiness and ON do not require a TypeSafe credential; OFF does no in
   let calls=0; const e=createDecisionEngine({home:f.home,env:{},provider:async()=>{calls++;throw new Error('unexpected');}});t.after(()=>e.close());
   assert.equal((await e.decide(request())).reason,'OFF');assert.equal(calls,0);
 });
-test('Laya normalization preserves provenance and requires checkpoint-specific qualification', t => {
+test('Laya normalization preserves provenance and requires checkpoint and question-specific qualification', t => {
   const p=layaConfig('/tmp');const raw={...response(),identity:identity(p.laya)};
   const n=normalizeInference('laya',raw,request(),DEFAULTS,p);assert.equal(n.eligible,false);assert.equal(n.provenance.provider,'laya');
   p.laya.qualification={checkpoint:p.laya.checkpoint,calibrationVersion:'fixture-v1',purposes:['route'],minConfidence:.9,minChoiceProbability:.9,noulCertainty:.95};
+  assert.equal(normalizeInference('laya',raw,request(),DEFAULTS,p).eligible,false);
+  p.laya.qualification.decisionIdentity={version:1,checkpoint:p.laya.checkpoint,runtimeVersion:p.laya.runtimeVersion,
+    precision:p.laya.precision??'fp32',inputFit:p.laya.inputFit??'lossless',calibrationVersion:'fixture-v1',
+    scopes:Object.keys(request().questions).map(id=>{const actual=decisionScope(request(),id);return {...actual,
+      familyId:'fixture-decision',familyRevision:'fixture-v1',stateBuilderRevision:`payload-state-schema-v1:${actual.stateSchemaHash}`,threshold:.9};})};
   assert.equal(normalizeInference('laya',raw,request(),DEFAULTS,p).eligible,true);
   assert.throws(()=>normalizeInference('laya',{...raw,identity:{...raw.identity,checkpoint:'b'.repeat(64)}},request(),DEFAULTS,p),/LAYA_IDENTITY_MISMATCH/);
 });

@@ -550,6 +550,13 @@ test('qualify route-gate params validate: fractions in (0,1], routeMaxErrorUpper
   assert.deepEqual(ok.params.routeMinApplied, 1);
 });
 
+// Recovery cases use already-issued legacy evidence. New purpose-only artifacts
+// cannot promote; decision-family.test exercises the new operational guard.
+function issuedLegacyQualification(home, candidateHash, qualification) {
+  const legacy = structuredClone(qualification);
+  delete legacy.decisionIdentity; delete legacy.familyQualification; delete legacy.operationalEligible;
+  atomicWrite(path.join(home, 'laya', 'qualifications', `${candidateHash}.json`), JSON.stringify(legacy));
+}
 test('promote copies routeGate into the promoted providers.json qualification when present', async t => {
   const f = trainingFixture(t);
   const version = buildDecisionRouteDataset(f);
@@ -559,6 +566,7 @@ test('promote copies routeGate into the promoted providers.json qualification wh
   const qual = await qualifyCandidate(f.home, { candidateHash: reg.checkpoint, datasetVersion: version, holdoutName: holdout.name, layaClient: fakeDecisionLayaClient(),
     targetAccuracy: .75, minCoverage: .3, minCalibration: 5, minTest: 5, minLowerBound: .5 });
   assert.ok(qual.routeGate, JSON.stringify(qual));
+  issuedLegacyQualification(f.home, reg.checkpoint, qual);
   await compareCandidate(f.home, { candidateHash: reg.checkpoint, holdoutName: holdout.name, layaClient: fakeDecisionLayaClient(), noActiveBaseline: true });
   const promoted = promoteCandidate(f.home, { candidateHash: reg.checkpoint, holdoutName: holdout.name });
   assert.equal(promoted.promoted, true, JSON.stringify(promoted));
@@ -573,6 +581,7 @@ async function qualifiedCandidate(f, version, holdoutName, model = 'laya/promote
   const qual = await qualifyCandidate(f.home, { candidateHash: reg.checkpoint, datasetVersion: version, holdoutName, layaClient: fakeLayaClient(),
     targetAccuracy: .75, minCoverage: .3, minCalibration: 5, minTest: 5, minLowerBound: .5 });
   assert.equal(qual.qualified, true, JSON.stringify(qual));
+  issuedLegacyQualification(f.home, reg.checkpoint, qual);
   return { reg, qual };
 }
 
@@ -587,6 +596,7 @@ test('qualify records the candidate precision, and promote carries it into provi
     targetAccuracy: .75, minCoverage: .3, minCalibration: 5, minTest: 5, minLowerBound: .5 });
   assert.equal(qual.qualified, true, JSON.stringify(qual));
   assert.equal(qual.precision, 'fp16');
+  issuedLegacyQualification(f.home, reg.checkpoint, qual);
   await compareCandidate(f.home, { candidateHash: reg.checkpoint, holdoutName: holdout.name, layaClient: fakeLayaClient(), noActiveBaseline: true });
   const promoted = promoteCandidate(f.home, { candidateHash: reg.checkpoint, holdoutName: holdout.name });
   assert.equal(promoted.promoted, true, JSON.stringify(promoted));

@@ -36,5 +36,258 @@
   "visibleHistoryContinuation": "UNVERIFIED",
   "approvalRequests": "none observed",
   "initialAttempt": "workspace sandbox blocked normal Codex sqlite state initialization before handshake",
-  "successfulAttempt": "same identity-only probe after sandbox escalation; no installation/config edits"
+  "successfulAttempt": "same identity-only probe after sandbox escalation; no installation/config edits",
+  "directMcpWorkflowProbe": {
+    "observedAt": "2026-10-03T04:58:03.060Z",
+    "host": "codex",
+    "version": "0.154.0",
+    "evidence": "installed_direct_mcp_workflow_probe",
+    "frozenAt": "2026-10-03T04:55:54.034Z",
+    "runtimeSourceHashes": {
+      "src/workflows.mjs": "c77f37109b649cb00c24a3014f8c58879207abbb1c7a020125c28fe483ffe946",
+      "src/workflow-repo.mjs": "e31a6de57948443b0028efcd843eaa95364e45e1aea1ce0fb64529149afd42ed",
+      "src/workflow-diagnostics.mjs": "3235347faf1905f1644dde3f2bd219b0172fe22b11ffc292c8bfea37c99508ab",
+      "src/workflow-hosts.mjs": "baab010a6fa1d53a57fa47c4628b7290e500cc4068b3b3e71bf14e8bcff9ce2d",
+      "src/mcp.mjs": "8ca940f84b00fa61206ada9b5fce865712bd93929feb28fe97a7e817edf16961",
+      "src/engine.mjs": "b10d74e23dfe0997f70e9033a91bac8ffc1da472e1471fa6595af035a7e372b9",
+      "src/contracts.mjs": "991fc309892cfafee6aa043cf7d910c2ba0739f9721f3543815e636add6d03b9",
+      "src/constants.mjs": "a6d8df69c33cdd5cbf82f7a0d8fd113fc4a9d22e298d9865df26c6e3f138eb1b",
+      "src/feature-policy.mjs": "45d32abe8605ebe1d0ec8c5055e852b148be72c501931ca7e802a585fee0b95a",
+      "src/storage.mjs": "55e06916c37d053c4ef7bdae273677d07a014701c004154c710ff06fa747fea4",
+      "bin/pointsman.mjs": "f031d1e0459817fef28b42267252ede96e7f31b528739bdedfd4a004f97fd7bf",
+      "package.json": "871c30c903d30626e4cacb2064672fdc3c4bf98f99294b0f35472fd897e53c76"
+    },
+    "ephemeralThread": true,
+    "sandbox": {
+      "type": "readOnly",
+      "networkAccess": false
+    },
+    "approvalsReviewer": "user",
+    "registration": {
+      "server": "pointsman_native_probe",
+      "runtimeStatus": "connected",
+      "run": "run",
+      "serverInfo": {
+        "name": "pointsman",
+        "title": null,
+        "version": "0.3.0",
+        "description": null,
+        "icons": null,
+        "websiteUrl": null
+      }
+    },
+    "methodsSent": [
+      "initialize",
+      "initialized",
+      "thread/start",
+      "mcpServerStatus/list",
+      "mcpServer/tool/call"
+    ],
+    "notifications": [
+      "remoteControl/status/changed",
+      "thread/started",
+      "mcpServer/startupStatus/updated",
+      "mcpServer/startupStatus/updated",
+      "mcpServer/startupStatus/updated",
+      "mcpServer/startupStatus/updated",
+      "mcpServer/startupStatus/updated",
+      "mcpServer/startupStatus/updated",
+      "mcpServer/startupStatus/updated",
+      "mcpServer/startupStatus/updated"
+    ],
+    "turnStartRequests": 0,
+    "providerRequests": "UNKNOWN",
+    "workflowStats": {
+      "actions": 4,
+      "decisions": 0,
+      "networkCalls": 0,
+      "inferenceCalls": 0,
+      "bytesRead": 191,
+      "outputBytes": 2173,
+      "cacheHits": 6,
+      "elapsedMs": 254.369
+    },
+    "independentCompletion": "PASS",
+    "facts": {
+      "definitions": [
+        "src/math.mjs"
+      ],
+      "callers": [
+        "src/use.mjs",
+        "tests/math.test.mjs"
+      ],
+      "tests": [
+        "tests/math.test.mjs"
+      ]
+    },
+    "packet": {
+      "version": 1,
+      "recipeRevision": "workflow-v1",
+      "id": "69ed5d8e-cdb0-4716-86ce-354855c07d9b",
+      "workflow": "repo-evidence",
+      "mode": "on",
+      "status": "done",
+      "reason": "EVIDENCE_COLLECTED",
+      "acceptance": {
+        "definition": "met",
+        "direct_callers": "met",
+        "tests": "met"
+      },
+      "evidence": [
+        {
+          "ref": "e0",
+          "path": "src/math.mjs",
+          "hash": "d5889be441f078a42bbc3cc5f1e7e556fae06b5011c7c52969bfb32b5b72ef79",
+          "text": "export function sum(a, b) { return a + b; }\n",
+          "role": "definition",
+          "startLine": 1,
+          "endLine": 2,
+          "roles": [
+            "definition"
+          ],
+          "symbols": [
+            "sum"
+          ]
+        },
+        {
+          "ref": "e1",
+          "path": "src/use.mjs",
+          "hash": "6cef05b21ebdc3b7e3bd42e680c1b20e042a539f70234b433c280cc4f8aa5601",
+          "text": "import { sum } from './math.mjs';\nexport const total = sum(1, 2);\n",
+          "role": "uncertain",
+          "startLine": 1,
+          "endLine": 3,
+          "roles": [
+            "uncertain",
+            "direct_caller"
+          ],
+          "symbols": [
+            "sum"
+          ]
+        },
+        {
+          "ref": "e2",
+          "path": "tests/math.test.mjs",
+          "hash": "b7470f431d43d45ed627adfc13bad8b2e0c71523f990fd05278619524cd04eaa",
+          "text": "import { sum } from '../src/math.mjs';\nif(sum(1,2)!==3) throw Error('contract');\n",
+          "role": "test",
+          "startLine": 1,
+          "endLine": 3,
+          "roles": [
+            "test",
+            "direct_caller"
+          ],
+          "symbols": [
+            "sum"
+          ]
+        }
+      ],
+      "coverage": {
+        "requested": "selective",
+        "complete": true,
+        "filesConsidered": 3,
+        "filesRead": 3,
+        "scope": [
+          "."
+        ],
+        "omissions": [],
+        "limits": [
+          "Lexical direct callers only; dynamic registries, generated and cross-language edges are UNKNOWN.",
+          "Comments, string references and aliases require parent interpretation."
+        ],
+        "excluded": []
+      },
+      "needsParent": null,
+      "authorizesExecution": false,
+      "stats": {
+        "actions": 4,
+        "decisions": 0,
+        "networkCalls": 0,
+        "inferenceCalls": 0,
+        "bytesRead": 191,
+        "outputBytes": 2173,
+        "cacheHits": 6,
+        "elapsedMs": 254.369
+      },
+      "details": {
+        "symbols": {
+          "sum": {
+            "definitions": [
+              "e0"
+            ],
+            "directCallers": [
+              "e1",
+              "e2"
+            ],
+            "tests": [
+              "e2",
+              "e2"
+            ],
+            "contracts": [],
+            "references": [
+              "e1"
+            ]
+          }
+        },
+        "selectedBranch": null,
+        "semanticSelection": "NOT_IMPLEMENTED",
+        "dynamicEdges": "UNKNOWN",
+        "requiredPaths": [],
+        "uncertainPaths": [],
+        "counterevidencePaths": []
+      },
+      "snapshot": {
+        "revision": null,
+        "files": {
+          "src/math.mjs": "d5889be441f078a42bbc3cc5f1e7e556fae06b5011c7c52969bfb32b5b72ef79",
+          "src/use.mjs": "6cef05b21ebdc3b7e3bd42e680c1b20e042a539f70234b433c280cc4f8aa5601",
+          "tests/math.test.mjs": "b7470f431d43d45ed627adfc13bad8b2e0c71523f990fd05278619524cd04eaa"
+        }
+      }
+    },
+    "cancellation": {
+      "beforeDispatch": "PASS",
+      "nativeInFlight": "UNKNOWN: no direct MCP cancellation method in installed schema"
+    },
+    "visibleHistoryContinuation": "UNKNOWN",
+    "runtimeHashesMatchCurrentReadback": true,
+    "attemptHistory": [
+      {
+        "attempt": 1,
+        "status": "FAIL",
+        "boundary": "probe oracle consumer used legacy singular role and missed merged roles[]",
+        "actualObservedFacts": {
+          "definitions": [
+            "src/math.mjs"
+          ],
+          "callers": [],
+          "tests": [
+            "tests/math.test.mjs"
+          ]
+        },
+        "workflowPacket": "returned completed but not persisted before probe oracle failed",
+        "providerRequests": "UNKNOWN"
+      },
+      {
+        "attempt": 2,
+        "status": "PASS",
+        "fix": "probe roles[] consumer only; process-local plugins/apps/hooks disabled"
+      }
+    ],
+    "processClosure": {
+      "remainingProbePathProcesses": 0,
+      "check": "exact own temporary path pgrep readback after launcher exited",
+      "nativeProbeExitCode": 0
+    },
+    "warnings": [
+      "Installed app-server still attempted inherited MCP_DOCKER startup, which failed, despite process-local plugin/apps/hooks disable. Only pointsman_native_probe run was invoked."
+    ],
+    "configIsolation": "Private temporary POINTSMAN_HOME/policies and fixture; no global settings/trust/modes edited. App-server inherited MCP startup was observed.",
+    "installedSchemaHashes": {
+      "ThreadStartParams": "25f490368ec6df52a2a3b82a5469d2413307eb93439121b309f415b5648eee7a",
+      "McpServerToolCallParams": "7039a7583a1cbf38e9e0f5fe6398ff3711acd4d654b81b0be562514087fce6ba",
+      "McpServerToolCallResponse": "04a59b2064922c37b0c49bdb2470b8fff08d943e56dba4f7280a6b34bfa52c68",
+      "ListMcpServerStatusParams": "33b1933595d844c61f76bdcfbc874c8456b65079877fed6e86e2710ea3d49f1b"
+    }
+  }
 }

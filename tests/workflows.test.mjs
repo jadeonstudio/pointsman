@@ -6,6 +6,7 @@ import os from 'node:os';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { createWorkflowRunner, workflowSchema } from '../src/workflows.mjs';
+import { containsSensitiveData } from '../src/contracts.mjs';
 
 const sha = text => createHash('sha256').update(text).digest('hex');
 const request = (extra = {}) => ({ workflow: 'repo-evidence', inputs: { symbols: ['work'] }, acceptance: ['definition', 'direct_callers', 'tests'], ...extra });
@@ -36,10 +37,10 @@ test('collects source-linked definitions, callers, tests and actual hashes in on
   const f = await fixture(t), result = await f.runner().run(request());
   assert.equal(result.status, 'done'); assert.equal(result.needsParent, null);
   assert.deepEqual(result.acceptance, { definition: 'met', direct_callers: 'met', tests: 'met' });
-  for (const role of ['definition', 'direct_caller', 'test']) assert(result.evidence.some(e => e.role === role));
+  for (const role of ['definition', 'direct_caller', 'test']) assert(result.evidence.some(e => e.roles.includes(role)));
   const source = result.evidence.find(e => e.role === 'definition');
   assert.equal(source.hash, sha(await fs.readFile(path.join(f.root, source.path))));
-  assert(source.ref.includes(source.hash)); assert.equal(result.details.dynamicEdges, 'UNKNOWN');
+  assert.match(source.ref, /^e\d+$/); assert.equal(result.details.dynamicEdges, 'UNKNOWN');
   assert.equal(result.snapshot.files['main.mjs'], source.hash); assert.equal(f.calls(), 0);
   assert.equal(result.stats.outputBytes, Buffer.byteLength(JSON.stringify(result)));
   assert.deepEqual(workflowSchema.properties.workflow.enum, ['repo-evidence', 'test-diagnose', 'log-triage']);
@@ -55,10 +56,20 @@ test('required, uncertain, contrary sources survive selective and exhaustive cov
   const f = await fixture(t, { 'contrary.md': 'work cannot handle null.', 'uncertain.md': 'work behavior is unclear.' });
   for (const coverage of ['selective', 'exhaustive']) {
     const result = await f.runner().run(request({ coverage, inputs: { symbols: ['work'], semantic: true, requiredPaths: ['main.mjs'], uncertainPaths: ['uncertain.md'], counterevidencePaths: ['contrary.md'] } }));
-    for (const role of ['required', 'uncertain', 'counterevidence']) assert(result.evidence.some(e => e.role === role), role);
+    for (const role of ['required', 'uncertain', 'counterevidence']) assert(result.evidence.some(e => e.roles.includes(role)), role);
     assert.equal(result.coverage.complete, true);
   }
   assert.equal(f.calls(), 0);
+});
+
+test('overlapping source spans share one full excerpt while retaining every role and symbol reference', async t => {
+  const f = await fixture(t);
+  const result = JSON.parse(JSON.stringify(await f.runner().run(request({ inputs: { symbols: ['work'], requiredPaths: ['main.mjs'], uncertainPaths: ['main.mjs'], counterevidencePaths: ['main.mjs'] } }))));
+  const spans = result.evidence.filter(e => e.path === 'main.mjs');
+  assert.equal(spans.length, 1); assert.equal(spans[0].text, await fs.readFile(path.join(f.root, 'main.mjs'), 'utf8'));
+  for (const role of ['definition', 'required', 'uncertain', 'counterevidence']) assert(spans[0].roles.includes(role));
+  assert.deepEqual(result.details.symbols.work.definitions, [spans[0].ref]);
+  for (const ids of Object.values(result.details.symbols.work)) for (const id of ids) assert(result.evidence.some(e => e.ref === id));
 });
 
 test('path traversal, symlink roots/ancestors, credentials and env files are never ingested', async t => {
@@ -156,7 +167,7 @@ test('trusted registered test capability runs exactly once with bounded signal a
   const result = await f.runner({ capabilities: { registeredTests } }).run(req);
   assert.equal(runs, 1); assert.equal(result.status, 'done'); assert.equal(result.needsParent, null);
   const reporter = result.evidence.find(e => e.role === 'diagnostic_input');
-  assert.equal(reporter.hash, sha('ok 1 - passing\n1..1\n')); assert.match(reporter.ref, /^registered-test:safe@/);
+  assert.equal(reporter.hash, sha('ok 1 - passing\n1..1\n')); assert.match(reporter.sourceRef, /^registered-test:safe@/);
   const absent = await f.runner({ capabilities: { registeredTests } }).run({ ...req, inputs: { registeredTest: 'unregistered' } });
   assert.equal(absent.reason, 'UNREGISTERED_TEST'); assert.equal(runs, 1);
   f.setPolicy({ mode: 'shadow' }); await f.runner({ capabilities: { registeredTests } }).run(req); assert.equal(runs, 1);
@@ -201,4 +212,64 @@ test('non-Git scoped inventory skips unrelated trees and nested ancestors within
   assert(Object.keys(result.snapshot.files).every(file => !file.startsWith('unrelated-')));
   const nested = await f.runner().run(request({ inputs: { symbols: ['work'], paths: ['nested/sub'] } }));
   assert.equal(nested.status, 'needs_parent'); assert.equal(nested.stats.bytesRead, 0); assert(!JSON.stringify(nested).includes('return 77'));
+});
+
+test('streamed NDJSON spans survive UTF-8 chunk boundaries with exact hash, counts and snapshot binding', async t => {
+  const f = await fixture(t);
+  const header = 'x'.repeat(8191) + '한글';
+  const common = '{"timestamp":"2026-10-03T00:00:00Z","level":"error","message":"common failure"}';
+  const text = header + '\n' + (common + '\n').repeat(1000) + '{"message":"rare failure"}\n{"message":"success"}';
+  await fs.writeFile(path.join(f.root, 'large.ndjson'), text);
+  const req = { workflow: 'log-triage', inputs: { paths: ['large.ndjson'] }, snapshot: { revision: null, files: { 'large.ndjson': sha(text) } }, budget: { maxActions: 2 } };
+  const result = await f.runner().run(req);
+  assert.equal(result.status, 'done'); assert.equal(result.stats.actions, 2); assert.equal(result.stats.bytesRead, Buffer.byteLength(text) * 2);
+  assert.equal(result.snapshot.files['large.ndjson'], sha(text)); assert.equal(result.details.parsedCount, 1003);
+  assert.equal(result.details.groups[0].signature, sha('||' + header));
+  const commonGroup = result.details.groups.find(g => g.count === 1000);
+  assert.equal(result.details.records[commonGroup.first].ref.lineStart, 2); assert.equal(result.details.records[commonGroup.last].ref.lineStart, 1001);
+  assert.equal(result.details.records[commonGroup.first].ref.byteStart, Buffer.byteLength(header) + 1);
+  assert.equal(result.details.timeline.length, 3); assert.equal(result.details.contrary.length, 1);
+  assert.ok(result.evidence.every(e => e.hash === sha(text))); assert.ok(result.stats.outputBytes < 12000);
+  assert.equal(result.stats.inferenceCalls, 0); assert.equal(result.stats.networkCalls, 0);
+});
+
+test('streamed sources refuse cross-chunk secrets, invalid UTF-8 and oversized files without partial evidence', async t => {
+  const f = await fixture(t);
+  await fs.writeFile(path.join(f.root, 'sensitive.log'), 'first harmless error\n' + 'x'.repeat(8165) + ' password=abcdefghi\nrare error');
+  await fs.writeFile(path.join(f.root, 'invalid.log'), Buffer.concat([Buffer.from('first harmless error\n'), Buffer.alloc(8192, 120), Buffer.from([0xff])]));
+  await fs.writeFile(path.join(f.root, 'split-url.log'), 'first harmless error\nhttps://user:\nprivate-value@example.invalid');
+  await fs.writeFile(path.join(f.root, 'oversized.log'), 'x'.repeat(192001));
+  for (const [name, reason] of [['sensitive.log', 'SENSITIVE_SOURCE'], ['split-url.log', 'SENSITIVE_SOURCE'], ['invalid.log', 'NON_TEXT'], ['oversized.log', 'FILE_TOO_LARGE']]) {
+    const result = await f.runner().run({ workflow: 'log-triage', inputs: { paths: [name] } });
+    assert.equal(result.status, 'needs_parent'); assert.equal(result.coverage.complete, false);
+    assert(result.coverage.omissions.some(o => o.reason === reason)); assert.equal(result.evidence.length, 0);
+    assert(!JSON.stringify(result).includes('abcdefghi')); assert(!JSON.stringify(result).includes('first harmless error'));
+  }
+});
+
+test('cancellation and global OFF during incremental reads invalidate every collected event', async t => {
+  const f = await fixture(t), text = '{"timestamp":"2026-10-03T00:00:00Z","message":"failure"}\n'.repeat(1200);
+  await fs.writeFile(path.join(f.root, 'interrupt.log'), text);
+  for (const change of ['cancel', 'off']) {
+    const controller = new AbortController(); let policyReads = 0;
+    f.setState({ mode: 'on' });
+    const runner = f.runner({ getPolicy: () => {
+      if (++policyReads === 9) { if (change === 'cancel') controller.abort(); else f.setState({ mode: 'off' }); }
+      return f.policy();
+    } });
+    const result = await runner.run({ workflow: 'log-triage', inputs: { paths: ['interrupt.log'] } }, { signal: controller.signal });
+    assert.equal(result.reason, change === 'cancel' ? 'CANCELLED' : 'ENGINE_CHANGED'); assert.equal(result.evidence.length, 0);
+    assert.ok(result.stats.bytesRead > 0); assert.equal(result.coverage.complete, false);
+  }
+});
+
+test('streamed credential assignments across lines preserve the existing whole-string detector', async t => {
+  const f = await fixture(t);
+  for (const [i, text] of ['password=\nsecret12345', 'password=x\nabc', 'password = \nsecret12345', 'api_key=\nkeyvalue123', 'password=\nabc'].entries()) {
+    const fullStringSensitive = containsSensitiveData({ text });
+    const name = `assignment-${i}.log`; await fs.writeFile(path.join(f.root, name), text);
+    const result = await f.runner().run({ workflow: 'log-triage', inputs: { paths: [name] } });
+    assert.equal(result.coverage.omissions.some(o => o.reason === 'SENSITIVE_SOURCE'), fullStringSensitive, JSON.stringify(text));
+    if (fullStringSensitive) { assert.equal(result.evidence.length, 0); assert.equal(result.coverage.complete, false); assert.equal(result.status, 'needs_parent'); }
+  }
 });

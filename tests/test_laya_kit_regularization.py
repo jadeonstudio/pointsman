@@ -432,7 +432,7 @@ class EncoderDropoutApplied(unittest.TestCase):
 
     def test_saved_encoder_config_keeps_original_dropout_values(self):
         calib_items = make_items()
-        tok = types.SimpleNamespace(pad_token_id=0, save_pretrained=lambda path: os.makedirs(path, exist_ok=True))
+        tok = types.SimpleNamespace(pad_token_id=0, save_pretrained=lambda path: (os.makedirs(path, exist_ok=True), Path(path, "tokenizer_config.json").write_text('{"tokenizer_class":"PreTrainedTokenizerFast"}')))
         saved = {}
         for label, dropout in (('off', None), ('on', 0.2)):
             model, restore = self.build(dropout)

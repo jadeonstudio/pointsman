@@ -15,6 +15,7 @@ import { registerCheckpoint, freezeHoldout, qualifyCandidate, loadCandidate, loa
   loadPublished, adoptCandidate, layaStatus, rollbackLaya, publishedDir, LAYA_RUNTIME_VERSION } from '../src/training/laya-lifecycle.mjs';
 import { packageCandidate, pullCandidate } from '../src/training/laya-package.mjs';
 import { TRAINING_HELP } from '../src/training/cli.mjs';
+import { decisionScope } from '../src/inference.mjs';
 
 test('CLI help text lists laya package/pull/adopt', () => {
   assert.match(TRAINING_HELP, /laya package --candidate HASH --out DIR/);
@@ -110,8 +111,40 @@ async function buildQualifiedCandidate(t) {
   const qualification = await qualifyCandidate(f.home, { candidateHash: reg.checkpoint, datasetVersion: version, holdoutName: holdout.name, layaClient: fakeLayaClient(),
     targetAccuracy: .75, minCoverage: .3, minCalibration: 5, minTest: 5, minLowerBound: .5 });
   assert.equal(qualification.qualified, true);
+  // Existing transfer cases replay an already-issued legacy artifact. New
+  // generic purpose-only qualifications are refused by the separate test below.
+  delete qualification.decisionIdentity; delete qualification.familyQualification; delete qualification.operationalEligible;
+  atomicWrite(path.join(f.home,'laya','qualifications',`${reg.checkpoint}.json`),JSON.stringify(qualification));
   return { home: f.home, checkpoint: reg.checkpoint, qualification };
 }
+
+test('package/pull/adopt retain the bounded decision proof and operational gate', async t => {
+  const pub=await buildQualifiedCandidate(t), candidate=loadCandidate(pub.home,pub.checkpoint), actual=decisionScope(buildRequest(1,'light',.95),'worker');
+  const qualification={...pub.qualification, operationalEligible:true, familyQualification:{status:'BOUNDED_ENVELOPE_QUALIFIED',families:{'fixture-bounded:choice':{passed:true}}},
+    decisionIdentity:{version:1,checkpoint:pub.checkpoint,runtimeVersion:candidate.runtimeVersion,precision:candidate.precision,inputFit:'task-head',calibrationVersion:pub.qualification.calibrationVersion,
+      scopes:[{...actual,familyId:'fixture-bounded',familyRevision:'fixture-v1',stateBuilderRevision:`payload-state-schema-v1:${actual.stateSchemaHash}`,threshold:.9}]}};
+  candidate.inputFit='task-head'; atomicWrite(path.join(pub.home,'laya','candidates',`${pub.checkpoint}.json`),JSON.stringify(candidate));
+  atomicWrite(path.join(pub.home,'laya','qualifications',`${pub.checkpoint}.json`),JSON.stringify(qualification));
+  const out=path.join(tmpRoot(t),'out'); packageCandidate(pub.home,{candidateHash:pub.checkpoint,outDir:out});
+  const manifest=JSON.parse(fs.readFileSync(path.join(out,'pointsman.json'))), home=tmpRoot(t);
+  assert.deepEqual(manifest.qualification.decisionIdentity,qualification.decisionIdentity);
+  const fetchImpl=async url=>{const name=new URL(url).pathname.split('/').slice(5).join('/');return new Response(fs.readFileSync(path.join(out,name)),{status:200});};
+  await pullCandidate(home,{repo:'fixture/model',revision:'b'.repeat(40),python:'/usr/bin/python3',device:'cpu',fetchImpl,
+    registerImpl:(h,args)=>registerCheckpoint(h,{...args,fingerprintImpl:fakeFingerprint})});
+  const published=loadPublished(home,pub.checkpoint); assert.equal(published.qualification.operationalEligible,true);
+  assert.deepEqual(published.qualification.familyQualification,qualification.familyQualification);
+  adoptCandidate(home,{candidateHash:pub.checkpoint});
+  const active=JSON.parse(fs.readFileSync(path.join(home,'providers.json'))).laya;
+  assert.deepEqual(active.qualification.decisionIdentity,qualification.decisionIdentity);assert.equal(active.inputFit,'task-head');
+  rollbackLaya(home); assert.equal(JSON.parse(fs.readFileSync(path.join(home,'providers.json'))).laya,null);
+});
+test('package refuses a new all-unqualified envelope before creating output', async t => {
+  const pub=await buildQualifiedCandidate(t),candidate=loadCandidate(pub.home,pub.checkpoint),q={...pub.qualification,operationalEligible:false,
+    decisionIdentity:{version:1,checkpoint:pub.checkpoint,runtimeVersion:candidate.runtimeVersion,precision:candidate.precision,inputFit:candidate.inputFit,calibrationVersion:pub.qualification.calibrationVersion,scopes:[]}};
+  atomicWrite(path.join(pub.home,'laya','qualifications',`${pub.checkpoint}.json`),JSON.stringify(q));
+  const out=path.join(tmpRoot(t),'out'); assert.throws(()=>packageCandidate(pub.home,{candidateHash:pub.checkpoint,outDir:out}),/NO_QUALIFIED_DECISION_FAMILY/);
+  assert.equal(fs.existsSync(out),false);
+});
 
 // ============================== package ==============================
 

@@ -6,7 +6,7 @@ import { digest, encode } from '../../src/training/schema.mjs';
 import { assertSplitIsolation } from '../../src/training/dataset.mjs';
 import { RULES, corpusReport } from './corpus.mjs';
 
-export const EVALUATION_REVISION='independent-workflow-eval-v1';
+export const EVALUATION_REVISION='independent-workflow-eval-v2-runtime-mass';
 const mean=xs=>xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:null;
 const keys=row=>Object.keys(row.target.probabilities);
 function semantic(row,key) {
@@ -26,6 +26,7 @@ export function freezeEvaluation(rows,{split='test'}={}) {
     thresholds:[.5,.7,.8,.9,.95,.99],selection:'dev only; calibration only fits temperatures/gates; test is sealed and is never used to choose a threshold',
     missing_prediction:'counted as full-envelope failure; excluded from distribution scoring with missing count exposed',
     confidence_semantics:'maximum normalized class probability; never provider confidence field',
+    distribution_contract:'finite bounded exact option keys, positive mass, absolute sum error <=0.02; renormalize rounded mass before scoring',
     clustering:'semantic family; generated rows are correlated and are not independent task evidence',
     candidate_recall:'generator represents other/insufficient cases; operational candidate-set recall remains UNKNOWN',
     requirements:'B/C PASS criteria and critical floors must come from the approved PLAN; absent provider comparisons remain UNKNOWN'};
@@ -41,6 +42,9 @@ function summaries(records) {
     expected_calibration_error:served.length?reliability.reduce((n,b)=>n+(b.count?b.count/served.length*Math.abs(b.accuracy-b.mean_probability):0),0):null,
     ordinal_mae:mean(score.map(r=>r.ordinal_error)),severe_ordinal_error:mean(score.map(r=>Number(r.ordinal_error>=2))),
     effective_family_count:new Set(records.map(r=>r.family)).size,
+    probability_mass_corrections:served.filter(r=>r.mass_corrected).length,
+    maximum_probability_mass_error:served.length?Math.max(...served.map(r=>r.mass_error)):null,
+    malformed_probabilities:records.filter(r=>r.status==='malformed').length,
     status:Object.fromEntries([...new Set(records.map(r=>r.status))].sort().map(k=>[k,records.filter(r=>r.status===k).length]))};
 }
 export function evaluatePredictions(rows,predictions,{split='test',spec=freezeEvaluation(rows,{split})}={}) {
@@ -58,11 +62,15 @@ export function evaluatePredictions(rows,predictions,{split='test',spec=freezeEv
     const p=byId.get(row.sample_id), base={sample_id:row.sample_id,family:row.lineage.semantic_family_id,language:row.state.language,domain:row.state.domain,type:row.question.type,task:RULES.find(r=>r.id===row.oracle.id).task,
       status:p?.status??'missing',gold:`${row.lineage.semantic_family_id}/${row.question.type}/${semantic(row,String(row.target.value))}`,correct:false};
     if(base.status!=='ok') return base;
-    const k=keys(row), probs=p.probabilities;
-    if(!probs||Object.keys(probs).length!==k.length||k.some(x=>!Object.hasOwn(probs,x)||typeof probs[x]!=='number'||!Number.isFinite(probs[x])||probs[x]<0||probs[x]>1)||Math.abs(k.reduce((n,x)=>n+probs[x],0)-1)>1e-6) return {...base,status:'malformed'};
+    const k=keys(row), raw=p.probabilities;
+    if(!raw||Object.keys(raw).length!==k.length||k.some(x=>!Object.hasOwn(raw,x)||typeof raw[x]!=='number'||!Number.isFinite(raw[x])||raw[x]<0||raw[x]>1)) return {...base,status:'malformed'};
+    const mass=k.reduce((n,x)=>n+raw[x],0), mass_error=Math.abs(mass-1);
+    if(mass<=0||mass_error>.02) return {...base,status:'malformed'};
+    // Runtime probabilities are rounded; normalize only their total mass, preserving argmax.
+    const probs=Object.fromEntries(k.map(x=>[x,raw[x]/mass]));
     const predicted=k.reduce((a,b)=>probs[b]>probs[a]?b:a), gold=String(row.target.value);
     const expected=row.question.type==='score'?k.reduce((n,x)=>n+Number(x)*probs[x],0):null;
-    return {...base,predicted:`${row.lineage.semantic_family_id}/${row.question.type}/${semantic(row,predicted)}`,correct:predicted===gold,confidence:probs[predicted],
+    return {...base,predicted:`${row.lineage.semantic_family_id}/${row.question.type}/${semantic(row,predicted)}`,correct:predicted===gold,confidence:probs[predicted],mass_error,mass_corrected:mass_error>1e-12,
       nll:-Math.log(Math.max(1e-15,probs[gold])),brier:k.reduce((n,x)=>n+(probs[x]-(x===gold?1:0))**2,0),ordinal_error:expected===null?null:Math.abs(expected-Number(gold))};
   });
   const slices={};
