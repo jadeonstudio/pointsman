@@ -73,7 +73,8 @@ The CLI/MCP status readback retained global OFF and active d6 checkpoint
 A (whole-task efficiency): **NOT ESTABLISHED**. Small controlled code batches beat
 the executor; actual Codex direct MCP execution passed, but no matched end-to-end
 three-arm task-success/cost/latency experiment passed. B (above pinned Jev):
-**UNKNOWN**, no accepted independent-gold comparison. C (broad generalization above Jev):
+**NOT ESTABLISHED**: the narrow public discount-term comparison tied at 96%,
+with no positive superiority bound. C (broad generalization above Jev):
 **NOT ESTABLISHED / UNKNOWN**; all new local candidates failed their applicable
 gates and the broader Jev comparison remains unaccepted. No operational promotion or
 rollback was performed; the previous model and settings are retained.
@@ -301,13 +302,12 @@ Current Claude docs require `2.1.287+` for the documented default-enabled mods
 path and say the old function-hooks environment flag is ignored. A later readback
 found installed `2.1.288`; this work did not upgrade the host. The existing
 effort-mod instructions describe the older path. The new workflow mod was checked
-against the actual `2.1.288` plugin test engine: [five native component tests
+against the actual `2.1.288` plugin test engine: [six native component tests
 passed](examples/workflow-hosts/claude-component-evidence.json), covering synthetic
-stream/result, normal fallback, late-success rejection and closing before consumption. Native manifest
+stream/result, exact ordinary-text entry, normal fallback, late-success rejection and closing before consumption. Native manifest
 validation required two missing user-config descriptions; those are now present.
 The production bridge also completed a fixed recipe in isolated local state.
-These checks do not prove authenticated CLI behavior, visible output, retained
-history or in-flight cancellation.
+Those component checks are separate from the authenticated session below.
 
 The [isolated full-session attempt](examples/workflow-hosts/claude-session-preflight.json)
 used the actual binary with OS-enforced network denial and no real credentials.
@@ -317,9 +317,31 @@ its owned temporary files were removed after evidence preservation. A read-only
 same official read-only command with normal host access then confirmed
 `loggedIn: true`, `authMethod: claude.ai`, `subscriptionType: max`. The earlier
 result was context-limited, not evidence that the host lacked a subscription.
-The separate in-app browser was not logged in; usage-credit billing controls
-remain unverified. Full native acceptance remains open. Global pointsman modes,
-installed trust state and the active model were not changed by these probes.
+The separate in-app browser was not logged in. The actual native `/usage` panel
+subsequently confirmed **Usage credits are off**; existing Max subscription use
+was available without additional billing. No billing setting was changed.
+
+The first authenticated trial exposed that an unknown `/pointsman-workflow`
+slash command is rejected before the prompt hook. The module now uses exact
+ordinary text `pointsman-workflow <request JSON>`. The second trial fell through
+because its overlay pointed to the nonexecutable source `.mjs` while its preflight
+had used Node: a preparation mismatch, corrected by using the existing executable
+shim and testing that exact argv. Both failed trials remain in the receipt.
+
+The third actual `2.1.288` session displayed a `done` packet with definition,
+caller and test acceptance all met: three actions, 157 source bytes and 66.502 ms
+inside the workflow. Workflow decisions/network/inference were zero. Native
+usage reported no main-model usage before continuation and exactly one main
+request after it. A Haiku helper used 941 input/16 output tokens, so this is not
+zero total model traffic. The ordinary continuation, with tools disabled and
+without answers in its prompt, correctly returned all four workflow/ref/path
+facts from the retained assistant packet. This establishes same-session visible
+output/history/continuation on the two-file synthetic fixture, not task A.
+The bounded number stream finished before interruption; in-flight bridge and
+model-stream cancellation remain UNKNOWN. Full native acceptance stays open.
+The CLI exited 0; owned source/settings/home and generated plugin type-cache
+files were removed after evidence preservation. Production modes, installed
+trust and d6 were unchanged.
 [Current mod availability](https://code.claude.com/docs/en/plugins/mods/overview)
 
 Cache-aware effort has a stronger supported route in an owned Claude API client:
@@ -429,7 +451,7 @@ candidate invalidates only downstream claims that consumed it.
 - WP03–WP06: independent oracle/provenance schemas, family-disjoint four-way splits, v3 exporter, supervised CE, dev-only epoch selection, calibration-only fitting and explicit prediction collection implemented. Existing legacy captures without rights remain outside the permitted new corpus. New-family prospective confirmation remains open.
 - WP07: one full supervised epoch completed on local MPS: 1,375 train sequences, 688 microsteps, 218.661 seconds in the training routine; total script timestamps span 250 seconds. End-of-epoch MPS driver allocation was 4,607.7 MiB (an observation, not a measured peak). Base/d6/new dev comparison completed at 53.6%/52.0%/64.0% accuracy (125 rows, one family). The numerical pilot gate passes, but the unchanged recipe is NO-GO for scale: 0/9 combined rule/order counterfactual pairs were both correct, and Korean accuracy fell from 22/41 to 19/41. The test remains unopened. Checkpoint promotion has not occurred.
 - WP11: [controlled measurement summary](examples/workflow-hosts/measurement-evidence.json), 30 executions with 30 independent fixture checks. Purpose-built code batches were faster and smaller than the reusable executor on these small fixtures. Arm three is NONEXECUTABLE until a qualified, useful semantic consumer exists; no cost or parent-request saving is claimed. The inert ambiguous-definition model call was removed for that reason.
-- WP12: [Codex installed protocol evidence](examples/workflow-hosts/codex-probe-evidence.json) now includes an actual direct MCP `run` on Codex 0.154.0 in an ephemeral read-only thread, passing definition/caller/test and source-hash checks. It dispatched zero `turn/start` requests; workflow counters show zero decision/network/inference calls. Full provider request readback, native in-flight MCP cancellation, UI/history continuation and Claude/Gemini operation remain UNKNOWN. The first probe had an outdated role-field oracle; only that consumer was corrected before the passing second attempt. An inherited Docker MCP startup failed despite process-local isolation flags; only the owned probe tool was invoked, no global settings changed, and probe processes/temp fixtures were removed.
+- WP12: [Codex installed protocol evidence](examples/workflow-hosts/codex-probe-evidence.json) now includes an actual direct MCP `run` on Codex 0.154.0 in an ephemeral read-only thread, passing definition/caller/test and source-hash checks. It dispatched zero `turn/start` requests; workflow counters show zero decision/network/inference calls. Full provider request readback, native in-flight MCP cancellation and Codex UI/history continuation remain UNKNOWN. Claude's later authenticated fixture now verifies visible/history output and ordinary continuation, with cancellation still open; Gemini full adoption remains NO-GO. The first Codex probe had an outdated role-field oracle; only that consumer was corrected before the passing second attempt. An inherited Docker MCP startup failed despite process-local isolation flags; only the owned probe tool was invoked, no global settings changed, and probe processes/temp fixtures were removed.
 - Integration gate: Node **578/578**, Python **158/158**, offline smoke and all three existing demos PASS. Independent bounded source review found no required correctness defects in the new workflow, adapter, split/trainer and prediction boundaries. No operational modes, active checkpoint or native trust state were changed.
 - Training measurement preparation now records actual nonpadding token/sequence presentations, synchronized training time, separate dev/checkpoint/resume phases and process-lifetime peak RSS. Per-rank throughput is not labeled global DDP throughput. Accelerator peak is measured only with a supported reset/read API; installed Torch 2.14 MPS lacks it and reports UNKNOWN. The completed historical runs retain their original missing values. The changed tokenizer/metrics/resume/regularization/local-mode boundaries passed 99 focused checks without another real training run.
 - Node attempts: admission failed once from escaped-Unicode head inflation and passed on the second, lossless transformation hypothesis; no training ran on failed admission. Other measured timings are in the public probe/measurement artifacts; unrecorded per-worker duration is UNKNOWN.
@@ -437,6 +459,7 @@ candidate invalidates only downstream claims that consumed it.
 - Gemini 0.42 [actual installed-component probe](examples/workflow-hosts/gemini-component-evidence.json): the previous response-only adapter reached the provider path. The corrected `BeforeModel` response emits synthetic content with zero provider invocations; OFF/incomplete paths reach a throw-only local sentinel, and pre-cancelled execution invokes neither hook nor provider. These use installed `GeminiChat`, `HookSystem`, `HookRunner` and `Turn`, with no real provider/authentication. Ten focused adapter checks passed. Synthetic assistant output is absent from native history: **full native adoption NO-GO**, not an accepted end-to-end bypass. The installed command-hook contract offers no history-insertion output; no host internals were patched.
 - Real regression seeds now have [pinned red/green and blind retrieval evidence](training/task-utility/evidence.json): pointsman pending-stdin failure on Node 22.18.0, and SymPy #13890/#13895 on Python 3.9.23/mpmath 1.3.0. The same tests fail before and pass after each upstream fix. A bounded code batch found both required source paths/functions in 10.385/103.553 ms with 8,060/8,536-byte index packets. These are single observations, not p50/p95 or repair success. **Semantic frontier selection NO-NEED for these two cases**; adding a classifier is not justified. Initial runtime incompatibilities and one oversized index were preparation issues, preserved separately. No model/provider calls were made by either runner.
 - Following the Gemini fix, the complete Node gate passed **597/597** in 27.898 seconds; syntax, offline smoke and all three demos passed. An earlier sandbox run was interrupted after local TCP/Unix fixture listeners were denied (`listen EPERM`); a focused reproduction confirmed that environment boundary before the permitted-local-sockets rerun. It was not a product-quality failure or paid/live API test. Unchanged Laya Python boundaries retain their prior 168/168 evidence; placement and invoice additions have their own focused tests.
+- After the Claude ordinary-entry fix and actual session proof, the complete offline Node gate passed **601/601** in 26.405 seconds; syntax checked 238 modules, and offline smoke plus all three demos passed. The [session receipt](examples/workflow-hosts/claude-session-preflight.json) records the log identity. No numerical experiments or unchanged Python boundaries were rerun. The checklist now records **102/157** checked items; cancellation, full task economics and broad superiority are still open.
 
 ### Local candidate verdict and next research direction — 2026-10-03
 
@@ -799,9 +822,24 @@ extension, not selection based on model quality.
 The longest-input resource probe passed and counts as the first of 150: 10,567
 tokens, 41.417 seconds for the first forward, MLX peak 12,986,770,920 bytes and
 sampled combined Metal driver allocation 13,187,268,608 bytes (12.282 GiB).
-The same process continues the remaining inputs; full-cohort quality is pending.
-This first-call timing includes its actual cold conditions and is not a warm
-speed estimate. The source manifest additionally records Jev `question_mode=all`:
+The fixed cohort completed all 150 forwards with 150 valid outputs. Its stage
+took 9,094.558 seconds; warm median/p95 were 61.887/83.914 seconds. Completion is
+established by the immutable manifest and process absence; the inaccessible
+original shell's exit code is UNKNOWN. The comparison was scored once, with no
+repeated inference. Both published Jev 1.13.0 and local Clef-Flash 8-bit scored
+144/150 (96%), with the same six errors: paired improvement/regression 0/0,
+accuracy-difference bootstrap interval [0,0] and exact McNemar p=1. This is a
+sample tie, not population equivalence. Observed-class macro F1 is 0.90049 for
+both. Clef/Jev NLL is 0.20120/0.36935, Brier 0.07292/0.07739, and ten-bin ECE
+0.04730/0.03840. Against always-none, each is +5.33 points with interval
+[-0.67,+11.33]; no superiority gate passes. The six-error one-sided 95% upper
+bound is 7.74%; critical severity was not adjudicated. All evidence remains
+limited to `discount_days`, with only two observed gold classes. The [aggregate
+receipt](training/public-invoice/evidence.json) preserves identities, numerical
+rules, resource peaks and ambient CPU overlap. A/B/C and adoption remain open.
+
+The first-call timing includes actual cold conditions. The source manifest
+additionally records Jev `question_mode=all`:
 the target question and state match, but the original complete multi-question API
 envelope is not attested by per-question records. Report narrow target outcomes,
 not an identical-full-request experiment or broad B/C proof. Numerical rules and
@@ -1138,23 +1176,23 @@ release; overall superiority still requires all A/B/C claims to pass.
 
 ### WP12 — Verify native consumption and controlled rollout
 
-**State:** PROTOTYPE VERIFIED — live workflow consumption remains unverified. **Depends on:** WP02 and WP11; WP10 additionally for a new local
+**State:** PARTIAL NATIVE EVIDENCE — Claude fixture packet/history/continuation verified; in-flight cancellation and task economics remain open. **Depends on:** WP02 and WP11; WP10 additionally for a new local
 checkpoint, plus the relevant capture/provider/host/operational scope.
 **Owner:** integration lead.
 **Output:** per-host/per-family native evidence and bounded adoption decision.
 
 - [ ] Freeze the accepted code/model/policy/state-builder/adapter revisions and retain the previous checkpoint and modes for recovery.
 - [x] Review required installer dry-run changes and use only owned artifacts; preserve native trust/approval state and unrelated settings. The stable runtime update to `3611466` and Codex skill refresh passed eleven immediate unchanged-file hash checks and wrote no native trust state. Later shared host-config drift is recorded separately above; both owned MCP registrations, Claude's symlink and pointsman modes remain preserved.
-- [ ] Verify host capability readback on the actual target version; do not treat a source fixture or installed MCP entry as application evidence.
+- [x] Verify host capability readback on the actual target version; Codex 0.154.0 direct MCP and fresh native catalog, Claude 2.1.288 authenticated fixture and Gemini 0.42 installed components have separate receipts. Only Claude has authenticated same-session packet/history/continuation proof; this does not close full native adoption.
 - [ ] On native bypass, prove zero corresponding model request, correct visible/history output, preserved continuation/cancellation and real acceptance. On Codex MCP, report remaining outer model turns honestly.
-- [ ] Update/install host-specific adapters only for verified versions; Claude 2.1.288 component tests now pass, while full CLI output/history/continuation acceptance remains open.
+- [ ] Update/install host-specific adapters only for verified versions; Claude 2.1.288 component and authenticated CLI packet/history/continuation checks pass, while cancellation and final adoption remain open.
 - [ ] Begin non-applying observation/shadow only within authorization; capture recommendation counts, missing outcomes and latency without claiming success/savings.
 - [ ] Confirm local worker readiness, cold/unavailable fail-open and no hidden paid fallback; measure warm/cold/concurrent requests.
 - [ ] Apply only qualified families at their calibrated gates; stale/unknown state, locks, unsupported targets and policy changes retain original behavior.
 - [ ] Run explicitly scoped controlled native allocation with independent task-quality capture; log propensity where randomized and include failed/aborted runs.
 - [ ] Check A gates against the natural competent-host baseline; do not infer quality from the current cost/time-only hook report.
 - [ ] Exercise OFF/cancel/provider-change and rollback paths, checking actual host/model state after recovery.
-- [ ] Mark each host/family ACCEPTED or UNKNOWN separately and stop expansion on drift, integrity failure or lost net benefit.
+- [x] Mark each host/family ACCEPTED or UNKNOWN separately and stop expansion on drift, integrity failure or lost net benefit. Claude accepts only the tested fixture packet/continuation boundary; final adoption UNKNOWN. Codex direct MCP/OFF boundary is accepted, full UI/continuation UNKNOWN. Gemini full adoption is NO-GO for missing assistant history. New model families remain unqualified; production expansion is stopped.
 
 **Accept when:** native execution and recovery meet the declared scope and evidence
 grade. No universal host support is inferred from one successful integration.

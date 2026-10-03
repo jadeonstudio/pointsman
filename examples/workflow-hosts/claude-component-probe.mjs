@@ -70,7 +70,7 @@ async function consume($, e = event) {
 describe('pointsman-workflows installed native component', () => {
   test('completed segment streams text and final result without bottom model request; ordinary continuation delegates once', async ($, on) => {
     const calls = fixture(on);
-    await prompt($, '/pointsman-workflow ' + JSON.stringify(request));
+    await prompt($, 'pointsman-workflow ' + JSON.stringify(request));
     const out = await consume($);
     expect(out.chunks).toEqual([{ kind: 'text', index: 0, text: JSON.stringify(packet) }, { kind: 'stop', stopReason: 'end_turn', usage: null }]);
     expect(out.result).toEqual({ turnId: event.turnId, index: 0, answer: JSON.stringify(packet), toolUses: [], stopReason: 'end_turn', usage: null });
@@ -80,9 +80,17 @@ describe('pointsman-workflows installed native component', () => {
     expect(continued.result.answer).toBe('fallback-sentinel');
     expect(calls).toEqual({ bridge: 1, delegate: 1, network: 0 });
   });
+  test('ordinary entry is exact and malformed JSON stays on the native fallback chain', async ($, on) => {
+    const calls = fixture(on);
+    for (const text of ['Please run pointsman-workflow ' + JSON.stringify(request), 'pointsman-workflow {broken']) {
+      await prompt($, text);
+      expect((await consume($)).result.answer).toBe('fallback-sentinel');
+    }
+    expect(calls).toEqual({ bridge: 0, delegate: 2, network: 0 });
+  });
   test('unapplied bridge result delegates once and preserves fallback chunks/result', async ($, on) => {
     const calls = fixture(on, { apply: false, reason: 'off' });
-    await prompt($, '/pointsman-workflow ' + JSON.stringify(request));
+    await prompt($, 'pointsman-workflow ' + JSON.stringify(request));
     const out = await consume($);
     expect(out.chunks[0].text).toBe('fallback-sentinel');
     expect(out.result.answer).toBe('fallback-sentinel');
@@ -90,21 +98,21 @@ describe('pointsman-workflows installed native component', () => {
   });
   test('subagent and later step bypass the bridge unchanged', async ($, on) => {
     const calls = fixture(on);
-    await prompt($, '/pointsman-workflow ' + JSON.stringify(request));
+    await prompt($, 'pointsman-workflow ' + JSON.stringify(request));
     expect((await consume($, { ...event, agentId: 'child' })).result.answer).toBe('fallback-sentinel');
     expect((await consume($, { ...event, index: 1 })).result.answer).toBe('fallback-sentinel');
     expect(calls).toEqual({ bridge: 0, delegate: 2, network: 0 });
   });
   test('closing before stream consumption calls neither bridge nor bottom model', async ($, on) => {
     const calls = fixture(on);
-    await prompt($, '/pointsman-workflow ' + JSON.stringify(request));
+    await prompt($, 'pointsman-workflow ' + JSON.stringify(request));
     const stream = $.turn.step(event);
     await stream.return();
     expect(calls).toEqual({ bridge: 0, delegate: 0, network: 0 });
   });
   test('successful bridge stdout arriving after its deadline delegates without synthetic output', async ($, on) => {
     const calls = fixture(on, response, true);
-    await prompt($, '/pointsman-workflow ' + JSON.stringify(request));
+    await prompt($, 'pointsman-workflow ' + JSON.stringify(request));
     const out = await consume($);
     expect(out.chunks[0].text).toBe('fallback-sentinel');
     expect(out.result.answer).toBe('fallback-sentinel');
@@ -123,6 +131,7 @@ describe('pointsman-workflows installed native component', () => {
     binaryHash: createHash('sha256').update(await fs.readFile(binary)).digest('hex'),
     moduleHash: createHash('sha256').update(await fs.readFile(new URL('hooks/pointsman-workflows.ts', sourcePlugin))).digest('hex'),
     contractRevision: WORKFLOW_HOST_CONTRACTS.claude.revision,
+    entry: 'pointsman-workflow <request JSON> (ordinary text, not a slash command)',
     officialTypes: { commit: '684800b206824dfd0cc8a876e8604b20f72c3617', generatedByVersion: '2.1.277', url: 'https://github.com/anthropics/claude-code/blob/684800b206824dfd0cc8a876e8604b20f72c3617/mods/types/claude-code.d.ts' },
     command: ['claude', 'plugin', 'test', '<owned temporary plugin copy>'],
     productionManifestValidation: validation.status === 0 ? 'PASS' : 'FAIL',
@@ -135,8 +144,8 @@ describe('pointsman-workflows installed native component', () => {
     testConfigOverride: { timeoutMs: 100, scope: 'owned temporary plugin copy; production default unchanged' },
     lateSuccessFallback: run.status === 0 ? 'PASS_NATIVE_TEST_HOST' : 'FAIL',
     priorRevision: { receiptSha256: createHash('sha256').update(priorText).digest('hex'), moduleHash: prior.moduleHash,
-      observedAt: prior.observedAt, passedTests: 4, nativeTestExitCode: prior.nativeTestExitCode,
-      note: 'Earlier four component checks retained in Git history; this run repeats them and adds late-success fallback.' },
+      observedAt: prior.observedAt, passedTests: (prior.nativeTestOutput.match(/\(pass\)/g) ?? []).length, nativeTestExitCode: prior.nativeTestExitCode,
+      note: 'Prior accepted component checks retained in Git history; this run uses the ordinary text entry and adds its guard regression.' },
     streamAndResult: run.status === 0 ? 'PASS_NATIVE_TEST_HOST' : 'FAIL',
     ordinaryContinuation: run.status === 0 ? 'PASS_NATIVE_HOOK_CHAIN_WITH_SENTINEL' : 'FAIL',
     cancellationBeforeConsumption: run.status === 0 ? 'PASS_NATIVE_TEST_HOST' : 'FAIL',

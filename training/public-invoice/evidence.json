@@ -1,0 +1,743 @@
+{
+  "acceptance": {
+    "A_completed_task": "NOT_PASSED: no competent-host whole-task success/cost/latency comparison",
+    "B_above_jev": "NOT_PASSED: paired accuracy difference0 and full API envelope unverified",
+    "C_unseen_generalization": "NOT_PASSED: one previously public task family, no unseen-domain suite",
+    "promotion_or_production_changes": false
+  },
+  "admission": {
+    "lossless_16384": {
+      "actual_forward_calls": 150,
+      "full_encoded_tokens": {
+        "max": 10567,
+        "min": 4459
+      },
+      "maximum_input_probe_included_in150": true,
+      "predeclared_combined_metal_limit_bytes": 15032385536,
+      "probe_sampled_combined_metal_gib": 12.282,
+      "served": 150,
+      "status": {
+        "ok": 150
+      },
+      "total": 150
+    },
+    "prior_2048": {
+      "accuracy": "NOT_MEASURED",
+      "actual_forward_calls": 0,
+      "reason": "Experimental input cap, not demonstrated model hard limit",
+      "served": 0,
+      "total": 150
+    }
+  },
+  "artifact_identities": {
+    "admission_16k_receipt_sha256": "f0ef8b2b9deb8d3fd3293d4eefc6245b620f4e9ad06f92b05372f304da2b8658",
+    "clef_completion_manifest_sha256": "42a08a0b95926461c156703c4f8eb8c91a5bc1bb2e2ec9a1669179ad87eeaf27",
+    "clef_contract_sha256": "276d19b1f307751240afcc63ea8b09d21080f59f56cf453c6571163a768effd0",
+    "clef_predictions_sha256": "12c8271db8af89293ca688fd258349198ae7ba766e47bea1f01a5b256c31beb3",
+    "comparator_source_sha256": "462f2f0bd7ccc0b0d82384bfd192425560061eaefcd6fc43c4f3e4271f68e921",
+    "comparison_report_sha256": "42bd522fe62516f80b3375bb067bb96754632814254c68f9ecea4f687802c064",
+    "cpu_integration_evidence_sha256": "35eefbdadba87a30469c52c27d57fc8c98fea16c6167d56f9def34e5e835f245",
+    "jev_predictions_sha256": "68aa5e0b0bcc7bd386d9de0af6af01fbe17f5f676a527dea7a578bebb8f7b98a",
+    "numerical_preregistration_sha256": "9e3be6ec686abc81b42128fbd49973b9cc4f668b26b0981247e38687f4744bf3",
+    "original_pre_unblind_preregistration_sha256": "8b53b218389e8a4d305249c84403be938106fcc3cd9f148d9d384b02239b56a4",
+    "recorded_inputs_sha256": "f3e8826843fbca0f00ad93bcd63ccc272d1d19584be990d8e4622d2a9ddc2a94"
+  },
+  "calibration_semantics": "NLL/Brier use full normalized rounded mass; ECE uses normalized probability of actual selected choice. Provider confidence remains separate and unused. Raw values retained privately.",
+  "critical_error_gate": {
+    "best_case_zero_error_one_sided_95_upper_at_n150": 0.019773438164508494,
+    "classification_error_one_sided_95_upper": 0.0774179971598718,
+    "classification_errors_clef": 6,
+    "classification_errors_jev": 6,
+    "critical_error_count": null,
+    "note": "Classification errors are not adjudicated critical errors. Even hypothetical zero critical errors at 150 iid cases cannot satisfy the 1% upper-bound requirement.",
+    "required_upper_below": 0.01,
+    "status": "UNKNOWN_NOT_DEMONSTRATED"
+  },
+  "dataset": {
+    "license": "Apache-2.0",
+    "license_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "repository": "typesafe/evalsafe-invoice-processing",
+    "revision": "6beeb2d2acd65c086c835022f5f4d7434114cafc"
+  },
+  "gold": {
+    "critical_severity_labels": null,
+    "distribution": {
+      "10": 14,
+      "none": 136
+    },
+    "gold_sha256": "8b0b2883a48612dc0945f9d474e0fcffa259d804cc8ced1e62225175aeec73f2",
+    "independent_preregistration_sha256": "010c1aa3df38294833c6cd2e93992f5011af410402bafce91838b384e4f77555",
+    "source": "Blind frozen grammar over original invoice.fields.payment_terms, not provider/consensus labels"
+  },
+  "input_identity": {
+    "case_count": 150,
+    "caveat": "Published Jev question_mode=all; original complete multi-question envelope and batching independence are unattested. Clef used only the exact recorded target question and full state, without a wrapper or truncation.",
+    "matched_full_api_envelopes": null,
+    "target_question": "discount_days",
+    "target_question_and_full_state_matched": 150
+  },
+  "measured_local_execution": {
+    "cpu_verification_overlap": {
+      "completion": [
+        "2026-10-03T08:44:18.495514Z",
+        "2026-10-03T08:44:19.216495Z"
+      ],
+      "fullGate": [
+        "2026-10-03T08:42:47.171618Z",
+        "2026-10-03T08:43:27.310777Z"
+      ],
+      "gpuWorkStartedByGate": false,
+      "latencyInterpretation": "Overlapping invoice timings include ambient CPU verification load; no uncontended or hosted-speed equivalence claim",
+      "timestampBasis": "Gate log creation and last-write filesystem times; not exact child start/end timestamps"
+    },
+    "fair_hosted_speed_comparison": false,
+    "forward_summary_ms": {
+      "first": 41416.92691715434,
+      "warm_median": 61886.834875214845,
+      "warm_p95": 83913.54862507433
+    },
+    "memory_note": "MLX, Torch Metal driver/current and RSS counters have different overlapping scopes; do not sum their independent peaks.",
+    "model_load_seconds": 3.388350000139326,
+    "process_completion": "Root observed OS process absent and verified immutable final manifest with150ok; old tool session inaccessible",
+    "resource_counters": {
+      "mlx_active_bytes": 11421508618,
+      "mlx_peak_bytes": 12986770920,
+      "rss_peak_bytes": 3380723712,
+      "torch_mps_current_bytes": 243526656,
+      "torch_mps_driver_bytes": 12773965824
+    },
+    "shell_exit_code": "UNKNOWN",
+    "stage_duration_seconds": 9094.557765,
+    "stage_finished_at_utc": "2026-10-03T09:24:13.226946+00:00",
+    "stage_started_at_utc": "2026-10-03T06:52:38.669181+00:00"
+  },
+  "metrics": {
+    "always_none": {
+      "accuracy": 0.9066666666666666,
+      "brier": 0.18666666666666668,
+      "choice_argmax_disagreements": 0,
+      "confusion": {
+        "10": {
+          "10": 0,
+          "15": 0,
+          "20": 0,
+          "30": 0,
+          "7": 0,
+          "invalid": 0,
+          "none": 14
+        },
+        "15": {
+          "10": 0,
+          "15": 0,
+          "20": 0,
+          "30": 0,
+          "7": 0,
+          "invalid": 0,
+          "none": 0
+        },
+        "20": {
+          "10": 0,
+          "15": 0,
+          "20": 0,
+          "30": 0,
+          "7": 0,
+          "invalid": 0,
+          "none": 0
+        },
+        "30": {
+          "10": 0,
+          "15": 0,
+          "20": 0,
+          "30": 0,
+          "7": 0,
+          "invalid": 0,
+          "none": 0
+        },
+        "7": {
+          "10": 0,
+          "15": 0,
+          "20": 0,
+          "30": 0,
+          "7": 0,
+          "invalid": 0,
+          "none": 0
+        },
+        "none": {
+          "10": 0,
+          "15": 0,
+          "20": 0,
+          "30": 0,
+          "7": 0,
+          "invalid": 0,
+          "none": 136
+        }
+      },
+      "correct": 136,
+      "count": 150,
+      "coverage": 1.0,
+      "ece": 0.09333333333333338,
+      "error_bounds": {
+        "one_sided_95_upper": 0.1420573851788291,
+        "two_sided_95": [
+          0.051970172294478256,
+          0.15163853130364818
+        ]
+      },
+      "errors": 14,
+      "nll": 3.223619130191664,
+      "observed_class_macro_f1": 0.4755244755244755,
+      "observed_class_macro_precision": 0.4533333333333333,
+      "observed_class_macro_recall": 0.5,
+      "per_class": {
+        "10": {
+          "f1": 0.0,
+          "precision": 0.0,
+          "recall": 0.0,
+          "support": 14
+        },
+        "15": {
+          "f1": 0.0,
+          "precision": 0.0,
+          "recall": null,
+          "support": 0
+        },
+        "20": {
+          "f1": 0.0,
+          "precision": 0.0,
+          "recall": null,
+          "support": 0
+        },
+        "30": {
+          "f1": 0.0,
+          "precision": 0.0,
+          "recall": null,
+          "support": 0
+        },
+        "7": {
+          "f1": 0.0,
+          "precision": 0.0,
+          "recall": null,
+          "support": 0
+        },
+        "none": {
+          "f1": 0.951048951048951,
+          "precision": 0.9066666666666666,
+          "recall": 1.0,
+          "support": 136
+        }
+      },
+      "reliability": [
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": 0.9066666666666666,
+          "count": 150,
+          "mean_probability": 1.0
+        }
+      ],
+      "served": 150,
+      "served_accuracy": 0.9066666666666666,
+      "six_class_macro_f1_zero_support_zero": 0.1585081585081585,
+      "status": {
+        "ok": 150
+      }
+    },
+    "clef": {
+      "accuracy": 0.96,
+      "brier": 0.07292255564201713,
+      "choice_argmax_disagreements": 0,
+      "confusion": {
+        "10": {
+          "10": 14,
+          "15": 0,
+          "20": 0,
+          "30": 0,
+          "7": 0,
+          "invalid": 0,
+          "none": 0
+        },
+        "15": {
+          "10": 0,
+          "15": 0,
+          "20": 0,
+          "30": 0,
+          "7": 0,
+          "invalid": 0,
+          "none": 0
+        },
+        "20": {
+          "10": 0,
+          "15": 0,
+          "20": 0,
+          "30": 0,
+          "7": 0,
+          "invalid": 0,
+          "none": 0
+        },
+        "30": {
+          "10": 0,
+          "15": 0,
+          "20": 0,
+          "30": 0,
+          "7": 0,
+          "invalid": 0,
+          "none": 0
+        },
+        "7": {
+          "10": 0,
+          "15": 0,
+          "20": 0,
+          "30": 0,
+          "7": 0,
+          "invalid": 0,
+          "none": 0
+        },
+        "none": {
+          "10": 6,
+          "15": 0,
+          "20": 0,
+          "30": 0,
+          "7": 0,
+          "invalid": 0,
+          "none": 130
+        }
+      },
+      "correct": 144,
+      "count": 150,
+      "coverage": 1.0,
+      "ece": 0.0473031738891347,
+      "error_bounds": {
+        "one_sided_95_upper": 0.0774179971598718,
+        "two_sided_95": [
+          0.014818521114898064,
+          0.08502781471819881
+        ]
+      },
+      "errors": 6,
+      "nll": 0.20119594140031374,
+      "observed_class_macro_f1": 0.900486510393631,
+      "observed_class_macro_precision": 0.85,
+      "observed_class_macro_recall": 0.9779411764705883,
+      "per_class": {
+        "10": {
+          "f1": 0.8235294117647058,
+          "precision": 0.7,
+          "recall": 1.0,
+          "support": 14
+        },
+        "15": {
+          "f1": 0.0,
+          "precision": 0.0,
+          "recall": null,
+          "support": 0
+        },
+        "20": {
+          "f1": 0.0,
+          "precision": 0.0,
+          "recall": null,
+          "support": 0
+        },
+        "30": {
+          "f1": 0.0,
+          "precision": 0.0,
+          "recall": null,
+          "support": 0
+        },
+        "7": {
+          "f1": 0.0,
+          "precision": 0.0,
+          "recall": null,
+          "support": 0
+        },
+        "none": {
+          "f1": 0.9774436090225563,
+          "precision": 1.0,
+          "recall": 0.9558823529411765,
+          "support": 136
+        }
+      },
+      "reliability": [
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": 0.0,
+          "count": 1,
+          "mean_probability": 0.7986
+        },
+        {
+          "accuracy": 0.0,
+          "count": 2,
+          "mean_probability": 0.8883445444544456
+        },
+        {
+          "accuracy": 0.9795918367346939,
+          "count": 147,
+          "mean_probability": 0.9488422653438006
+        }
+      ],
+      "served": 150,
+      "served_accuracy": 0.96,
+      "six_class_macro_f1_zero_support_zero": 0.3001621701312103,
+      "status": {
+        "ok": 150
+      }
+    },
+    "jev": {
+      "accuracy": 0.96,
+      "brier": 0.07739466666666667,
+      "choice_argmax_disagreements": 0,
+      "confusion": {
+        "10": {
+          "10": 14,
+          "15": 0,
+          "20": 0,
+          "30": 0,
+          "7": 0,
+          "invalid": 0,
+          "none": 0
+        },
+        "15": {
+          "10": 0,
+          "15": 0,
+          "20": 0,
+          "30": 0,
+          "7": 0,
+          "invalid": 0,
+          "none": 0
+        },
+        "20": {
+          "10": 0,
+          "15": 0,
+          "20": 0,
+          "30": 0,
+          "7": 0,
+          "invalid": 0,
+          "none": 0
+        },
+        "30": {
+          "10": 0,
+          "15": 0,
+          "20": 0,
+          "30": 0,
+          "7": 0,
+          "invalid": 0,
+          "none": 0
+        },
+        "7": {
+          "10": 0,
+          "15": 0,
+          "20": 0,
+          "30": 0,
+          "7": 0,
+          "invalid": 0,
+          "none": 0
+        },
+        "none": {
+          "10": 6,
+          "15": 0,
+          "20": 0,
+          "30": 0,
+          "7": 0,
+          "invalid": 0,
+          "none": 130
+        }
+      },
+      "correct": 144,
+      "count": 150,
+      "coverage": 1.0,
+      "ece": 0.03839999999999999,
+      "error_bounds": {
+        "one_sided_95_upper": 0.0774179971598718,
+        "two_sided_95": [
+          0.014818521114898064,
+          0.08502781471819881
+        ]
+      },
+      "errors": 6,
+      "nll": 0.3693516462253741,
+      "observed_class_macro_f1": 0.900486510393631,
+      "observed_class_macro_precision": 0.85,
+      "observed_class_macro_recall": 0.9779411764705883,
+      "per_class": {
+        "10": {
+          "f1": 0.8235294117647058,
+          "precision": 0.7,
+          "recall": 1.0,
+          "support": 14
+        },
+        "15": {
+          "f1": 0.0,
+          "precision": 0.0,
+          "recall": null,
+          "support": 0
+        },
+        "20": {
+          "f1": 0.0,
+          "precision": 0.0,
+          "recall": null,
+          "support": 0
+        },
+        "30": {
+          "f1": 0.0,
+          "precision": 0.0,
+          "recall": null,
+          "support": 0
+        },
+        "7": {
+          "f1": 0.0,
+          "precision": 0.0,
+          "recall": null,
+          "support": 0
+        },
+        "none": {
+          "f1": 0.9774436090225563,
+          "precision": 1.0,
+          "recall": 0.9558823529411765,
+          "support": 136
+        }
+      },
+      "reliability": [
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": null,
+          "count": 0,
+          "mean_probability": null
+        },
+        {
+          "accuracy": 0.96,
+          "count": 150,
+          "mean_probability": 0.9984
+        }
+      ],
+      "served": 150,
+      "served_accuracy": 0.96,
+      "six_class_macro_f1_zero_support_zero": 0.3001621701312103,
+      "status": {
+        "ok": 150
+      }
+    }
+  },
+  "models": {
+    "always_none": {
+      "kind": "Deterministic always-none control",
+      "majority_gold_count": 136,
+      "total": 150
+    },
+    "clef": {
+      "admission_revision": "16k",
+      "head_precision": "BF16",
+      "inference_contract": "invoice-recorded-payload-v1",
+      "max_tokens": 16384,
+      "model": "clef_flash_mlx8_torch_bf16",
+      "note": "Frozen prior weights/head/runtime reference; new invoice inference/admission contract, not an unchanged prior DEV experiment or publisher full precision",
+      "predictor_source_sha256": "86a6d26e0c15ac310c40d3b516d81825269decddaab636006231157ec192d024",
+      "quantization": {
+        "bits": 8,
+        "group_size": 64,
+        "mode": "affine",
+        "unquantized": [
+          "embed_tokens",
+          "lm_head",
+          "joint_head"
+        ]
+      },
+      "runtime": {
+        "mlx": "0.32.3",
+        "mlx-lm": "0.32.0",
+        "safetensors": "0.8.0",
+        "torch": "2.14.0",
+        "transformers": "5.17.0"
+      },
+      "upstream_revision": "17f0b0ad64efb65d273590632833508766b2aae6",
+      "weights_checkpoint_reference": "2d78acadca4a2d3865b6c9efd8402d1b2483c1dc6c43a802f81ecc72dcb45e63"
+    },
+    "grammar_parser": {
+      "accuracy_by_construction": 1.0,
+      "kind": "Frozen source-rule oracle",
+      "learned_model_or_efficiency_evidence": false
+    },
+    "jev": {
+      "evidence": "Previously published licensed recorded outputs; zero new Jev API calls",
+      "model": "jev-1.13.0",
+      "run_id": "code-typesafe-jev-1.13.0-off-160259a2ba80"
+    }
+  },
+  "paired": {
+    "clef_minus_always_none": {
+      "accuracy_difference": 0.05333333333333334,
+      "both_correct": 130,
+      "both_wrong": 0,
+      "case_bootstrap_95": [
+        -0.006666666666666667,
+        0.11333333333333333
+      ],
+      "draws": 2000,
+      "improved": 14,
+      "mcnemar_exact_two_sided_p": 0.11531829833984375,
+      "regressed": 6,
+      "scope": "Within one narrow task family; not unseen-domain C",
+      "seed": 42
+    },
+    "clef_minus_jev": {
+      "accuracy_difference": 0.0,
+      "both_correct": 144,
+      "both_wrong": 6,
+      "case_bootstrap_95": [
+        0.0,
+        0.0
+      ],
+      "draws": 2000,
+      "improved": 0,
+      "mcnemar_exact_two_sided_p": 1.0,
+      "regressed": 0,
+      "scope": "Within one narrow task family; not unseen-domain C",
+      "seed": 42
+    },
+    "jev_minus_always_none": {
+      "accuracy_difference": 0.05333333333333334,
+      "both_correct": 130,
+      "both_wrong": 0,
+      "case_bootstrap_95": [
+        -0.006666666666666667,
+        0.11333333333333333
+      ],
+      "draws": 2000,
+      "improved": 14,
+      "mcnemar_exact_two_sided_p": 0.11531829833984375,
+      "regressed": 6,
+      "scope": "Within one narrow task family; not unseen-domain C",
+      "seed": 42
+    }
+  },
+  "revision": "public-invoice-discount-days-frozen-comparison-v1",
+  "scope": "One public reference-trace canonical discount-term family, 150 fixed cases; not invoice approval/fraud or general decision quality",
+  "status": "COMPLETE_NARROW_DESCRIPTIVE_STUDY",
+  "verification": {
+    "comparator_focused_tests": {
+      "pass": 6,
+      "rerun_for_final_report": false,
+      "reused_unchanged_source": true
+    },
+    "comparison_invocations": 1,
+    "core_runtime_anchor": "53fad15",
+    "document_head_before_result": "63e4551",
+    "new_external_api_calls": 0,
+    "new_model_inference_by_scorer": 0,
+    "raw_case_results_published": false
+  }
+}

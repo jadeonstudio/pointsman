@@ -127,7 +127,7 @@ test('actual Claude mod registers bounded explicit entry and yields synthetic re
   await hooks['prompt.submit']($, { text: 'ordinary prompt' }, async event => event);
   await hooks['turn.step']($, step, next).next();
   assert.equal(modelCalls, 1); assert.equal(calls.length, 0);
-  await hooks['prompt.submit']($, { text: `/pointsman-workflow ${JSON.stringify(request)}` }, async event => event);
+  await hooks['prompt.submit']($, { text: `pointsman-workflow ${JSON.stringify(request)}` }, async event => event);
   const stream = hooks['turn.step']($, step, next);
   assert.deepEqual((await stream.next()).value, { kind: 'text', index: 0, text: 'verified bounded evidence' });
   assert.equal((await stream.next()).value.kind, 'stop');
@@ -135,4 +135,21 @@ test('actual Claude mod registers bounded explicit entry and yields synthetic re
   assert.deepEqual(calls[0].argv, ['/owned/pointsman', 'workflow-native', '--host', 'claude', '--event', 'turn-step']);
   assert.deepEqual(JSON.parse(calls[0].options.stdin).request, request);
   assert.equal(modelCalls, 1);
+});
+test('Claude ordinary entry is explicit; slash, malformed JSON and plugin submissions preserve fallback', async () => {
+  const source = await fs.readFile(new URL('../mods/pointsman-workflows/hooks/pointsman-workflows.ts', import.meta.url), 'utf8');
+  const module = await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(source)).toString('base64')}`);
+  const hooks = {};
+  module.register((name, fn) => { hooks[name] = fn; }, {});
+  const $ = { process: { run: () => assert.fail('Non-entry text must not invoke the bridge') } };
+  const next = async function* () { yield { kind: 'text', index: 0, text: 'normal' }; return { answer: 'normal' }; };
+  for (const event of [
+    { text: `/pointsman-workflow ${JSON.stringify(request)}` },
+    { text: `Please run pointsman-workflow ${JSON.stringify(request)}` },
+    { text: 'pointsman-workflow {broken' },
+    { text: `pointsman-workflow ${JSON.stringify(request)}`, origin: { kind: 'plugin' } },
+  ]) {
+    assert.equal(await hooks['prompt.submit']($, event, async received => received), event);
+    assert.equal((await hooks['turn.step']($, { turnId: 'entry-guard', index: 0 }, next).next()).value.text, 'normal');
+  }
 });

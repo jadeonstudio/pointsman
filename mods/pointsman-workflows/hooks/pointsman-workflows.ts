@@ -25,8 +25,9 @@ export const register: Register = (on, raw) => {
     timeoutMs: typeof raw.timeoutMs === 'number' && raw.timeoutMs >= 100 && raw.timeoutMs <= 60000 ? raw.timeoutMs : 5000 };
   on('prompt.submit', async ($, e, next) => {
     pending = null;
-    if (e.origin?.kind !== 'plugin' && typeof e.text === 'string' && e.text.startsWith('/pointsman-workflow ')) {
-      try { pending = JSON.parse(e.text.slice('/pointsman-workflow '.length)); } catch { /* fail open */ }
+    // Ordinary text reaches this hook; unknown slash commands are handled earlier by the host.
+    if (e.origin?.kind !== 'plugin' && typeof e.text === 'string' && e.text.startsWith('pointsman-workflow ')) {
+      try { pending = JSON.parse(e.text.slice('pointsman-workflow '.length)); } catch { /* fail open */ }
     }
     return next(e);
   });
