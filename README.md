@@ -6,7 +6,7 @@ The existing automatic integration routes Claude Code subagents to a lighter or 
 
 ## Cross-agent design and learning roadmap
 
-The [architecture](ARCHITECTURE.md) defines how to reuse the shared engine across Codex, Claude Code, other MCP clients and owned agent harnesses. The [training plan](TRAINING_PLAN.md) and [evaluation gates](EVALUATION.md) separate three goals: better completed-task efficiency, higher decision quality than Jev, and generalization to unseen tasks and schemas. These are plans, not shipped integrations or demonstrated superiority.
+The [integrated plan](PLAN.md) combines the cross-agent architecture, local training strategy and three separate evaluation goals: completed-task efficiency, decision quality against Jev, and generalization to unseen tasks and schemas. Its [14 work packages](PLAN.md#detailed-work-packages) include dependencies, detailed checklists, outputs, verification and stop criteria. These are plans, not shipped integrations or demonstrated superiority.
 
 | Surface | Current repository support | Application boundary |
 |---|---|---|
@@ -29,7 +29,7 @@ A Claude Code `PreToolUse` hook watches every `Agent` (subagent spawn) call. Eac
 
 The hook applies guard rules first (sensitive content, a model the caller already locked, unknown/incomplete scope, prior failures) that keep the host's own choice untouched. Otherwise the model answers three questions about the task — intent, difficulty (1–5) and risk — and a decision-level gate (tier probability ≥ 0.80 **and** keep-host probability ≤ 0.20, both fitted on held-out data and shipped with the checkpoint) decides whether to rewrite the spawn's `subagent_type`/`model` or leave it as the host chose.
 
-Codex support is more limited: the repository records opaque spawn messages on `codex-cli` 0.154.0, so that integration cannot read task text and only records spawns (role distribution, no routing decision). Current official hook documentation describes broader capabilities; this repository has not reverified task visibility and rewriting on a newer host. The MCP tools (`route`, `decide`, `status`, …) remain available. See the [capability matrix](ARCHITECTURE.md#host-capability-matrix) before assuming automatic routing.
+Codex support is more limited: the repository records opaque spawn messages on `codex-cli` 0.154.0, so that integration cannot read task text and only records spawns (role distribution, no routing decision). Current official hook documentation describes broader capabilities; this repository has not reverified task visibility and rewriting on a newer host. The MCP tools (`route`, `decide`, `status`, …) remain available. See the [capability matrix](PLAN.md#host-capability-matrix) before assuming automatic routing.
 
 ## Measured results
 
@@ -163,7 +163,7 @@ It never changes the model, never changes a subagent's role, and never rewrites 
 
 ## Training your own checkpoint
 
-The training kit is included at [training/laya-kit/](training/laya-kit/README.md), with an explicit local training path. The [learning plan](TRAINING_PLAN.md) describes the data, evaluation and qualification changes needed for broader decisions. The lifecycle commands are `laya register` → `laya holdout freeze` → `laya qualify` (includes decision-gate flags) → `laya compare` → `laya promote`, and `laya package` builds a folder (weights plus a `pointsman.json` manifest) ready to upload with `hf upload`. All are explicit operator calls — nothing here starts training or promotes a checkpoint automatically.
+The training kit is included at [training/laya-kit/](training/laya-kit/README.md), with an explicit local training path. The [integrated learning plan](PLAN.md#what-the-model-must-learn) describes the data, evaluation and qualification changes needed for broader decisions. The lifecycle commands are `laya register` → `laya holdout freeze` → `laya qualify` (includes decision-gate flags) → `laya compare` → `laya promote`, and `laya package` builds a folder (weights plus a `pointsman.json` manifest) ready to upload with `hf upload`. All are explicit operator calls — nothing here starts training or promotes a checkpoint automatically.
 
 ## Security and privacy
 
