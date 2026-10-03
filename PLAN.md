@@ -297,6 +297,11 @@ and global/workflow/native OFF plus the existing d6 checkpoint remain unchanged.
 No reinstall, host reload, new hook trust or global-file write was needed. The
 [delivery receipt](examples/workflow-hosts/current-app-refresh-evidence.json)
 records this installed runtime identity separately from later evidence-only commits.
+The ordinary-entry fix and completed invoice comparison were then pushed as
+`231ef7e0a73f8cc28c97af005ce75181dc0b2101`, with identical remote readback.
+The clean installed checkout was fast-forwarded to that revision; workflow-mod
+and shared-runtime hashes match. Installer/skills were unchanged, so no repeat
+dry-run, reinstall, reload or global write was needed. OFF modes and d6 remain.
 
 Current Claude docs require `2.1.287+` for the documented default-enabled mods
 path and say the old function-hooks environment flag is ignored. A later readback

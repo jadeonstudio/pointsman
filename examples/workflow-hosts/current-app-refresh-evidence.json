@@ -179,5 +179,41 @@
     },
     "validation": "Accepted unchanged source evidence reused; no extra full gate, GPU or model calls",
     "scope": "Installed checkout/source readback; not a native session reload or ON task-adoption claim"
+  },
+  "ordinaryEntryRuntimeDelivery": {
+    "observedAt": "2026-10-03T10:17:19.071Z",
+    "acceptedSourceCommit": "231ef7e0a73f8cc28c97af005ce75181dc0b2101",
+    "remoteReadbackCommit": "231ef7e0a73f8cc28c97af005ce75181dc0b2101",
+    "installedCommit": "231ef7e0a73f8cc28c97af005ce75181dc0b2101",
+    "previousInstalledCommit": "53fad15c001b250d7c31063c7145db9ef1650a10",
+    "branch": "main",
+    "worktreeClean": true,
+    "update": "local fetch and fast-forward only",
+    "sourceMatches": {
+      "mods/pointsman-workflows/hooks/pointsman-workflows.ts": "ff2c3f42f5a14c30988469444b84513761ec11711147b631a967dd3833e21dd5",
+      "src/hooks.mjs": "83f4c0532368c02df8799f1e0ff7d1020e3c0ff9137d4abc914813196e765ef1",
+      "src/workflow-hosts.mjs": "ad949278eea236690268c59d94c9ed682f7e8c00cf01896b8e0cf1f12fd15d1a"
+    },
+    "modes": {
+      "global": "off",
+      "workflow": "off",
+      "native": "off",
+      "routerEffective": "off",
+      "routerConfigured": "on",
+      "effortEffective": "off",
+      "effortConfigured": "shadow"
+    },
+    "provider": "laya",
+    "model": "multilingual-d6",
+    "checkpoint": "d145e848f7827fdd0a643b90727e65a8fe67d5637bf8c6c07ab3d26511edd434",
+    "captureExistingPreserved": true,
+    "installerAndSkillsChanged": false,
+    "additionalDryRunNeeded": false,
+    "reinstallPerformed": false,
+    "globalFilesWritten": false,
+    "nativeReloadPerformed": false,
+    "extraTestsRun": false,
+    "validation": "Reused accepted 601/601 gate; installed-runtime readback is separate from later documentation-only receipt commits",
+    "removedFiles": []
   }
 }
