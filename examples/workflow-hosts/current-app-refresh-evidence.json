@@ -38,5 +38,107 @@
   "sources": {
     "reload": "https://learn.chatgpt.com/docs/app-server",
     "proxy": "Installed codex0.154.0 app-server proxy --help and daemon version readback"
+  },
+  "installedDelivery": {
+    "recordedAt": "2026-10-03T07:28:58.622980+00:00",
+    "previousCommit": "39bf5a46ac203256c414ef322a6c0035b1842fca",
+    "installedCommit": "361146648d6bb3608403072ca27a3038118e6423",
+    "cleanReadback": true,
+    "updateMethod": "local fetch and fast-forward only",
+    "preUpdateSnapshotSha256": "e1338cdedc0ef9c6590eb91e5b0ebef57c51877a7b05b530e1b2670a68e049fa",
+    "immediatePostInstall": {
+      "preservedCount": 11,
+      "changed": [],
+      "evidence": "delivery_state tool output 62ea55",
+      "exactUtcTime": "UNKNOWN"
+    },
+    "laterReadback": {
+      "unchangedArtifactHashes": {
+        "config.toml": false,
+        ".claude.json": false,
+        "hooks.json": true,
+        "settings.json": true,
+        "AGENTS.md": true,
+        "CLAUDE.md": true,
+        "config.json": true,
+        "features.json": true,
+        "providers.json": true,
+        "training.json": true,
+        "pointsman": true
+      },
+      "ownedMcpProjections": {
+        "codex": {
+          "stableArgsMatch": true,
+          "nodeCommandPresent": true,
+          "homeMatches": true
+        },
+        "claude": {
+          "stableArgsMatch": true,
+          "nodeCommandPresent": true,
+          "homeMatches": true
+        }
+      },
+      "changedFieldsWriterCause": "UNKNOWN; previous unrelated host settings were not captured",
+      "beforeAndAfterTrustValueComparison": "UNKNOWN",
+      "currentChangesPreserved": true
+    },
+    "freshStdioToolNames": [
+      "run",
+      "decide",
+      "status",
+      "feedback",
+      "route",
+      "filter",
+      "observe",
+      "record"
+    ],
+    "codexSkillsUpdated": [
+      "pointsman-control",
+      "pointsman-decisions"
+    ],
+    "skillHashes": {
+      "control": "9c60365ee762ce907b3baa93a23e0a70e441454e009021c335d2f1b452c8b761",
+      "decisions": "82f8f99662fd5fe167da3ac2629742f759f25138952d7c6b2a64436929f474fb"
+    },
+    "claudeSkills": "Existing symlink preserved; not followed or updated",
+    "workspaceKit": "Updated owned skill paths are not in its manifest",
+    "globalMode": "off",
+    "workflowMode": "off",
+    "nativeMode": "off",
+    "activeCheckpoint": "d145e848f7827fdd0a643b90727e65a8fe67d5637bf8c6c07ab3d26511edd434",
+    "hostTrustWrittenByInstaller": false,
+    "hostRestartOrReloadExecuted": false,
+    "freshNativeAgent": {
+      "grade": "actual native agent MCP tools, not owned stdio simulation",
+      "model": "gpt-6.1-sol",
+      "reasoning": "medium",
+      "toolNames": [
+        "decide",
+        "feedback",
+        "filter",
+        "observe",
+        "record",
+        "route",
+        "run",
+        "status"
+      ],
+      "workflowStatusPresent": true,
+      "run": {
+        "id": "94d1a95b-e857-4fcb-951f-b23c6dc6b600",
+        "workflow": "repo-evidence",
+        "status": "needs_parent",
+        "reason": "OFF",
+        "actions": 0,
+        "decisions": 0,
+        "networkCalls": 0,
+        "inferenceCalls": 0,
+        "bytesRead": 0,
+        "authorizesExecution": false
+      },
+      "hostModelRequests": "NOT_MEASURED; the inspection agent itself used a model",
+      "onModeWorkflowExecution": "NOT_RUN"
+    },
+    "rootExistingCatalog": "Still cached at seven tools without run",
+    "uiControl": "Computer Use refused com.openai.codex by app policy; no alternate UI control attempted"
   }
 }

@@ -1,0 +1,137 @@
+{
+  "observedAt": "2026-10-03T08:05:07.269Z",
+  "status": "BLOCKED_OFFLINE_BOOTSTRAP",
+  "ownedTemporaryRoot": "<owned-temporary-root>",
+  "nativeBridgePreflight": {
+    "status": "PASS",
+    "hostVersion": "2.1.288",
+    "contractRevision": "claude-turn-step-2026-10-03",
+    "inferenceCalls": 0,
+    "networkCalls": 0
+  },
+  "cwd": "<owned-temporary-root>",
+  "argv": [
+    "/usr/bin/sandbox-exec",
+    "-f",
+    "<owned-temporary-root>/network-deny.sb",
+    "/usr/bin/env",
+    "-i",
+    "PATH=<user-home>/.local/bin:/opt/homebrew/bin:/usr/bin:/bin",
+    "HOME=<user-home>",
+    "CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1",
+    "CLAUDE_CONFIG_DIR=<owned-temporary-root>/claude-config",
+    "ANTHROPIC_API_KEY=pointsman-offline-fixture-not-a-real-credential",
+    "<installed-claude>",
+    "--restricted",
+    "--permission-mode",
+    "manual",
+    "--strict-mcp-config",
+    "--mcp-config",
+    "{\"mcpServers\":{}}",
+    "--settings",
+    "<owned-temporary-root>/settings.json",
+    "--plugin-dir",
+    "<repository>/mods/pointsman-workflows",
+    "--tools",
+    ""
+  ],
+  "prompt": "/pointsman-workflow {\"workflow\":\"repo-evidence\",\"inputs\":{\"symbols\":[\"sum\"]},\"acceptance\":[\"definition\",\"direct_callers\",\"tests\"]}",
+  "externalNetwork": "Reviewed OS deny-network/auth-path/keychain profile was executed: loopback self-check returned EPERM; the approved literal CLI attempt preserved that profile and stopped at offline bootstrap before any workflow prompt. Delivered external requests 0; attempted network requests at least 1; model endpoint attempt count UNKNOWN.",
+  "normalTrust": "Interactive TTY; no --print, no skip-permission flags, no auto trust response, no global plugin install/enable or trust hashes written. Leave any host trust/approval prompt to the human; only fresh isolated config can receive normal session records.",
+  "activation": "Only the generated temporary POINTSMAN_HOME is ON; global mode and all installed configuration unchanged.",
+  "acceptance": [
+    "Native terminal displays synthetic packet",
+    "fresh isolated session retains assistant packet",
+    "same isolated session ordinary continuation reads retained packet",
+    "user interruption terminates stream/bridge",
+    "OS denies every external model request"
+  ],
+  "providerRequests": "External delivered requests 0 under OS deny; attempted network requests at least 1; model endpoint attempt count UNKNOWN.",
+  "fullSession": "BLOCKED_OFFLINE_BOOTSTRAP",
+  "remainingBoundary": "This isolated offline native probe closed at the installed CLI online-bootstrap boundary before a workflow prompt. UI, assistant-history retention, continuation and in-flight cancellation remain UNKNOWN. This receipt describes the completed probe scope; it does not prohibit a separately authorized follow-up.",
+  "cleanupOwner": "Root terminated the executed literal CLI with Ctrl-C, exit 1; no active process remained. This worker preserved exact argv/profile and fixture inputs in private local research evidence, then removed only the owned temporary fixture directory.",
+  "configuration": {
+    "configDir": "<owned-temporary-root>/claude-config",
+    "officialSource": "https://code.claude.com/docs/en/env-vars#variables",
+    "isolation": "Fresh CLAUDE_CONFIG_DIR; env -i copies no auth; OS profile denies reads/writes to original .claude/.claude.json/Keychains and denies securityd lookup. No real credential used.",
+    "dummyCredential": "Unmistakable synthetic noncredential set only in the proposed process environment.",
+    "settingsOptionsSource": "https://github.com/anthropics/claude-code/blob/684800b206824dfd0cc8a876e8604b20f72c3617/mods/types/claude-code.d.ts#L6180-L6194"
+  },
+  "sandboxAvailability": {
+    "executable": "/usr/bin/sandbox-exec",
+    "present": true,
+    "enforcementExecuted": true,
+    "selfCheck": {
+      "status": "PASS",
+      "code": "EPERM",
+      "syscall": "connect",
+      "address": "127.0.0.1",
+      "port": 9,
+      "profilePreserved": true,
+      "nestedSandboxAttempt": "sandbox_apply Operation not permitted",
+      "properEscalation": "PASS_WITH_SAME_PROFILE"
+    }
+  },
+  "preflightInventory": {
+    "status": "PREPARATION_ERROR_STOPPED",
+    "first": "Appended plugin list --json swallowed by variadic --tools; --json unknown at root parser",
+    "second": "Removing --json still swallowed plugin/list; unintended startup terminated after 10000ms with SIGTERM, no output",
+    "workflowPromptSubmitted": false,
+    "providerContactPossible": false,
+    "next": "Closed: root literal attempt reached offline bootstrap blocker; no further inventory/startup"
+  },
+  "privateEvidence": "Exact argv/profile and owned fixture identity are held in private local research evidence.",
+  "fullCliAttempts": [
+    {
+      "attempt": 1,
+      "outcome": "UNINTENDED_STARTUP_SIGTERM_TIMEOUT",
+      "promptSubmitted": false
+    },
+    {
+      "attempt": 2,
+      "outcome": "BLOCKED_OFFLINE_BOOTSTRAP",
+      "approvalReview": {
+        "initial": "Dynamic argv wrapper rejected before start: reviewer could not attest isolation",
+        "resolution": "Post-rejection exact argv/profile and EPERM safety proof reviewed; root issued literal unchanged isolated command; auto-review APPROVED",
+        "profileWeakened": false
+      },
+      "execution": {
+        "owner": "root",
+        "toolSessionId": 17144,
+        "resolvedVersion": "2.1.288",
+        "welcome": "Welcome to Claude Code v2.1.288",
+        "error": "Unable to connect to Anthropic services; Failed to connect api.anthropic.com: ENOTFOUND",
+        "workflowPromptSubmitted": false,
+        "trustResponseSubmitted": false,
+        "termination": "Root Ctrl-C; exit 1; no active process"
+      },
+      "network": {
+        "osDenyProfilePreserved": true,
+        "deliveredExternalRequests": 0,
+        "attemptedNetworkRequests": "AT_LEAST_1",
+        "modelEndpointAttemptCount": "UNKNOWN"
+      },
+      "acceptedFullSession": false
+    }
+  ],
+  "visibleUi": "UNKNOWN_WORKFLOW_NOT_SUBMITTED",
+  "assistantHistoryRetention": "UNKNOWN",
+  "ordinaryContinuation": "UNKNOWN",
+  "inFlightCancellation": "UNKNOWN",
+  "cleanup": {
+    "ownedTemporaryDirectory": "REMOVED_AFTER_PRIVATE_FIXTURE_RECEIPT_PRESERVATION",
+    "liveProcess": false,
+    "filesPreserved": "Exact argv/profile and four fixture inputs in private local research evidence",
+    "otherFilesRemoved": false
+  },
+  "currentHostAuthReadback": {
+    "owner": "root",
+    "command": "claude auth status --json",
+    "toolChunk": "3cba8b",
+    "exitCode": 0,
+    "loggedIn": false,
+    "authMethod": "none",
+    "apiProvider": "firstParty",
+    "subscriptionStatus": "UNKNOWN: login status does not establish subscription availability"
+  }
+}

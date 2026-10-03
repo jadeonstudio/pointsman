@@ -4,7 +4,7 @@
   "description": "Opt-in, OFF-by-default bounded workflow synthetic text for Claude Code 2.1.287+. Uses the workflow-native bridge; ordinary prompts pass through.",
   "userConfig": {
     "pointsmanPath": { "type": "string", "title": "Pointsman CLI path", "default": "", "description": "Absolute pointsman shim path. Empty uses $HOME/.local/bin/pointsman." },
-    "pointsmanHome": { "type": "string", "title": "Pointsman home", "default": "" },
-    "timeoutMs": { "type": "number", "title": "Bounded workflow timeout", "default": 5000 }
+    "pointsmanHome": { "type": "string", "title": "Pointsman home", "default": "", "description": "Private pointsman policy/state directory. Empty uses the usual pointsman home." },
+    "timeoutMs": { "type": "number", "title": "Bounded workflow timeout", "default": 5000, "description": "Milliseconds to wait for the bounded workflow bridge." }
   }
 }

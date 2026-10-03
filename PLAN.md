@@ -243,7 +243,7 @@ Sources: [Codex app-server](https://learn.chatgpt.com/docs/app-server),
 [Gemini hooks](https://geminicli.com/docs/hooks/reference/),
 [Gemini translator](https://github.com/google-gemini/gemini-cli/blob/main/packages/core/src/hooks/hookTranslator.ts).
 
-Local research readback on 2026-10-03: Codex CLI `0.154.0`, Claude Code `2.1.280`,
+Initial research readback on 2026-10-03: Codex CLI `0.154.0`, Claude Code `2.1.280`,
 Gemini CLI `0.42.0`. The generated experimental schema of this installed Codex
 contains `command/exec`, `mcpServer/tool/call`, `turn/start`, `item/tool/call`,
 `TurnStartParams.model/effort/toolOutput` and `ThreadStartParams.dynamicTools`.
@@ -261,11 +261,54 @@ chat's seven-tool pointsman catalog still lacks `run`; the successful separate
 queues every loaded thread, not just this chat. No daemon restart/reload or
 global trust/configuration changes were made.
 
+The later [installed-delivery readback](examples/workflow-hosts/current-app-refresh-evidence.json)
+found the direct missing-tool cause: both host registrations and the CLI shim used
+a clean stable checkout at `39bf5a4`, seven commits behind the accepted runtime.
+It was fast-forwarded to exact `3611466`. Post-update dry-runs and owned reinstalls
+preserved eleven complete configuration/policy/hook/instruction/shim hashes,
+including native trust and unrelated MCP settings. Only the two owned Codex skills
+and their markers changed. Claude's skills symlink was left untouched; these
+skill paths are not managed by workspace-kit. Global/workflow/native remain OFF
+and the existing d6 checkpoint is unchanged.
+
+The immediate post-install readback reported 11/11 unchanged hashes. Subsequent
+root checks observed drift in the shared Codex `config.toml` and Claude
+`.claude.json`, while the nine other observed files remained unchanged. Both
+owned MCP registrations still point to the stable executable and home. The
+specific unrelated fields, writers and causes are UNKNOWN; the prior unrelated
+settings were not captured. Current changes were preserved, not overwritten.
+Whole-file hashes describe the installation instant; ongoing delivery checks
+use the owned registration fields and pointsman state. Do not turn the earlier
+hash check into a claim that later host trust or model settings never changed.
+
+A fresh native GPT-6.1 Sol/medium agent now sees eight actual MCP tools, including
+`run`, and invoked it once. The OFF response correctly returned `needs_parent`,
+with zero actions, source bytes, decisions, network calls and model inference
+inside the workflow. This proves native fresh-agent availability and OFF behavior,
+not ON execution, task utility or zero model requests by the inspecting agent.
+This older root chat still has the seven-tool cache. Codex UI automation was refused
+by Computer Use's app policy; no alternate UI-control path or restart was attempted.
+
 Current Claude docs require `2.1.287+` for the documented default-enabled mods
-path and say the old function-hooks environment flag is ignored. That is newer
-than the installed `2.1.280`; the existing effort-mod instructions describe the
-older path. Version/upgrade and native compatibility work belongs in WP02/WP12,
-not an assumption that the feature is already active.
+path and say the old function-hooks environment flag is ignored. A later readback
+found installed `2.1.288`; this work did not upgrade the host. The existing
+effort-mod instructions describe the older path. The new workflow mod was checked
+against the actual `2.1.288` plugin test engine: [four native component tests
+passed](examples/workflow-hosts/claude-component-evidence.json), covering synthetic
+stream/result, normal fallback and closing before consumption. Native manifest
+validation required two missing user-config descriptions; those are now present.
+The production bridge also completed a fixed recipe in isolated local state.
+These checks do not prove authenticated CLI behavior, visible output, retained
+history or in-flight cancellation.
+
+The [isolated full-session attempt](examples/workflow-hosts/claude-session-preflight.json)
+used the actual binary with OS-enforced network denial and no real credentials.
+It stopped at online bootstrap before any workflow prompt, then was terminated;
+its owned temporary files were removed after evidence preservation. A read-only
+`claude auth status` subsequently reported `loggedIn: false` in the tool context;
+this does not establish the user's subscription status. Full native acceptance
+remains open. Global pointsman modes, installed trust state and the active model
+were not changed by these probes.
 [Current mod availability](https://code.claude.com/docs/en/plugins/mods/overview)
 
 Cache-aware effort has a stronger supported route in an owned Claude API client:
@@ -1053,10 +1096,10 @@ checkpoint, plus the relevant capture/provider/host/operational scope.
 **Output:** per-host/per-family native evidence and bounded adoption decision.
 
 - [ ] Freeze the accepted code/model/policy/state-builder/adapter revisions and retain the previous checkpoint and modes for recovery.
-- [ ] Review required installer dry-run changes and use only owned artifacts; preserve native trust/approval state and unrelated settings.
+- [x] Review required installer dry-run changes and use only owned artifacts; preserve native trust/approval state and unrelated settings. The stable runtime update to `3611466` and Codex skill refresh passed eleven immediate unchanged-file hash checks and wrote no native trust state. Later shared host-config drift is recorded separately above; both owned MCP registrations, Claude's symlink and pointsman modes remain preserved.
 - [ ] Verify host capability readback on the actual target version; do not treat a source fixture or installed MCP entry as application evidence.
 - [ ] On native bypass, prove zero corresponding model request, correct visible/history output, preserved continuation/cancellation and real acceptance. On Codex MCP, report remaining outer model turns honestly.
-- [ ] Update/install host-specific adapters only for verified versions; the local Claude 2.1.280 observation does not satisfy current 2.1.287+ documentation by itself.
+- [ ] Update/install host-specific adapters only for verified versions; Claude 2.1.288 component tests now pass, while full CLI output/history/continuation acceptance remains open.
 - [ ] Begin non-applying observation/shadow only within authorization; capture recommendation counts, missing outcomes and latency without claiming success/savings.
 - [ ] Confirm local worker readiness, cold/unavailable fail-open and no hidden paid fallback; measure warm/cold/concurrent requests.
 - [ ] Apply only qualified families at their calibrated gates; stale/unknown state, locks, unsupported targets and policy changes retain original behavior.
@@ -1192,7 +1235,7 @@ documentation delivery.
 | Host | Lowest common integration | Optional application path | Exact limitation / next evidence |
 |---|---|---|---|
 | Codex | Existing advice tools; proposed shared workflow tool | Current-app workflow segments; stronger owned app-server client | Installed 0.154.0 schema confirms direct command/MCP execution and conditional `turn/start`. Native hooks do not document transparent model-response synthesis. Opaque spawn input limits routing, not the portable workflow path. |
-| Claude Code | Existing advice/Agent hooks and older effort mod | `turn.step` synthetic response/tool chunks; PostToolBatch stop; full tool-output replacement | Current mod docs are 2.1.287+, installed CLI is 2.1.280. Implement against version-specific declarations and verify inference is actually skipped. Ordinary stop text differs from clean synthetic completion. |
+| Claude Code | Existing advice/Agent hooks and older effort mod; opt-in workflow mod | `turn.step` synthetic response/tool chunks; PostToolBatch stop; full tool-output replacement | Installed 2.1.288 passes four native component tests and manifest validation. An isolated full CLI run stopped at online bootstrap before the workflow prompt; visible/history output, authenticated continuation and in-flight cancellation remain UNKNOWN. Ordinary stop text differs from clean synthetic completion. |
 | Gemini CLI | Proposed workflow tool | `BeforeModel.llm_response` skips the model with synthetic text | Installed 0.42.0 is an identity observation, not a verified adapter. Current translator's response parts are strings; arbitrary synthetic function calls are not this contract. |
 | Other MCP hosts | Shared workflow tool after implementation | Multiple internal actions behind one dispatch | Removes internal round trips without control of the host's outer calls. Existing `decide` alone has no such executor. |
 | Owned SDK/API harness | JS/shared workflow plus supported model/run APIs | App owns when model calls occur; optional programmatic tool calling/per-message effort | Measure cache and actual requests. API beta support does not imply the same mechanism is active in a native mod. |

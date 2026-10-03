@@ -1,0 +1,39 @@
+{
+  "observedAt": "2026-10-03T07:38:50.673Z",
+  "host": "claude",
+  "version": "2.1.288",
+  "grade": "installed_native_plugin_test_host_with_injected_bottom_hooks",
+  "binaryHash": "bbe93063f7a0879a1021b2891e5c9354e5b3b98433e32efe6750f7710afed750",
+  "moduleHash": "d56803fe63e607d159814d7a685a2407bf4b69994bf2c028513f64dd607fc4b5",
+  "contractRevision": "claude-turn-step-2026-10-03",
+  "officialTypes": {
+    "commit": "684800b206824dfd0cc8a876e8604b20f72c3617",
+    "generatedByVersion": "2.1.277",
+    "url": "https://github.com/anthropics/claude-code/blob/684800b206824dfd0cc8a876e8604b20f72c3617/mods/types/claude-code.d.ts"
+  },
+  "command": [
+    "claude",
+    "plugin",
+    "test",
+    "<owned temporary plugin copy>"
+  ],
+  "productionManifestValidation": "PASS",
+  "nativeTestExitCode": 0,
+  "nativeTestOutput": "(pass) pointsman-workflows installed native component > completed segment streams text and final result without bottom model request; ordinary continuation delegates once [62.36ms]\n(pass) pointsman-workflows installed native component > unapplied bridge result delegates once and preserves fallback chunks/result [15.86ms]\n(pass) pointsman-workflows installed native component > subagent and later step bypass the bridge unchanged [10.74ms]\n(pass) pointsman-workflows installed native component > closing before stream consumption calls neither bridge nor bottom model [10.19ms]\n 4 pass\n 0 fail\nRan 4 tests across 1 file. [0.25s]",
+  "installedTestingStream": "Async generator: capture done.value through next(); installed test stream has no .result property.",
+  "actualProviderPresentInTestHost": false,
+  "actualExternalModelRequests": 0,
+  "providerCountScope": "No provider implementation exists beneath native testing hooks; this does not measure an authenticated CLI session.",
+  "workflowInferenceCalls": 0,
+  "workflowNetworkCalls": 0,
+  "globalSettingsChanged": false,
+  "activationChanged": false,
+  "streamAndResult": "PASS_NATIVE_TEST_HOST",
+  "ordinaryContinuation": "PASS_NATIVE_HOOK_CHAIN_WITH_SENTINEL",
+  "cancellationBeforeConsumption": "PASS_NATIVE_TEST_HOST",
+  "visibleUi": "UNKNOWN",
+  "assistantHistoryRetention": "UNKNOWN",
+  "authenticatedContinuation": "UNKNOWN",
+  "inFlightCancellation": "UNKNOWN",
+  "adoption": "UNQUALIFIED_FULL_NATIVE_SESSION"
+}
