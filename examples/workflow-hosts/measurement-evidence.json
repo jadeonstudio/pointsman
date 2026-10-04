@@ -179,5 +179,295 @@
       "reduction_percent": 27.7
     }
   ],
-  "packet_size_comparison_note": "Same controlled fixtures; compact records and streaming timeline semantics preserve the independent required checks, not every repeated event as a distinct timeline entry."
+  "packet_size_comparison_note": "Same controlled fixtures; compact records and streaming timeline semantics preserve the independent required checks, not every repeated event as a distinct timeline entry.",
+  "nativeClaudeSourcePair": {
+    "on": {
+      "input_match": true,
+      "history_match": true,
+      "fence_only_normalization": false,
+      "oracle": {
+        "status": "PASS_SOURCE_FACTS",
+        "sourceRevision": "4a9426e8c658a71a4f8b5e43060a7c2f8ccb1f28",
+        "copyRevision": "1af26c9c6c82ba162b81c710f5c4328b13e9e76a",
+        "sourceSites": 8,
+        "observedEvidenceEntries": 6,
+        "scope": "Completed evidence segment only; task utility/A/model advantage not established."
+      },
+      "stream_sha256": "9b976f25cbce85540cd73f658633c15a1219e97d394582c5115f4e3da2672718",
+      "history_sha256": "cde64d714108ecffd0c7498a546f87eec2bb1ac2bafc4732956351e613a14afb",
+      "result_sha256": "3bb789261adab73c3bdb673c2dfbf5a5513306b5cf72527c63c3a742c9455370",
+      "native_duration_ms": 183,
+      "api_duration_ms": 0,
+      "process_wall_ms": 2222.8144579567015,
+      "api_equivalent_usd": 0,
+      "model_usage": {},
+      "host_tool_calls": 0,
+      "permission_denials": 0,
+      "is_error": false,
+      "native_result_num_turns": 1,
+      "source_changes": 0,
+      "observedMainRequestCount": 0
+    },
+    "off": {
+      "input_match": true,
+      "history_match": true,
+      "fence_only_normalization": true,
+      "oracle": {
+        "status": "PASS_SOURCE_FACTS",
+        "sourceRevision": "4a9426e8c658a71a4f8b5e43060a7c2f8ccb1f28",
+        "copyRevision": "1af26c9c6c82ba162b81c710f5c4328b13e9e76a",
+        "sourceSites": 8,
+        "observedEvidenceEntries": 8,
+        "scope": "Completed evidence segment only; task utility/A/model advantage not established."
+      },
+      "stream_sha256": "65bff456dbd8dca0065862140c14cf39dd1808bbf4f13837c4e926d8f75c99e1",
+      "history_sha256": "8fdbfc5b8d1702b88c2a406632e7506a526bae2368a5f71d5d030736751b499d",
+      "result_sha256": "aaa9c0205e1784c504688a013d56ba2dfe66a934fb7e1c1a8e4384ae9589fc25",
+      "native_duration_ms": 26388,
+      "api_duration_ms": 25523,
+      "process_wall_ms": 28289.933084044605,
+      "api_equivalent_usd": 0.05787,
+      "model_usage": {
+        "claude-sonnet-5-5": {
+          "inputTokens": 4,
+          "outputTokens": 3594,
+          "cacheReadInputTokens": 11530,
+          "cacheCreationInputTokens": 4904,
+          "webSearchRequests": 0,
+          "costUSD": 0.05787,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 0,
+          "canonicalModel": "claude-sonnet-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "host_tool_calls": 1,
+      "permission_denials": 0,
+      "is_error": false,
+      "native_result_num_turns": 2,
+      "source_changes": 0,
+      "observedMainRequestCount": 2
+    },
+    "scope": "One matched source-evidence segment, one run per arm; no general A/B/C, whole coding task or model benefit claim. Native num_turns is not provider request count.",
+    "process_speed_ratio": 12.727078044134114,
+    "baseline_prompt_cache": "Observed cache_read11530/cache_creation4904/input4; not assumed cold.",
+    "prep_overhead_api_equivalent_usd": 0.132913,
+    "total_experiment_api_equivalent_usd": 0.190783,
+    "spend": "Existing ClaudeMax subscription; usage creditsOFF; costBasis=list/API-equivalent, not extra cash charge.",
+    "host": {
+      "version": "2.1.288",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "subscription": "Claude Max",
+      "usageCredits": "OFF",
+      "input": "official print text stdin",
+      "output": "stream-json plus persisted assistant history"
+    },
+    "runtimeRevision": "6d83f4516ff620f356e27924d47bd5cf1473d130",
+    "promptSha256": "7466a07edf840e71528aa7206c1d60e66bc18c039c813fb56ac783549789afa5",
+    "oracleSha256": "1eb539ae197c7832de8da03318085f530f9e9de128d642df6d2e97c0efe9a5e3",
+    "privateReceiptSha256": "4e070fda52c2cc56896d4bfe23a6e1d29333628422b39c7fe7a5d617d8ab61b6",
+    "observedAt": "2026-10-04",
+    "order": [
+      "on",
+      "off"
+    ],
+    "preparationErrors": [
+      {
+        "revision": "r2",
+        "cause": "Interactive paste/clear produced two malformed task inputs; excluded from paired quality and speed.",
+        "apiEquivalentUsd": 0.0441012
+      },
+      {
+        "revision": "r3",
+        "cause": "OFF arm did not use offered batch and encountered a read-only checksum permission denial; excluded from efficiency comparison.",
+        "apiEquivalentUsd": 0.0888118
+      }
+    ],
+    "mechanism": "ON completes the fixed recipe directly; OFF calls the same prepared whole-segment batch once and returns its JSON through the model. Both pass an independent source-span oracle. Neither arm calls Jev/Laya. Direct code alone is faster than either native process and remains the appropriate baseline when no model consumer is needed.",
+    "billing": "CLI costBasis=list is API-equivalent usage, not additional subscription billing; total includes invalid preparation. No paid API/GPU call was authorized or made."
+  },
+  "representativeWorkloadPreparation": {
+    "observedAt": "2026-10-04",
+    "source": "Four owner-authorized Codex session summaries; only aggregate patterns are published.",
+    "patterns": [
+      "Storage inventory and ranked attribution without ancestor double counting",
+      "Source/configuration/runtime linkage with explicit versus automatic behavior",
+      "Checklist completion based on independent evidence grades"
+    ],
+    "firstCase": "Automatic decision-model invocation and execution boundaries",
+    "sourceRevision": "9778610bcf25ac9b71b43db82f1f3808b1471bc6",
+    "acceptedAssertions": 19,
+    "mcpProbe": {
+      "initializationPingAndListModelCalls": 0,
+      "genericUserRequestError": -32601,
+      "explicitRouteLayerCalls": 1,
+      "explicitRouteEngineCalls": 0
+    },
+    "preparationReportSha256": "cc05591c04338a63a8f4e310ea30c7ffc9946951edfecd00313411cf80df3d1f",
+    "pairedComparison": "Source-evidence subsegment completed in nativeClaudeRepresentativePair; final runtime-answer quality remains unmeasured.",
+    "semanticModelConsumer": "NOT_REQUIRED for these deterministic contract facts",
+    "scope": "Source and offline runtime oracle preparation; user-session answers are not gold. No host task completion, savings or native dispatch claim."
+  },
+  "nativeClaudeRepresentativePair": {
+    "off": {
+      "inputMatch": true,
+      "persistentHistoryMatch": true,
+      "fenceOnlyNormalization": true,
+      "processWallMs": 26531.098790932447,
+      "nativeDurationMs": 24698,
+      "apiDurationMs": 24053,
+      "apiEquivalentUsd": 0.05330800000000001,
+      "modelUsage": {
+        "claude-sonnet-5-5": {
+          "inputTokens": 6,
+          "outputTokens": 3130,
+          "cacheReadInputTokens": 20960,
+          "cacheCreationInputTokens": 4451,
+          "webSearchRequests": 0,
+          "costUSD": 0.05330800000000001,
+          "contextWindow": 1000000,
+          "maxOutputTokens": 128000,
+          "thinkingTokens": 93,
+          "canonicalModel": "claude-sonnet-5-5",
+          "provider": "firstParty",
+          "costBasis": "list"
+        }
+      },
+      "observedMainRequestCount": 3,
+      "hostToolCalls": 2,
+      "preparedBatchCalls": 1,
+      "extraHostCommands": [
+        "echo '{\"status\":\"done\",\"note\":\"packet returned verbatim above\"}' >/dev/null"
+      ],
+      "permissionDenials": 0,
+      "streamSha256": "75ca14426dabe0f4d6613e6462ad4c58a4d1ed1abf622663ba6d565c3be13fd0",
+      "historySha256": "37180ef5c3831ffc3dd6bfe7a009086dc188f8ad99e06c9894fb4f1e48bd5a74",
+      "resultSha256": "e5ffc0aa19dbda2c2a63b3c300d769cc1a495c3826b3a1bb0a62363ee226ef87",
+      "packetBytes": 6147,
+      "oracle": {
+        "status": "PASS",
+        "sourceFiles": 2,
+        "requiredAnchors": 3,
+        "interpretation": "Source-evidence segment only; no final runtime answer accepted."
+      }
+    },
+    "on": {
+      "inputMatch": true,
+      "persistentHistoryMatch": true,
+      "fenceOnlyNormalization": false,
+      "processWallMs": 2517.113999929279,
+      "nativeDurationMs": 206,
+      "apiDurationMs": 0,
+      "apiEquivalentUsd": 0,
+      "modelUsage": {},
+      "observedMainRequestCount": 0,
+      "hostToolCalls": 0,
+      "preparedBatchCalls": 0,
+      "extraHostCommands": [],
+      "permissionDenials": 0,
+      "streamSha256": "53149dec4a405c5fed6abbeb62d4caaf8c39daf7e96fa00611c8c0d8a2ae12c5",
+      "historySha256": "cb30def3f0e1a8ff40e043cd57e4e5db6246d297cf16b9dca5286ff08e59a709",
+      "resultSha256": "e0d90e14414b8c52cdf2b7f9efeebf27179318c791b8ed5895a976defd1d4b88",
+      "packetBytes": 7525,
+      "oracle": {
+        "status": "PASS",
+        "sourceFiles": 2,
+        "requiredAnchors": 3,
+        "interpretation": "Source-evidence segment only; no final runtime answer accepted."
+      }
+    },
+    "processSpeedRatio": 10.5402849420717,
+    "oracle": "PASS_BOTH_WITH_REPORTED_BASELINE_NOOP",
+    "scope": "Representative source/configuration evidence segment from owner-authorized Codex session pattern; source facts only, not final runtime answer. One pair, reverse of R4; no distribution claim.",
+    "order": [
+      "off",
+      "on"
+    ],
+    "promptSha256": "687f6335c37091f627204d8906cef9037b1116742a1b7ec091c0dee89a1ce11a",
+    "sourceSpecSha256": "d5e6451fc1f2e7de4838dbc873a8df8cf8d17ca51f781d9fdca7e21f8a0d54b1",
+    "sourceModuleSha256": "8135b265d3ffed5aaa21352a91356da37576931ec1e8249606f1d5663b1a0d47",
+    "runtimeRevision": "6d83f4516ff620f356e27924d47bd5cf1473d130",
+    "host": {
+      "version": "2.1.288",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "subscription": "Claude Max",
+      "usageCredits": "OFF"
+    },
+    "preparationError": {
+      "record": "execution-r5.json",
+      "scope": "Unprivileged filesystem sandbox could not access existing macOS login; official auth status outside sandbox verified Claude Max.",
+      "status": "AUTHENTICATION_ENVIRONMENT_ERROR",
+      "modelRequests": 0,
+      "apiEquivalentUsd": 0
+    },
+    "baselineDeviation": "The host ran the prepared batch exactly once, then an extra echo-to-/dev/null no-op. Include this overhead; not evidence against the minimal single-tool baseline. R4 remains the clean one-tool reference. No permission denial or repository write.",
+    "receiptPreparationCorrections": [
+      "Native transcript retained the final input newline; matched exact frozen file bytes rather than a trimmed string.",
+      "Removed an unjustified one-total-tool assertion after exposing the extra no-op; execution, gold and task input are unchanged."
+    ],
+    "privateReceiptSha256": "e460502a9d0b68a8c0e900a5a9c1f56289b99513172d6c1b76b5034e38d12eb7",
+    "billing": "Existing Claude Max subscription with usage credits OFF; reported USD is API-equivalent list usage, not additional billing."
+  },
+  "resumedExperimentTotals": {
+    "apiEquivalentUsdIncludingPreparation": 0.244091,
+    "additionalCashCharges": 0,
+    "paidGpuCalls": 0,
+    "jevCalls": 0,
+    "layaCalls": 0,
+    "status": "Two source-evidence pairs and one source-read interruption/recovery; no whole-task or semantic model superiority claim."
+  },
+  "resumedDeliveryVerification": {
+    "observedAt": "2026-10-04",
+    "sourceRevision": "9778610bcf25ac9b71b43db82f1f3808b1471bc6",
+    "runtimeCodeChanges": false,
+    "nodeTests": {
+      "passed": 623,
+      "failed": 0
+    },
+    "syntaxModulesIncludingPrivateHelpers": 268,
+    "steps": [
+      {
+        "step": "check",
+        "exitCode": 0,
+        "wallMs": 7380.004416685551,
+        "sha256": "287702077b1f0ccf8fed6b34b919eddef1f202935473413a43994bb0328b7b10"
+      },
+      {
+        "step": "tests",
+        "exitCode": 0,
+        "wallMs": 28184.430750086904,
+        "sha256": "253d3cfb928fad83f3b3a834175364ceefa9557900aab22349894cb79c0411e3"
+      },
+      {
+        "step": "smoke",
+        "exitCode": 0,
+        "wallMs": 54.90700015798211,
+        "sha256": "e11445d0cbbd3fa67b890295b49088b5bd28ad5172db717fb0a92d229ae34426"
+      },
+      {
+        "step": "fast-path",
+        "exitCode": 0,
+        "wallMs": 54.13512513041496,
+        "sha256": "b9a19d9864ce5f3808a52173e6d6e937fb2c4d9bc96c208bd89049ae6bf5f5a1"
+      },
+      {
+        "step": "classifier-design",
+        "exitCode": 0,
+        "wallMs": 58.49474994465709,
+        "sha256": "b882f3a3cc27a17ea27938650fec75807701f15a999ddfd8de30374aa96a1d9f"
+      },
+      {
+        "step": "training-pipeline",
+        "exitCode": 0,
+        "wallMs": 302.7964159846306,
+        "sha256": "c14357a088e90e6c9e7ea3108acfa574d33dd6b546a249c11f5019b668aa1d1a"
+      }
+    ],
+    "cleanup": "Archived with byte-identical hashes, then removed the six experiment-generated TypeScript config/type files from the installed mod. Frozen experiment inputs, receipts and original host session records retained. No native or GPU worker left running.",
+    "scope": "One required full offline delivery gate; no repeated successful test gate or new paid API/GPU call."
+  }
 }

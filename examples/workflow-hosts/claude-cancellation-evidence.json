@@ -114,7 +114,7 @@
   "globalSettingsChanged": false,
   "productionModesChanged": false,
   "activeCheckpointChanged": false,
-  "remaining": "Actual recipe/model in-flight cancellation, isolated cancellation-only provider count and full task economics remain unaccepted",
+  "remaining": "Recipe source-read cancellation and same-process recovery passed in the later scoped trial; model-inference cancellation, other host contracts and complete task economics remain unaccepted.",
   "cleanup": {
     "nativeSessionsExit0": 2,
     "ownedWrapperAndChildExited": true,
@@ -137,5 +137,55 @@
     "logSha256": "64720ca4e3d2d0bcb5e2d69ffbebad8772365f7ea4392337ecc132eabe5b84ac",
     "paidModelGpuCalls": 0,
     "scope": "Complete frozen-source Node gate once; reuse unchanged Python evidence, with5tool-selection and2prefix focused checks separately passed"
-  }
+  },
+  "recipeReadCancellation": {
+    "observedAt": "2026-10-04T10:05:24.627Z",
+    "status": "PASS_NATIVE_RECIPE_READ_CANCEL_AND_SAME_PROCESS_RECOVERY",
+    "hostVersion": "2.1.288",
+    "sdkVersion": "0.2.76",
+    "runtimeRevision": "6d83f4516ff620f356e27924d47bd5cf1473d130",
+    "scope": "Real native same-process turn interruption during controlled 5s snapshot source-read hold",
+    "trigger": "Public Query.interrupt() on streaming input, not process termination; no raw control payload or host patch.",
+    "readyToInterruptMs": 17,
+    "interruptAckMs": 2,
+    "readyToAbortMs": 19.667665999999997,
+    "holdCompleted": false,
+    "childGoneBeforeRecovery": true,
+    "sameHostProcessAfterRecovery": true,
+    "cancelledTurn": {
+      "terminalReason": "aborted_streaming",
+      "durationMs": 714,
+      "apiDurationMs": 0,
+      "modelUsage": {},
+      "apiEquivalentUsd": 0
+    },
+    "recovery": {
+      "terminalReason": "completed",
+      "durationMs": 170,
+      "apiDurationMs": 0,
+      "modelUsage": {},
+      "apiEquivalentUsd": 0,
+      "oracle": {
+        "status": "PASS_SOURCE_FACTS",
+        "sourceSites": 8,
+        "sourceFiles": 2,
+        "evidenceEntries": 6
+      },
+      "persistentHistory": "UNKNOWN: no owned transcript at the expected location after this sandboxed SDK process. Stream recovery is accepted; existing authenticated R4 history evidence remains separate."
+    },
+    "unexpectedPermissionRequests": false,
+    "lateCancelledPacketOrModelFallback": false,
+    "observedMainRequestIds": 0,
+    "streamSha256": "5e6610252fe392348a45225a7f123f86e2a7eb464d876af182a30d8f0ef6752d",
+    "privateReceiptSha256": "b901931007ceeda160941645ab0bcad1c0063e87a5243fa180a1ac2cd21b8f74",
+    "injectedReadModuleSha256": "f5c93b6e6929aaa58671fdaedec4b0a7092bfb68bfb0cba6b228efb7d5df5664",
+    "sourceChanges": 0,
+    "cleanup": {
+      "nativeProcessAbsent": true,
+      "bridgeProcessAbsent": true,
+      "close": "SDK close after recovery; host exited143. No forced bridge cleanup."
+    },
+    "limits": "Controlled latency at actual snapshot file read; not cancellation during model inference, arbitrary recipe computation or all host versions. SDK0.2.76 with pinnedCLI2.1.288 passed this exercised path only. No provider transport capture."
+  },
+  "recordLayout": "Top-level status, scope and trials preserve the earlier 2026-10-03 held-input record. The later accepted recipe-read cancellation and same-process recovery is in recipeReadCancellation (2026-10-04)."
 }

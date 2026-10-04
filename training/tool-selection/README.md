@@ -17,6 +17,25 @@ explicitly defined by the pinned official `relevance_file_runner`. Missing or
 malformed multiple references fail preparation; they never become no-call gold.
 This is a function-name projection, not argument/AST/execution correctness.
 
+The [official BFCL definition](https://gorilla.cs.berkeley.edu/blogs/8_berkeley_function_calling_leaderboard.html)
+targets withholding invocation. Its [pinned runner](https://github.com/gorilla-llm/gorilla/blob/916260dfc116bf06793a1af79b4ec8195b0453b6/berkeley-function-call-leaderboard/bfcl/eval_checker/eval_runner.py#L274)
+checks absence of a decoded call, including decoding failure; the source hashes
+are preserved in [admission-evidence.json](admission-evidence.json). The
+[builder](build.py) instead asks for required tool names with `no execution`,
+without explicitly requiring sufficient arguments for immediate invocation.
+Neither the category nor its runner supplies independently annotated causes.
+A read-only audit of all 47 DEV no-call cases found unsupplied required values,
+different requested operations, and cases with the required information visible.
+Individual no-call reasons remain UNKNOWN; this does not authorize relabeling,
+rescoring, or a conclusion about generic model defects. Existing scores and
+gates remain unchanged.
+
+Deterministic argument eligibility can remove model work when an authoritative
+bound-argument object explicitly lacks required keys. These wires contain
+conversation text and schemas, without bound arguments; deciding which values
+are supplied or derivable still requires semantic interpretation. A schema-only
+filter would not establish repaired no-call quality.
+
 The original input-only admission froze before downloading the reference file.
 Cases sharing any exact canonical full named-function schema form one component.
 The existing SHA256 bucket split is preserved: 440 original cases / 363 schema

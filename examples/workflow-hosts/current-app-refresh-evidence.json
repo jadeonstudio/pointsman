@@ -239,5 +239,30 @@
     "reinstall": false,
     "nativeReload": false,
     "globalWrites": false
+  },
+  "ownerResumedCurrentApp": {
+    "observedAt": "2026-10-04",
+    "runToolAvailable": true,
+    "actualOffRun": {
+      "status": "needs_parent",
+      "reason": "OFF",
+      "actions": 0,
+      "decisions": 0,
+      "networkCalls": 0,
+      "inferenceCalls": 0,
+      "bytesRead": 0,
+      "outputBytes": 428,
+      "elapsedMs": 6.399
+    },
+    "productionReadback": {
+      "globalMode": "off",
+      "workflowMode": "off",
+      "nativeMode": "off",
+      "provider": "laya",
+      "checkpoint": "d145e848f7827fdd0a643b90727e65a8fe67d5637bf8c6c07ab3d26511edd434",
+      "inFlight": 0,
+      "workerRunning": false
+    },
+    "scope": "Current app availability/OFF and unchanged production state only; no new ON, outer inference-count, UI/history or end-user utility claim."
   }
 }

@@ -1,6 +1,6 @@
 # Pointsman integrated architecture, learning and delivery plan
 
-Updated: 2026-10-03. Status: **EXECUTION BLOCKED — 104/157 verified; full objective unchanged**.
+Updated: 2026-10-04. Status: **OWNER-RESUMED EXECUTION — 104/157 verified; full objective unchanged**.
 Runtime source baseline: `39bf5a4`; original design bundle: `e18cd21`; first
 consolidation: `b950227`. The revision below replaces routing-first priorities
 with execution that removes repeated parent-model requests.
@@ -71,8 +71,9 @@ The CLI/MCP status readback retained global OFF and active d6 checkpoint
 `d145e848f7827fdd0a643b90727e65a8fe67d5637bf8c6c07ab3d26511edd434`.
 
 A (whole-task efficiency): **NOT ESTABLISHED**. Small controlled code batches beat
-the executor; actual Codex direct MCP execution passed, but no matched end-to-end
-three-arm task-success/cost/latency experiment passed. B (above pinned Jev):
+the executor. The later matched Claude source segment below demonstrates native
+request elimination, but no complete three-arm task-success/cost/latency experiment
+has passed. B (above pinned Jev):
 **NOT ESTABLISHED**: the narrow public discount-term comparison tied at 96%,
 with no positive superiority bound. C (broad generalization above Jev):
 **NOT ESTABLISHED / UNKNOWN**; all new local candidates failed their applicable
@@ -87,29 +88,75 @@ aggregate is in `examples/workflow-hosts/measurement-evidence.json`. Original
 prediction files, model assets and experiment source snapshots remain preserved.
 No active worker or unrelated-file cleanup remains.
 
-### Remaining execution boundaries — 2026-10-03
+### Resumed execution and remaining boundaries — 2026-10-04
 
-After delivery of `e043fb5`, three bounded GPT-6.1 Sol read-only assessments
-rechecked the remaining Codex, effort and data/model dependencies. No additional
-READY node was found under the current constraints. Previous successful checks
-were reused; no new host/model process, paid request, global change or research
-retry was started. This is an incomplete objective, not a completed release or
-a narrower replacement target.
+The owner explicitly authorized trusting only the prepared Claude experiment
+folder, read-only comparisons on the existing subscription, and inspection of
+Codex sessions to derive representative work. That scoped trust was accepted
+through Claude's normal prompt. The previous trust blocker is resolved. Claude
+Max reports usage credits OFF; no additional paid API/GPU usage is permitted.
+The existing goal's app record remains blocked; this does not cancel the owner's
+explicit resumption, nor does it mean the full objective is complete.
+
+The first matched native source-evidence pair now passes an independent oracle
+on both arms: all eight required source sites, verbatim excerpts, references,
+hashes and dynamic-edge UNKNOWN. Native ON completed in **2,222.814 ms** including
+startup, versus **28,289.933 ms** for OFF using the prepared whole-segment code
+batch once: **12.727×** for this one segment. Observed corresponding main requests
+were **0 versus 2**, with no permission denials or source changes. Both used
+Claude 2.1.288, Sonnet 5.5 medium and the same frozen input/runtime. Neither arm
+called Jev/Laya. This measures native completion's removal of model orchestration
+and output regeneration; direct code alone remains faster when no model consumer
+is needed. It is one pair in ON→OFF order, not a randomized p50/p95 study or A/B/C
+superiority. Actual cache counters and all invalid preparation usage are retained
+in [measurement evidence](examples/workflow-hosts/measurement-evidence.json).
+
+The representative OFF-precedence source case also passed both independent
+oracles (two files, three required anchors): **26,531.099→2,517.114 ms** including
+startup, with **3→0** observed main requests. The OFF host ran the prepared batch
+once and an extra `echo` to `/dev/null`; this overhead is reported, not removed.
+Treat **10.540×** as the observed host run, not a minimal one-tool baseline or a
+second statistical replication of the first case. Output packets were 6,147
+versus 7,525 bytes: this gain is request elimination, not packet compression.
+The first sandboxed OFF launch lacked native keychain access; official CLI auth
+status outside that sandbox confirmed the existing Max login, and the identical
+input then ran successfully. That failed launch consumed no model tokens.
+
+Actual recipe-read cancellation is now accepted at its tested boundary. The
+public SDK's streaming `Query.interrupt()` aborted a controlled five-second
+source-read hold after 19.668 ms, removed the bridge child, and kept the same
+Claude process alive for an eight-site oracle-passing recovery. Both turns
+reported zero model usage; no late cancelled packet or fallback appeared. The
+sandboxed SDK probe did not leave a persistent transcript at the expected owned
+path, so its history persistence is UNKNOWN; authenticated pair histories are
+separate accepted evidence. Model-inference cancellation remains untested.
+See [cancellation evidence](examples/workflow-hosts/claude-cancellation-evidence.json).
+
+Four owner-authorized Codex session summaries yielded three representative
+patterns: storage attribution, source/configuration/runtime linkage, and
+checklist/evidence assessment. A frozen current-source case for automatic model
+invocation has 19 accepted existing assertions and an independent MCP boundary
+probe. Those facts are independent of session answers. Its source-evidence
+subsegment completed the paired comparison above; a final runtime explanation still
+requires interpretation, and no qualified semantic model consumer is invented.
 
 | Remaining requirements | Current authoritative boundary | What is required to continue |
 |---|---|---|
-| WP02/WP11/WP12 native execution and task economics | Claude session 25566 is still live; the owner-only trust question remains unanswered and no task was submitted. This root's current catalog still has seven tools without `run`. Separate Codex direct MCP/OFF evidence does not prove current-app delivery, provider request counts or native in-flight cancellation. Gemini omits synthetic assistant history. | The normal owner trust decision opens the prepared Claude trial only. Codex needs a supported current-app connection/catalog and observable native boundaries; Gemini needs a supported history-preserving path. Existing UI-policy refusals are not bypassed. |
-| WP02 per-message effort and cache preservation | Existing effort gates and prior regressions remain accepted. The [documented per-message API beta](https://platform.claude.com/docs/en/build-with-claude/effort#per-message-effort-beta) is distinct from the current mod's `e.effort`; no verified transport/entitlement executes that contract at zero additional spend. | Supported model, beta, actual request payload, effective turn and before/after cache usage in one authorised run. Documentation or a subscription alone is not that proof. |
-| WP04/WP05/WP07–WP10 generalization and qualification | Three trained Laya candidates failed their preregistered learning gates. The seven-arm tool-selection study is closed; Clef's semantic strength did not repair no-call quality. No accepted prospective/unseen-family executor corpus or qualifying new candidate exists. | Independently adjudicated, rights-cleared executor decision cases and completion outcomes, plus a justified candidate hypothesis and an explicitly bounded next experiment. A new node name, more duplicate rows, calibration or opening test is not a remedy for a failed learning gate. |
-| WP10 B/C superiority versus pinned Jev | The permitted invoice comparison tied; O*NET's licensed AI-consensus labels are not independently established gold. New competitive Jev API use remains unavailable under the owner's stated permission/budget constraints. | An applicable permitted broader comparison with independent gold and adequate effective samples. Missing results cannot become PASS. |
-| WP12/WP13 applying rollout, qualification and promotion | The preceding quality/native utility gates remain unaccepted. Existing d6 and OFF modes are retained. | Actual upstream acceptance, followed by scoped operational checks; an installer run or forced promotion cannot replace it. |
+| WP02/WP11/WP12 native execution and task economics | Current-app `run` is now present and an actual OFF call returned no actions, reads or inference. Two Claude source pairs and actual recipe-read cancellation/recovery passed; broader complete-task utility remains separate. Gemini omits synthetic assistant history. | Use the accepted scoped interruption/recovery and source-pair evidence; close complete-task success and semantic-model utility. Count Codex's outer model turns; retain Gemini's history limitation. No further user trust action or current-app restart is needed for these observed boundaries. |
+| WP02 per-message effort and cache preservation | Existing effort gates remain accepted. The documented per-message API beta is distinct from the mod's `e.effort`; no verified transport/entitlement executes it at zero extra spend. | Supported model/beta, actual payload, effective turn and before/after cache usage in one authorized run. |
+| WP04/WP05/WP07–WP10 generalization and qualification | Three Laya candidates failed learning gates. Seven-arm tool-selection study is closed. BFCL invocation withholding and the current name-selection projection differ; no independent reason labels justify a generic-defect conclusion or rescoring. No qualifying new candidate exists. | Independently adjudicated executor cases/outcomes and a justified bounded candidate hypothesis. More duplicate rows or opening sealed test cannot repair the learning gate. |
+| WP10 B/C superiority versus pinned Jev | The permitted invoice comparison tied; broader independent Jev gold is not established. New competitive Jev calls remain outside the permission/budget constraints. | Applicable permitted comparison with independent gold and adequate samples; missing results stay UNKNOWN. |
+| WP12/WP13 applying rollout, qualification and promotion | Broad task-quality/model gates remain unaccepted; production modes remain OFF and active d6 is unchanged. | Upstream acceptance followed by scoped operational checks; never force promotion to close a checkbox. |
 
-The Claude trust boundary has persisted across consecutive goal turns. Automatic
-approval review refused even the proposed `No` response to close it, requiring
-the owner's normal trust decision. No response, alternate termination or trust
-state write followed. [AGENTS.md](AGENTS.md) requires: "Respect normal trust and
-approvals." The pending question is retained rather than duplicated. All research
-GPU processes exited and their absence was verified; no research writer remains.
+Root owns native trials, integration and this plan. GPT-6.1 Sol workers own
+bounded cancellation-contract, representative-case and no-call-semantics tasks.
+Prior accepted research checks are reused. The required delivery gate passed once:
+623/623 Node tests, syntax check, offline smoke and all three demos. Runtime
+source did not change. Six host-generated TypeScript config/type files were
+archived with verified hashes and removed from the installed mod; experiment
+inputs and evidence remain preserved. No live experiment writer or GPU worker
+remains. The full objective and every unmet checklist remain intact; scoped
+experimental progress is not a completed release.
 
 ## Reading and execution order
 
@@ -1566,7 +1613,7 @@ but the Jev-superiority targets UNKNOWN; no overall superiority claim follows.
 
 ### WP11 — Measure task utility and learn routing utility separately
 
-**State:** PARTIAL MEASUREMENT — deterministic fixture comparison does not demonstrate an efficiency win. **Depends on:** WP02, WP03 and a permitted selected provider;
+**State:** PARTIAL MEASUREMENT — one matched Claude source segment passed at 12.727× process speed and 2→0 main requests; broader task/model utility remains open. **Depends on:** WP02, WP03 and a permitted selected provider;
 new local checkpoints additionally need WP10. Run the initial executor experiment
 before waiting for broad model training. **Owner:** task-runner/evaluation lead.
 **Output:** independent task evidence, A scorecard and, only if justified, a
@@ -1592,7 +1639,7 @@ release; overall superiority still requires all A/B/C claims to pass.
 
 ### WP12 — Verify native consumption and controlled rollout
 
-**State:** PARTIAL NATIVE EVIDENCE — Claude fixture packet/history/continuation verified; in-flight cancellation and task economics remain open. **Depends on:** WP02 and WP11; WP10 additionally for a new local
+**State:** PARTIAL NATIVE EVIDENCE — Claude source-packet/history, continuation and actual recipe-read cancellation/recovery verified; complete-task economics and broader adoption remain open. **Depends on:** WP02 and WP11; WP10 additionally for a new local
 checkpoint, plus the relevant capture/provider/host/operational scope.
 **Owner:** integration lead.
 **Output:** per-host/per-family native evidence and bounded adoption decision.
@@ -1601,7 +1648,7 @@ checkpoint, plus the relevant capture/provider/host/operational scope.
 - [x] Review required installer dry-run changes and use only owned artifacts; preserve native trust/approval state and unrelated settings. The stable runtime update to `3611466` and Codex skill refresh passed eleven immediate unchanged-file hash checks and wrote no native trust state. Later shared host-config drift is recorded separately above; both owned MCP registrations, Claude's symlink and pointsman modes remain preserved.
 - [x] Verify host capability readback on the actual target version; Codex 0.154.0 direct MCP and fresh native catalog, Claude 2.1.288 authenticated fixture and Gemini 0.42 installed components have separate receipts. Only Claude has authenticated same-session packet/history/continuation proof; this does not close full native adoption.
 - [ ] On native bypass, prove zero corresponding model request, correct visible/history output, preserved continuation/cancellation and real acceptance. On Codex MCP, report remaining outer model turns honestly.
-- [ ] Update/install host-specific adapters only for verified versions; Claude 2.1.288 component and authenticated CLI packet/history/continuation checks pass, while cancellation and final adoption remain open.
+- [ ] Update/install host-specific adapters only for verified versions; Claude 2.1.288 component and authenticated CLI packet/history/continuation checks pass, with later actual recipe-read cancellation/recovery also accepted; model-inference cancellation and final adoption remain open.
 - [ ] Begin non-applying observation/shadow only within authorization; capture recommendation counts, missing outcomes and latency without claiming success/savings.
 - [ ] Confirm local worker readiness, cold/unavailable fail-open and no hidden paid fallback; measure warm/cold/concurrent requests.
 - [ ] Apply only qualified families at their calibrated gates; stale/unknown state, locks, unsupported targets and policy changes retain original behavior.
