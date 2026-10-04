@@ -164,6 +164,18 @@ for (const [name, changes] of [['exhaustive', { coverage: 'exhaustive' }], ['sen
     assert.equal(r.apply, false); assert.equal(r.keepIds.length, 4); assert.equal(s.calls.length, 0);
   });
 }
+run('evidence gate defaults OFF and reuses filtering with an independent attempt cap', async s => {
+  assert.equal(loadFeaturePolicy(s.home).evidence.mode, 'off');
+  assert.equal(s.layer.status().features.evidence.mode, 'off');
+  assert.throws(() => validateFeaturePolicy({ evidence: { mode: 'auto' } }));
+  s.policy.evidence.mode = 'on'; s.policy.bulk.mode = 'off'; s.policy.bulk.batchSize = 1; s.save();
+  const r = await s.layer.filter(copy(FILTER_INPUT), { feature: 'evidence', maxRequests: 1 });
+  assert.equal(r.mode, 'on'); assert.equal(s.calls.length, 1);
+  assert.ok(r.reviewIds.length > 0);
+  const none = await s.layer.filter(copy(FILTER_INPUT), { feature: 'evidence', maxRequests: 0 });
+  assert.equal(s.calls.length, 1); assert.equal(none.keepIds.length, FILTER_INPUT.items.length);
+  assert.equal((await s.layer.filter(copy(FILTER_INPUT))).reason, 'OFF');
+});
 run('bulk OFF keeps all even with global ON', async s => {
   setFeatureMode(s.home, 'bulk', 'off'); const r = await s.layer.filter(copy(FILTER_INPUT));
   assert.equal(r.keepIds.length, 4); assert.equal(r.rejectIds.length, 0); assert.equal(s.calls.length, 0);
@@ -226,6 +238,9 @@ run('CLI mode/status/filter are runnable without original host executables', asy
   const exec = args => spawnSync(process.execPath, [bin, ...args, '--home', s.home], { encoding: 'utf8', env: { PATH: process.env.PATH, HOME: s.home } });
   assert.equal(exec(['router', 'off']).status, 0);
   assert.equal(JSON.parse(exec(['status']).stdout).features.router.mode, 'off');
+  assert.equal(exec(['evidence', 'on']).status, 0);
+  assert.equal(JSON.parse(exec(['evidence', 'status']).stdout).features.evidence.configuredMode, 'on');
+  assert.equal(exec(['evidence', 'off']).status, 0);
   assert.equal(exec(['policy', 'check']).status, 0);
 });
 run('abControlShare defaults to 0, is bounded to [0, 0.5], and `router ab` writes only that field', async s => {

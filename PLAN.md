@@ -9,6 +9,50 @@ This is the single canonical public plan replacing `ARCHITECTURE.md`,
 evidence limitations are consolidated below; the work packages turn them into
 executable checklists. It remains one file at the owner's explicit request.
 
+## 2026-10-04 evidence MCP delivery
+
+Owner request: build category 2 (source preselection) for Codex/Claude, optimizing
+completed work per subscription allowance. This is implementation authorization,
+not permission to activate global modes or incur paid inference. Local model
+payloads were backed up and removed; do not restore or retrain them for this work.
+
+Graph: source/MCP scouts (accepted, `4048206`) -> recipe and integration in parallel
+-> focused protocol/data-integrity acceptance -> one required repository gate.
+Root owns shared runner/MCP/policy/CLI and this record. Recipe worker owns
+`src/evidence.mjs` and its focused tests; consumer worker owns its protocol tests.
+All workers use GPT-6.1 Sol; no nested delegation or independent full-suite runs.
+
+- [x] Map the existing root-bound reader, inventory, freshness checks and batched filter.
+- [x] Implement local literal search, merged/deduplicated exact excerpts and bounded optional provider filtering.
+- [x] Preserve required/contrary/uncertain evidence; disclose incomplete search, deferred/rejected refs and any metadata-budget overflow.
+- [x] Provide hash-bound source recovery without a model call.
+- [x] Add an independent OFF-default evidence gate and MCP tools; retain one provider/credential authority.
+- [x] Verify OFF/SHADOW, path/secret/ignore boundaries, provider fallback, stale data, budgets and cancellation.
+- [x] Exercise collection and recovery through real MCP stdio without a paid API or installed weights.
+- [x] Update operator/agent usage and run the required offline repository checks.
+- [x] Commit/push the accepted implementation under the standing delivery authorization.
+
+Acceptance excludes claims of measured subscription savings or live Jev quality.
+Local byte/call counters describe this evidence segment only. Live paid/native
+verification and global activation remain separate, explicitly reported states.
+
+Validation: syntax check passed for 271 modules; new recipe tests 8/8 and MCP
+protocol cases 12/12 passed after one request-error mapping correction. The full
+repository run reported 616 passes and 23 sandbox socket failures/stalls; the
+three affected fixture files passed 44/44 with local sockets allowed, and the two
+remaining socket cases passed 2/2. No unresolved acceptance failure remains.
+Offline smoke and all three demos passed with zero external API calls. Existing
+95-test focused evidence was reused; only failed boundaries were retried.
+
+A local source probe read 16 of 97 scoped files, returned exact excerpts, and
+correctly reported `FILE_BUDGET`/incomplete coverage. This was not a task-quality,
+latency-baseline or subscription-quota experiment. `stats.bytesRead` counts
+collection reads, not subsequent freshness-only hashing I/O. Test/probe receipts
+are retained privately under `.pointsman-local/reports/evidence-mcp-2026-10-04/`.
+Temporary `/tmp/pointsman-evidence-*.log` receipts were moved there; no product
+source was deleted. No running writer, new dependency, global activation, model
+restore, live provider call or host reconnect was part of this delivery.
+
 ## Scope and current state
 
 The goal is substantial completed-task speed and cost improvement across agent

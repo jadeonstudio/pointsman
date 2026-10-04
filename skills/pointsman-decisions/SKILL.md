@@ -3,9 +3,15 @@ name: pointsman-decisions
 description: Delegate bounded evidence/diagnosis segments, choices, optional routing and selective snippet filtering to enabled pointsman tools. Not for code generation, permissions or exhaustive audit omission.
 ---
 # Optional pointsman decision layer
-While global mode is OFF the tools return at once without calling a provider. Decision results require `apply`; workflow results use their segment status and evidence contract below. Use `status` when reporting modes or readiness. Router, bulk and workflow each have an OFF/SHADOW/ON switch; global OFF always wins. Never enable a feature yourself or infer readiness from a previous turn.
+While global mode is OFF the tools return at once without calling a provider. Decision results require `apply`; workflow results use their segment status and evidence contract below. Use `status` when reporting modes or readiness. Router, bulk, workflow and evidence each have an OFF/SHADOW/ON switch; global OFF always wins. Never enable a feature yourself or infer readiness from a previous turn.
 
 Use deterministic code first. Explicit instructions, exit codes, exact paths and permissions need no classifier. `decide` replaces a genuine narrow choice using minimal `state` and finite `questions` (Choice/Noul/Score). Do not fully decide, call pointsman for confirmation, then decide again. Batch independent questions only. Consume a result only when `apply === true`; otherwise follow the original host path without retry loops.
+
+## Preselect source evidence
+
+Prefer `collect_evidence` for a bounded question that would otherwise need repeated Read/Grep rounds across several sources; use direct tools for one cheap action. Supply `query`, 1–16 literal `terms`, optional relative `paths`, `requiredPaths`, `uncertainPaths`, `counterevidencePaths`, `risk`, `coverage`, `budget` and `snapshot`. The server root is fixed at startup. `semantic: false` defaults to local matching, merged spans and deduplicated originals/aliases with hashes. Defaults/maxima are `maxFiles` 48/96, `maxSnippets` 32/64 and `contextLines` 3/12. Evidence mode is independently OFF by default; global OFF dominates, and bulk/workflow activation is not required. Never enable it yourself.
+
+Optional `semantic: true` uses only the selected provider on admitted bounded candidate snippets above 4,096 bytes, subject to existing bulk thresholds and workflow budgets. Keep required, uncertain, contradictory, failed and deferred evidence; exhaustive coverage never filters. Read `status`, `coverage`, source refs and stats before using the packet. Recover omitted or further-needed spans with `read_evidence({refs:[{path,hash,startLine,endLine}],budget?,snapshot?})`; stale hashes require fresh collection. Sources stay intact, and no history is deleted. Excluded credentials, Gitignored files, links, nested repositories and denied directories (`docs`, `private`, `models`, `.pointsman-local`) mean bounded collection is not proof of an exhaustive audit or complete documentation search. Byte/count metrics are not subscription-quota savings or live readiness evidence.
 
 ## Complete an evidence segment in one call
 

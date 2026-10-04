@@ -26,6 +26,12 @@ The optional `run` entrypoint reads source/report files beneath a root fixed by 
 
 JS integrations may inject named, already authorized test callbacks; the workflow cannot authorize those callbacks. OFF/SHADOW performs no source collection. Policy/provider changes, cancellation, source changes and exhausted limits prevent completed results. Original files remain intact. Native adapters can synthesize a completed segment only through a supported host contract and a separate explicit gate; normal permissions and continuation remain with the host. Generic decision qualification does not establish qualification for a new workflow family.
 
+## Source preselection
+
+MCP `collect_evidence` and `read_evidence` share the server's bound root and existing workflow limits, with a separate default-OFF evidence mode; global OFF dominates. Literal terms and relative paths cannot supply regex, shell commands, new roots or permissions. Collection excludes Gitignored files, symlinks, nested repositories, credentials and denied directories including `docs`, `private`, `models` and `.pointsman-local`. Bounded scans and exclusions remain coverage limits. A direct read requires the referenced source hash to match; original files and conversation history remain intact.
+
+Local lexical collection is the default. Explicit semantic selection sends only admitted bounded candidate snippets to the selected provider, never a raw repository or transcript automatically, and uses existing bulk limits and rejection thresholds. Required, uncertain, contradictory, failed and deferred evidence stays recoverable; exhaustive coverage disables filtering. Optional filtering creates no execution authority, credential source or automatic provider fallback. Evidence text belongs to the requesting host; metrics contain only bytes and counts.
+
 ## Transport and output validation
 
 The endpoint is fixed to HTTPS `api.typesafe.ai/v1/systemone`. Redirects and endpoint overrides are disabled; insecure TLS disabling is refused by the engine. Node/OS TLS trust remains authoritative. No automatic retries. The default deadline covers the complete response, not only headers. Request/frame/response sizes, question counts, in-flight concurrency and per-process call rates are bounded. Bounded reason codes replace raw errors and upstream error bodies.

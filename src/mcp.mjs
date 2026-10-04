@@ -5,11 +5,16 @@ import { createControlLayer, observeSchema } from './control-layer.mjs';
 import { routeSchema } from './routing.mjs';
 import { filterSchema } from './filtering.mjs';
 import { createWorkflowRunner, workflowSchema } from './workflows.mjs';
-import { workflowPolicy } from './feature-policy.mjs';
+import { evidenceSchema, evidenceReadSchema, evidenceRequest } from './evidence.mjs';
+import { workflowPolicy, evidencePolicy } from './feature-policy.mjs';
 
 const withTrace = schema => ({ ...schema, properties: { ...schema.properties, trace: traceSchema } });
 const protocolVersions = ['2024-11-05', '2025-03-26', '2025-06-18'];
 export const TOOLS = [
+  { name: 'collect_evidence', description: 'Search literal terms in this server root, merge and deduplicate exact source excerpts, optionally preselect relevance before text enters host context. semantic defaults false; true may use the configured paid provider. Preserve required, uncertain and contrary evidence. Check coverage and omitted references; exhaustive mode never filters. Evidence feature OFF by default.',
+    inputSchema: evidenceSchema, annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: true } },
+  { name: 'read_evidence', description: 'Recover exact source lines using path, full-file hash, startLine and endLine from evidence or omitted references. Refuse changed files and paths outside the permitted root inventory. No provider call. Evidence feature OFF by default.',
+    inputSchema: evidenceReadSchema, annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: false } },
   { name: 'run', description: 'Run one bounded repo-evidence, test-diagnose or log-triage recipe within this server\'s configured root. Collect source-linked evidence behind one call. OFF/SHADOW retain the host path; requests cannot add roots, commands or capabilities. Completion applies only to the delegated recipe.',
     inputSchema: workflowSchema,
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true } },
@@ -39,7 +44,14 @@ export const TOOLS = [
 export function startMcp(engine, { input = process.stdin, output = process.stdout,
   layer = createControlLayer({ engine, home: engine.status().home }), root = process.cwd(),
   workflowRunner = createWorkflowRunner({ engine, root,
-    getPolicy: () => workflowPolicy(engine.status().home, engine.status().mode) }) } = {}) {
+    getPolicy: () => workflowPolicy(engine.status().home, engine.status().mode) }),
+  evidenceRunner = createWorkflowRunner({ engine, root, family: 'evidence',
+    getPolicy: () => evidencePolicy(engine.status().home, engine.status().mode),
+    capabilities: { filter: (request, ctx) => createControlLayer({ home: engine.status().home,
+      engine: { status: () => engine.status(), decide: (decision, options) => ctx.decide(decision, options) },
+    }).filter(request, { signal: ctx.signal, feature: 'evidence',
+      maxRequests: Math.max(0, ctx.limits.maxDecisionCalls - ctx.stats.decisions) }) },
+  }) } = {}) {
   let buffer = Buffer.alloc(0), initialized = false, ready = false, closed = false;
   const pending = new Map();
   const write = object => { if (!closed && !output.destroyed) output.write(JSON.stringify(object) + '\n'); };
@@ -79,7 +91,9 @@ export function startMcp(engine, { input = process.stdin, output = process.stdou
     try {
       const args = message.params.arguments ?? {};
       let value;
-      if (message.params.name === 'run') value = await workflowRunner.run(args, { signal: controller.signal });
+      if (['collect_evidence', 'read_evidence'].includes(message.params.name)) value = await evidenceRunner.run(
+        evidenceRequest(args, message.params.name === 'collect_evidence' ? 'collect-evidence' : 'read-evidence'), { signal: controller.signal });
+      else if (message.params.name === 'run') value = await workflowRunner.run(args, { signal: controller.signal });
       else if (message.params.name === 'decide') value = await engine.decide(args, { signal: controller.signal });
       else if (message.params.name === 'route') { if (!isObject(args)) fail('INVALID_REQUEST'); const { trace, ...request } = args; value = await layer.route(request, { signal: controller.signal, trace }); }
       else if (message.params.name === 'filter') { if (!isObject(args)) fail('INVALID_REQUEST'); const { trace, ...request } = args; value = await layer.filter(request, { signal: controller.signal, trace }); }

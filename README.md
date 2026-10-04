@@ -126,6 +126,34 @@ pointsman metrics --days 7
 
 The `[route scope=... complete=... failures=...]` line at the top of a routed prompt is how the hook decides whether it has enough context to route at all; leave it out or mark `scope=unknown`/`complete=no` when you're not sure, and the hook keeps the host's own choice.
 
+## Source preselection
+
+Use MCP `collect_evidence` before repeated search/read rounds when a bounded source question needs several files. Use a direct tool for one cheap read or exact lookup. The existing MCP server binds the root at startup (`pointsman mcp --root /absolute/path/to/project`, default current directory); requests cannot change it. `pointsman evidence off|shadow|on|status` controls this independent feature, OFF by default. Global OFF dominates; bulk/workflow modes need not be ON. Activate it only when requested.
+
+Example MCP arguments for `collect_evidence`:
+
+```json
+{
+  "query": "Find provider failure handling and its tests",
+  "terms": ["createDecisionEngine", "PROVIDER_FAILED"],
+  "paths": ["src", "tests"],
+  "requiredPaths": ["src/provider.mjs"],
+  "semantic": false,
+  "risk": "routine",
+  "coverage": "selective",
+  "maxFiles": 16,
+  "maxSnippets": 32,
+  "contextLines": 3,
+  "budget": {"maxActions": 24, "maxMs": 10000, "maxDecisionCalls": 0, "maxOutputBytes": 24000}
+}
+```
+
+`terms` accepts 1–16 literal strings, not regex or shell commands. Optional `uncertainPaths` and `counterevidencePaths` preserve uncertain and contrary sources. Local collection matches terms, merges overlapping spans and deduplicates excerpts while retaining original refs, aliases and source hashes. Limits are `maxFiles` 48 (maximum 96), `maxSnippets` 32 (maximum 64), and `contextLines` 3 (maximum 12). Budgets use the existing workflow policy limits; optional semantic selection uses the existing bulk batch/model/rejection thresholds. `snapshot` uses the workflow snapshot format below.
+
+`semantic: false` is local-only. Explicit `semantic: true` may filter admitted bounded candidate snippets through the selected provider when the packet exceeds 4,096 bytes; it retains required, uncertain, contradictory, failed and deferred candidates. `coverage: "exhaustive"` disables semantic filtering. No automatic provider fallback, repository upload or history deletion occurs.
+
+Read result `status`, `coverage`, source refs and byte/count stats together. Bounded scans, exclusions and omitted spans do not establish exhaustive audit coverage. Recovery uses `read_evidence` with `refs: [{path, hash, startLine, endLine}]` from the result (including omitted refs), plus optional `budget` and `snapshot`; a changed source hash requires fresh collection. Gitignored files, symlinks, nested repositories, credentials and denied directories such as `docs`, `private`, `models` and `.pointsman-local` stay excluded, so this is not a complete Markdown/documentation search. Metrics report bytes and counts; synthetic checks cannot establish subscription-quota savings or live provider readiness.
+
 ## Bounded workflows
 
 Use one `run` call to collect evidence, then let the parent interpret the packet and make the change. Internal search/read/parse/group steps reduce parent round trips. Compare against a competent host that batches tools; cost and latency savings remain unmeasured.

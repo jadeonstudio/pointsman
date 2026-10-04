@@ -53,6 +53,7 @@ export const FEATURE_DEFAULTS = Object.freeze({
     // cache penalty; 'on' allows applying it (only meaningful once `mode` is 'on' -- SHADOW always
     // records regardless of this setting; never changes a subagent's model or role).
     subagents: 'off' },
+  evidence: { mode: 'off' },
   workflow: { mode: 'off', nativeMode: 'off', maxActions: 128, maxMs: 10000,
     maxDecisionCalls: 2, maxOutputBytes: 24000 },
 });
@@ -119,7 +120,7 @@ function migrateProfileV1(value, host) {
   return migrated;
 }
 export function validateFeaturePolicy(raw) {
-  fields(raw, ['version', 'router', 'bulk', 'effort', 'workflow']);
+  fields(raw, ['version', 'router', 'bulk', 'effort', 'workflow', 'evidence']);
   if (Object.hasOwn(raw, 'version') && raw.version !== 1 && raw.version !== 2) fail('INVALID_FEATURE_POLICY');
   const version = raw.version ?? 1;
   fields(Object.hasOwn(raw, 'router') ? raw.router : {}, Object.keys(FEATURE_DEFAULTS.router));
@@ -128,13 +129,16 @@ export function validateFeaturePolicy(raw) {
   // keep loading with the OFF defaults below rather than failing INVALID_FEATURE_POLICY.
   fields(Object.hasOwn(raw, 'effort') ? raw.effort : {}, Object.keys(FEATURE_DEFAULTS.effort));
   fields(Object.hasOwn(raw, 'workflow') ? raw.workflow : {}, Object.keys(FEATURE_DEFAULTS.workflow));
+  fields(Object.hasOwn(raw, 'evidence') ? raw.evidence : {}, Object.keys(FEATURE_DEFAULTS.evidence));
   // The in-memory result is always current-schema v2, even when `raw` was v1; the file itself is
   // rewritten as v2 only the next time a write path (setFeatureMode, presetHostRoles, ...) saves it.
   const policy = { version: 2,
     router: { ...structuredClone(FEATURE_DEFAULTS.router), ...raw.router },
     bulk: { ...FEATURE_DEFAULTS.bulk, ...raw.bulk },
     effort: { ...FEATURE_DEFAULTS.effort, ...raw.effort },
-    workflow: { ...FEATURE_DEFAULTS.workflow, ...raw.workflow } };
+    workflow: { ...FEATURE_DEFAULTS.workflow, ...raw.workflow },
+    evidence: { ...FEATURE_DEFAULTS.evidence, ...raw.evidence } };
+  if (!MODES.includes(policy.evidence.mode)) fail('INVALID_FEATURE_POLICY');
   for (const feature of [policy.router, policy.bulk]) {
     if (!MODES.includes(feature.mode) || !/^jev-\d+\.\d+\.\d+$/.test(feature.expectedModel)) fail('INVALID_FEATURE_POLICY');
   }
@@ -180,7 +184,7 @@ export function loadFeaturePolicy(home) {
 }
 export function policyFingerprint(policy) { return createHash('sha256').update(JSON.stringify(policy)).digest('hex'); }
 export function setFeatureMode(home, feature, mode) {
-  if (!['router', 'bulk', 'effort', 'workflow'].includes(feature) || !MODES.includes(mode)) fail('INVALID_FEATURE_MODE');
+  if (!['router', 'bulk', 'effort', 'workflow', 'evidence'].includes(feature) || !MODES.includes(mode)) fail('INVALID_FEATURE_MODE');
   ensureDir(home, true);
   const file = path.join(home, 'features.json');
   const previous = readText(file, { optional: true, privateFile: true });
@@ -200,6 +204,11 @@ export function setWorkflowNativeMode(home, mode) {
   policy.workflow.nativeMode = mode;
   atomicWrite(file, JSON.stringify(validateFeaturePolicy(policy), null, 2) + '\n', { expected: previous });
   return policy;
+}
+export function evidencePolicy(home, globalMode) {
+  const policy = loadFeaturePolicy(home);
+  return { ...policy.workflow, mode: effectiveMode(globalMode, policy.evidence.mode),
+    nativeMode: 'off', revision: policyFingerprint(policy) };
 }
 export function workflowPolicy(home, globalMode) {
   const policy = loadFeaturePolicy(home);
