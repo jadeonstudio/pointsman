@@ -143,7 +143,7 @@ pointsman evidence status
 
 Use `pointsman evidence auto off` to stop automatic preference.
 
-This needs no hooks. Evidence-only activation keeps router, effort and training capture OFF; do not enable them as a side effect. Reconnect existing hosts to load updated skills and initialization instructions.
+No new hook execution is needed. If owned host instruction blocks are already installed, refresh them with the existing `install --hooks` path after reviewing its dry-run; MCP descriptions alone did not reliably trigger automatic selection in the native probes. Evidence-only activation keeps router, effort and training capture OFF; do not enable them as a side effect. Reconnect existing hosts to load updated skills and initialization instructions.
 
 Example MCP arguments for `collect_evidence`:
 

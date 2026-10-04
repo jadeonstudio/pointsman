@@ -107,7 +107,8 @@ export function instructionBlock(host) {
     '- When spawning a subagent with a worker role (lightweight-worker/implementer/specialist/scout), write `[route scope=<local|cross-module|repository|unknown> complete=<yes|no> failures=<n>]` truthfully as the first line of the prompt. Use scope=unknown, complete=no when unsure. The hook needs this line to decide role/model.',
     "- The hook decides role/model automatically. If the user chose a model, keep it.",
   ];
-  return [BLOCK_BEGIN, '## pointsman (installer-managed block)', ...body, decide, BLOCK_END].join('\n');
+  const evidence = '- For ordinary multi-file debugging, investigation or refactoring, use pointsman `collect_evidence` before reading source contents through repeated Read/Grep/shell calls. Derive query, literal terms and relative paths yourself; never ask the user to name tools or parameters. Follow the operator automatic mode reported by MCP initialization or `status` (check once if unknown); automatic off keeps the normal host workflow. Omit semantic to use that configured mode. Use `read_evidence` only for missing original spans. Check the server root matches the task, preserve mandatory/contrary evidence, use direct tools for one cheap lookup, and do not enable modes yourself.';
+  return [BLOCK_BEGIN, '## pointsman (installer-managed block)', ...body, evidence, decide, BLOCK_END].join('\n');
 }
 function hookCommand(cli, host, event, home) {
   return `${sh(process.execPath)} ${sh(cli)} hook --host ${sh(host)} --event ${sh(event)} --home ${sh(home)}`;

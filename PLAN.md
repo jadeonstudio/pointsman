@@ -33,6 +33,12 @@ per failed boundary, new evidence required. No nested workers or extra judge cal
 - [ ] Verify fresh native clients select evidence for an ordinary multi-file request.
 - [ ] Record actual results and limits; commit/push accepted implementation.
 
+Native attempt 1: both clients solved the synthetic read-only task but used
+ordinary source tools, so automatic-selection acceptance FAILED. MCP-only advice
+was insufficient in these host contexts. Revision 2 adds the same bounded rule
+to the already installed, ownership-managed host instruction blocks; existing
+hook groups stay byte-identical. Retest only that native selection boundary.
+
 Offline acceptance: 272 modules syntax-checked; full suite 662/662 passed
 with local fixture sockets allowed; offline smoke and all three demos passed.
 The focused automatic-policy/MCP suite passed 18 cases. No live calls yet.
