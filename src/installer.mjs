@@ -177,10 +177,14 @@ export function describeHookStatus({ home, env = process.env, scope = 'user', pr
   }
   return result;
 }
-export function installationPlan({ home, env = process.env, target = 'both', scope = 'user', project = process.cwd(), remove = false, hooks = false, hooksOnly = false, skills = true, root = REPO_ROOT, layaAgent = false } = {}) {
+export function installationPlan({ home, env = process.env, target = 'both', scope = 'user', project = process.cwd(), remove = false, hooks = false, hooksOnly = false, skills = true, skillsDirectory, root = REPO_ROOT, layaAgent = false } = {}) {
   if (process.platform === 'win32') fail('USE_WSL');
   if (!['both', 'codex', 'claude'].includes(target) || !['user', 'project'].includes(scope)) fail('INVALID_INSTALL_OPTIONS');
   if (hooksOnly && !remove) fail('HOOKS_ONLY_REQUIRES_UNINSTALL');
+  if (skillsDirectory !== undefined) {
+    if (target === 'both' || !skills || hooksOnly || typeof skillsDirectory !== 'string' || !path.isAbsolute(skillsDirectory)) fail('INVALID_SKILLS_DIRECTORY');
+    noSymlinks(skillsDirectory);
+  }
   if (layaAgent && process.platform !== 'darwin') fail('UNSUPPORTED_PLATFORM');
   if (layaAgent && hooksOnly) fail('INVALID_INSTALL_OPTIONS');
   const userHome = fs.realpathSync(env.HOME || os.homedir());
@@ -309,7 +313,7 @@ export function installationPlan({ home, env = process.env, target = 'both', sco
         }
         updateRecord(owned, file, server);
       }
-      const skillsDir = path.join(scope === 'user' ? userHome : projectRoot, agent === 'codex' ? '.agents/skills' : '.claude/skills');
+      const skillsDir = skillsDirectory ?? path.join(scope === 'user' ? userHome : projectRoot, agent === 'codex' ? '.agents/skills' : '.claude/skills');
       // --no-skills: leave the skills directory alone (e.g. a symlinked skills root the installer must not write through).
       for (const skill of skills ? ['pointsman-control', 'pointsman-decisions'] : []) {
         const skillDir = path.join(skillsDir, skill), markerPath = path.join(skillDir, '.pointsman-managed.json');

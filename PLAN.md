@@ -39,6 +39,12 @@ was insufficient in these host contexts. Revision 2 adds the same bounded rule
 to the already installed, ownership-managed host instruction blocks; existing
 hook groups stay byte-identical. Retest only that native selection boundary.
 
+Native attempt 2: Codex automatically collected evidence and invoked Jev with
+no tool names in the user prompt. Claude still used direct reads; its Pointsman
+skill was absent because the existing skills root is a symlink. Revision 3 adds
+an explicit real-directory installer option, preserving no-symlink and ownership
+checks, to deploy the same Claude skill without a one-off unmanaged copy.
+
 Offline acceptance: 272 modules syntax-checked; full suite 662/662 passed
 with local fixture sockets allowed; offline smoke and all three demos passed.
 The focused automatic-policy/MCP suite passed 18 cases. No live calls yet.

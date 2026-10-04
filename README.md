@@ -78,6 +78,7 @@ node bin/pointsman.mjs install --target claude --hooks --laya-agent
 
 Clone to a stable location — the installed shim keeps pointing at that path, so don't delete the folder afterward. The installer puts a `pointsman` shim in `~/.local/bin`; make sure that directory is on your `PATH` (or keep calling `node bin/pointsman.mjs`).
 
+- With a symlinked skills root, an explicit physical directory is supported: `install --target claude --skills-dir /absolute/real/skills` (review `--dry-run`; use the same option for updates/uninstall). The installer still refuses symlinks and preserves ownership/collision checks.
 - Add `--no-skills` if `~/.claude/skills` is a symlink; the installer refuses to write through a symlinked skills root and this flag leaves it untouched (MCP entry, hooks and the instruction block still install).
 - For Codex, install with `--target codex --hooks`, then approve the new hooks yourself in Codex's `/hooks` — the installer never writes that approval state.
 - `--target both` installs both hosts at once.
