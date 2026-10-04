@@ -27,11 +27,12 @@ per failed boundary, new evidence required. No nested workers or extra judge cal
 - [x] Add OFF-default automatic local/semantic policy and natural-task guidance.
 - [x] Verify policy defaults, semantic overrides, mode changes and bound-root visibility.
 - [x] Run required offline checks once on the integrated source.
-- [ ] Update stable runtime and owned Codex/Claude integrations without changing trust.
-- [ ] Enable evidence only; keep unrelated router/effort/capture disabled.
-- [ ] Verify live Jev selection and exact local recovery through real MCP.
-- [ ] Verify fresh native clients select evidence for an ordinary multi-file request.
-- [ ] Record actual results and limits; commit/push accepted implementation.
+- [x] Update stable runtime and owned Codex/Claude integrations without changing trust.
+- [x] Enable evidence only; keep unrelated router/effort/capture disabled.
+- [x] Verify live Jev selection and exact local recovery through real MCP.
+- [x] Verify fresh Codex selects evidence for an ordinary multi-file request.
+- [ ] Verify fresh Claude selects evidence automatically: FAILED in three attempts; installed tools and skills are visible, but it chose direct reads.
+- [x] Record actual results and limits; commit/push accepted implementation.
 
 Native attempt 1: both clients solved the synthetic read-only task but used
 ordinary source tools, so automatic-selection acceptance FAILED. MCP-only advice
@@ -47,7 +48,36 @@ checks, to deploy the same Claude skill without a one-off unmanaged copy.
 
 Offline acceptance: 272 modules syntax-checked; full suite 662/662 passed
 with local fixture sockets allowed; offline smoke and all three demos passed.
-The focused automatic-policy/MCP suite passed 18 cases. No live calls yet.
+The focused automatic-policy/MCP suite passed 18 cases. Later installer changes
+passed 34 focused cases plus 10 physical-directory cases; the unaffected whole
+suite evidence was retained.
+
+Deployment and live acceptance: the stable checkout is updated; Codex owned
+skills and both existing host instruction blocks are current. No hook group or
+trust/permission entry changed. Claude skills were installed to its explicitly
+resolved physical skills directory using the ownership-checked installer.
+Readback dry runs report zero pending changes for both hosts. Jev is selected,
+global/evidence modes are ON, automatic is semantic, and router/bulk/effort/
+workflow/capture remain OFF. The existing managed key authenticated successfully.
+
+A real stdio collection used one Jev inference (504.447 ms collection segment),
+retained required evidence, and recovered exact hash-bound text with no inference
+(49.124 ms recovery). Native Codex GPT-6.1 Sol/medium independently chose
+collect_evidence from an ordinary Korean multi-file debugging prompt and made
+one Jev request (607.811 ms collection segment). These are component timings,
+not whole-task speedups or subscription savings. Claude Sonnet 5.5 saw the new
+tools and, after physical skill installation, both skills, but still selected
+Grep/Read in all three ordinary-prompt attempts. Its automatic-selection gate is
+FAILED, not complete; no fourth paid/native attempt was launched.
+
+Shared Codex instructions were reconciled without changing the common policy
+body and synced to workspace-kit commit `026f6cf` with remote HEAD verified.
+Existing desktop-session reload is unverified: the computer-use tool refused
+access to the Codex app, so a user restart/reconnect is still needed there.
+Receipts and archived synthetic source are private under
+`.pointsman-local/reports/auto-evidence-2026-10-05/acceptance.json`. The owned
+temporary fixture directory was removed; temporary probe/log files were moved
+into that receipt directory. Product source and original user data were retained.
 
 ## 2026-10-04 evidence MCP delivery
 
