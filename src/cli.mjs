@@ -83,7 +83,7 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
   }
   if (['off', 'shadow', 'on'].includes(command)) {
     // Explicit local workflows need no provider. Decision entrypoints retain their own readiness checks.
-    if (command !== 'off' && !engine.status().ready && loadFeaturePolicy(home).workflow.mode === 'off') {
+    if (command !== 'off' && !engine.status().ready && loadFeaturePolicy(home).workflow.mode === 'off' && loadFeaturePolicy(home).evidence.mode === 'off') {
       fail(engine.status().provider === 'laya' ? 'LAYA_NOT_READY' : 'NO_API_KEY');
     }
     setMode(home, command, env); output(engine.status()); return;

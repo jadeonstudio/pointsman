@@ -43,7 +43,7 @@ export function createControlLayer({ home = resolveHome(), env = process.env, en
         expectedModel: expected(base, p.router), configuredTargets: Object.fromEntries(Object.entries(p.router.profiles).map(([host, targets]) => [host, Object.keys(targets)])),
         abControlShare: p.router.abControlShare, warnings: routerWarnings(p, env) },
       bulk: { mode: effectiveMode(base.mode, p.bulk.mode), configuredMode: p.bulk.mode, expectedModel: expected(base, p.bulk) },
-      evidence: { mode: effectiveMode(base.mode, p.evidence.mode), configuredMode: p.evidence.mode },
+      evidence: { mode: effectiveMode(base.mode, p.evidence.mode), configuredMode: p.evidence.mode, automatic: p.evidence.automatic },
       effort: { mode: effectiveMode(base.mode, p.effort.mode), configuredMode: p.effort.mode, input: p.effort.input, abControlShare: p.effort.abControlShare },
       workflow: { ...p.workflow, configuredMode: p.workflow.mode, mode: effectiveMode(base.mode, p.workflow.mode),
         nativeMode: effectiveMode(effectiveMode(base.mode, p.workflow.mode), p.workflow.nativeMode) } },

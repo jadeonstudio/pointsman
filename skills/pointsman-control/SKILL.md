@@ -1,6 +1,6 @@
 ---
 name: pointsman-control
-description: Install or inspect pointsman for Codex/Claude, and explicitly control router/bulk/workflow modes and native adapter gates.
+description: Install or inspect pointsman for Codex/Claude, and explicitly control router/bulk/workflow/evidence modes and native adapter gates.
 ---
 # pointsman operator controls
 Resolve the bundled `scripts/run.mjs` relative to this skill's own directory, not the project working directory:
@@ -19,6 +19,9 @@ node <this-skill-directory>/scripts/run.mjs router on
 node <this-skill-directory>/scripts/run.mjs bulk off
 node <this-skill-directory>/scripts/run.mjs bulk shadow
 node <this-skill-directory>/scripts/run.mjs bulk on
+node <this-skill-directory>/scripts/run.mjs evidence status
+node <this-skill-directory>/scripts/run.mjs evidence off|shadow|on
+node <this-skill-directory>/scripts/run.mjs evidence auto off|local|semantic
 node <this-skill-directory>/scripts/run.mjs workflow status
 node <this-skill-directory>/scripts/run.mjs workflow off|shadow|on
 node <this-skill-directory>/scripts/run.mjs workflow native off|shadow|on
@@ -35,6 +38,14 @@ Reuse the existing TYPESAFE_API_KEY. If missing, ask the user to run `key set` i
 `smoke` and examples are offline. `smoke --live` incurs TypeSafe usage and requires explicit authorization. Feature SHADOW with the `jev` provider also incurs TypeSafe usage; the local `laya` provider makes no API calls. No classifier.dev account/key is used. In-flight requests cannot be unsent; responses observed after OFF/policy changes are not applied. Installation preserves normal host trust/permissions and does not switch the active host model.
 
 For updates: OFF, review Git changes, fast-forward pull, full tests, reinstall the two existing skills/MCP entries, reconnect hosts. Check `src/feature-policy.mjs` and `src/evaluation.mjs` for configuration, limitations and paired evaluation. Never claim savings or native/live success from a synthetic test.
+
+## Evidence controls
+
+`evidence.mode` and `evidence.automatic` are independent private policy settings. Automatic preference is `off|local|semantic` and defaults OFF when absent, including an update from existing evidence ON. Global/evidence OFF prevents collection; SHADOW does not apply it. Enable only within the user's requested scope and read back `evidence status`. Automatic OFF preserves manually requested tools. Automatic local defaults omitted `semantic` false; automatic semantic defaults it true and may incur selected-provider API usage. Explicit `semantic: false` remains local. No provider fallback occurs.
+
+Install both MCP entries and skills with `install --target both` for authorized Codex/Claude use; evidence selection needs no hooks. For evidence-only activation keep router, effort and training capture OFF. Reconnect hosts to receive updated skills and MCP initialization instructions. Verify the root reported by initialization/status matches the current project; `mcp --root` binds it at startup and requests cannot change it.
+
+Enabled automatic preference tells the agent to derive query, terms and scope from ordinary multi-file debugging, investigation or refactoring requests and collect once; users do not name tools or paths. Cheap single-file actions stay direct, and `read_evidence` is only for needed recovery. This is host guidance, not guaranteed tool interception or per-tool classification. Existing source exclusions and exhaustive-coverage rules still apply.
 
 ## Workflow controls and root binding
 

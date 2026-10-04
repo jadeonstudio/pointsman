@@ -4,7 +4,7 @@ import { promisify } from 'node:util';
 import { addAbortSignal } from 'node:stream';
 import { MAX_FRAME_BYTES, fail } from './constants.mjs';
 import { resolveHome } from './storage.mjs';
-import { initializeFeaturePolicy, loadFeaturePolicy, setFeatureMode, presetHostRoles, setAbControlShare, setWorkflowNativeMode, workflowPolicy } from './feature-policy.mjs';
+import { initializeFeaturePolicy, loadFeaturePolicy, setFeatureMode, presetHostRoles, setAbControlShare, setWorkflowNativeMode, workflowPolicy, setEvidenceAutomatic } from './feature-policy.mjs';
 import { createDecisionEngine } from './engine.mjs';
 import { createControlLayer } from './control-layer.mjs';
 import { evaluatePairedRuns } from './evaluation.mjs';
@@ -38,9 +38,10 @@ export async function featureMain(argv = process.argv.slice(2), env = process.en
   if (values.help) { process.stdout.write(FEATURE_HELP); return true; }
   const sub = positionals[1];
   const abOnly = ['router', 'effort'].includes(command) && sub === 'ab';
+  const evidenceAuto = command === 'evidence' && sub === 'auto';
   const workflowNativeMode = command === 'workflow' && sub === 'native';
-  if (positionals.length > (abOnly || workflowNativeMode ? 3 : (['router', 'bulk', 'effort', 'workflow', 'evidence', 'policy'].includes(command) ? 2 : 1))) fail('UNEXPECTED_ARGUMENTS');
-  if (abOnly && positionals.length !== 3) fail('UNEXPECTED_ARGUMENTS');
+  if (positionals.length > (abOnly || workflowNativeMode || evidenceAuto ? 3 : (['router', 'bulk', 'effort', 'workflow', 'evidence', 'policy'].includes(command) ? 2 : 1))) fail('UNEXPECTED_ARGUMENTS');
+  if ((abOnly || evidenceAuto) && positionals.length !== 3) fail('UNEXPECTED_ARGUMENTS');
   const rolesOnly = command === 'policy' && sub === 'roles';
   if (!rolesOnly && command !== 'workflow-native' && values.host !== undefined) fail('UNEXPECTED_OPTION');
   if (!rolesOnly && (values['dry-run'] !== undefined || values.replace !== undefined)) fail('UNEXPECTED_OPTION');
@@ -51,6 +52,7 @@ export async function featureMain(argv = process.argv.slice(2), env = process.en
   const layer = createControlLayer({ home, env, engine });
   try {
   if (abOnly) { setAbControlShare(home, positionals[2], command); print(layer.status()); }
+  else if (evidenceAuto) { setEvidenceAutomatic(home, positionals[2]); print(layer.status()); }
   else if (workflowNativeMode) {
     setWorkflowNativeMode(home, positionals[2]); print(layer.status());
   } else if (['workflow', 'evidence'].includes(command) && sub === 'status') print(layer.status());
@@ -119,4 +121,4 @@ export async function featureMain(argv = process.argv.slice(2), env = process.en
   return true;
   } finally { engine.close(); }
 }
-export const FEATURE_HELP = `\nClassifier-inspired features (explicit Jev or local Laya provider):\n  policy init|check   Create/validate private features.json; no automatic targets\n  policy roles --host codex|claude [--dry-run] [--replace]\n                      Preset router.profiles[host] from roles the host actually has (~/.codex/agents/*.toml, ~/.claude/agents/*.md); refuses to overwrite an existing profile unless --replace\n  router off|shadow|on  Cap routing independently of the global switch\n  router ab SHARE|off Randomised control/treatment split (0..0.5) of otherwise-rewritten spawns; see README "Measuring cost and time"\n  bulk off|shadow|on    Cap prefiltering independently of the global switch\n  effort off|shadow|on  Cap the Claude Code main-loop reasoning-effort mod independently of the global switch (see mods/pointsman-effort)\n  effort ab SHARE|off Randomised control/treatment split (0..0.5) of otherwise-applied ON-mode effort changes\n  workflow off|shadow|on|status  Gate fixed recipes independently of the global switch\n  evidence off|shadow|on|status Gate source preselection MCP tools independently\n  workflow native off|shadow|on Gate opt-in native completion independently\n  run [--root PATH]  Read one repo-evidence/test-diagnose/log-triage request from stdin\n  workflow-native --host claude|gemini --event turn-step|before-agent|before-model [--root PATH]\n                      Version-checked native bridge; requires both workflow gates ON\n  route|filter       Read bounded JSON from stdin; results contain no raw text\n  evaluate           Offline paired-execution report from JSON stdin\n`;
+export const FEATURE_HELP = `\nClassifier-inspired features (explicit Jev or local Laya provider):\n  policy init|check   Create/validate private features.json; no automatic targets\n  policy roles --host codex|claude [--dry-run] [--replace]\n                      Preset router.profiles[host] from roles the host actually has (~/.codex/agents/*.toml, ~/.claude/agents/*.md); refuses to overwrite an existing profile unless --replace\n  router off|shadow|on  Cap routing independently of the global switch\n  router ab SHARE|off Randomised control/treatment split (0..0.5) of otherwise-rewritten spawns; see README "Measuring cost and time"\n  bulk off|shadow|on    Cap prefiltering independently of the global switch\n  effort off|shadow|on  Cap the Claude Code main-loop reasoning-effort mod independently of the global switch (see mods/pointsman-effort)\n  effort ab SHARE|off Randomised control/treatment split (0..0.5) of otherwise-applied ON-mode effort changes\n  workflow off|shadow|on|status  Gate fixed recipes independently of the global switch\n  evidence off|shadow|on|status Gate source preselection MCP tools independently\n  evidence auto off|local|semantic  Automatic host selection; semantic may incur provider charges\n  workflow native off|shadow|on Gate opt-in native completion independently\n  run [--root PATH]  Read one repo-evidence/test-diagnose/log-triage request from stdin\n  workflow-native --host claude|gemini --event turn-step|before-agent|before-model [--root PATH]\n                      Version-checked native bridge; requires both workflow gates ON\n  route|filter       Read bounded JSON from stdin; results contain no raw text\n  evaluate           Offline paired-execution report from JSON stdin\n`;

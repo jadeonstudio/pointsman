@@ -30,6 +30,8 @@ JS integrations may inject named, already authorized test callbacks; the workflo
 
 MCP `collect_evidence` and `read_evidence` share the server's bound root and existing workflow limits, with a separate default-OFF evidence mode; global OFF dominates. Literal terms and relative paths cannot supply regex, shell commands, new roots or permissions. Collection excludes Gitignored files, symlinks, nested repositories, credentials and denied directories including `docs`, `private`, `models` and `.pointsman-local`. Bounded scans and exclusions remain coverage limits. A direct read requires the referenced source hash to match; original files and conversation history remain intact.
 
+Automatic host selection defaults OFF independently of evidence mode. `evidence auto local` requests local collection for ordinary multi-file work; `evidence auto semantic` defaults omitted MCP `semantic` to true and may incur selected-provider charges. Explicit `semantic: false` remains local. The host chooses whether to follow these instructions; this is not a forced hook. Source root is disclosed in MCP initialization/status.
+
 Local lexical collection is the default. Explicit semantic selection sends only admitted bounded candidate snippets to the selected provider, never a raw repository or transcript automatically, and uses existing bulk limits and rejection thresholds. Required, uncertain, contradictory, failed and deferred evidence stays recoverable; exhaustive coverage disables filtering. Optional filtering creates no execution authority, credential source or automatic provider fallback. Evidence text belongs to the requesting host; metrics contain only bytes and counts.
 
 ## Transport and output validation

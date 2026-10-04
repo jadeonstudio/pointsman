@@ -128,7 +128,22 @@ The `[route scope=... complete=... failures=...]` line at the top of a routed pr
 
 ## Source preselection
 
-Use MCP `collect_evidence` before repeated search/read rounds when a bounded source question needs several files. Use a direct tool for one cheap read or exact lookup. The existing MCP server binds the root at startup (`pointsman mcp --root /absolute/path/to/project`, default current directory); requests cannot change it. `pointsman evidence off|shadow|on|status` controls this independent feature, OFF by default. Global OFF dominates; bulk/workflow modes need not be ON. Activate it only when requested.
+Use MCP `collect_evidence` before repeated search/read rounds when a bounded source question needs several files. Use a direct tool for one cheap read or exact lookup. The MCP server binds the root at startup (`pointsman mcp --root /absolute/path/to/project`, default current directory) and reports it in initialization instructions and status; requests cannot change it. Confirm that root matches the current project before collecting. `pointsman evidence off|shadow|on|status` controls this independent feature, OFF by default. Global OFF dominates; bulk/workflow modes need not be ON. Activate it only when requested.
+
+`pointsman evidence auto off|local|semantic` controls a separate automatic preference, default OFF even when evidence mode was already ON. With `local` or `semantic`, Codex/Claude agents derive query, literal terms and scope from ordinary debugging, investigation or refactoring requests, then prefer one `collect_evidence` call over repeated Read/Grep rounds. Users do not need to name tools, terms or paths. `local` defaults omitted `semantic` to false; `semantic` defaults it to true and may incur selected-provider API charges. Explicit `semantic: false` always stays local. Automatic OFF removes this preference while retaining manually requested evidence tools. This is host guidance, not guaranteed interception of every tool call; it uses no per-tool judge or classifier to decide whether to classify.
+
+For an authorized semantic activation on both hosts, install their MCP entries and skills with `pointsman install --target both`, select the prepared provider, then run:
+
+```sh
+pointsman evidence on
+pointsman evidence auto semantic   # selected Jev provider can incur API usage
+pointsman on
+pointsman evidence status
+```
+
+Use `pointsman evidence auto off` to stop automatic preference.
+
+This needs no hooks. Evidence-only activation keeps router, effort and training capture OFF; do not enable them as a side effect. Reconnect existing hosts to load updated skills and initialization instructions.
 
 Example MCP arguments for `collect_evidence`:
 
@@ -150,9 +165,9 @@ Example MCP arguments for `collect_evidence`:
 
 `terms` accepts 1–16 literal strings, not regex or shell commands. Optional `uncertainPaths` and `counterevidencePaths` preserve uncertain and contrary sources. Local collection matches terms, merges overlapping spans and deduplicates excerpts while retaining original refs, aliases and source hashes. Limits are `maxFiles` 48 (maximum 96), `maxSnippets` 32 (maximum 64), and `contextLines` 3 (maximum 12). Budgets use the existing workflow policy limits; optional semantic selection uses the existing bulk batch/model/rejection thresholds. `snapshot` uses the workflow snapshot format below.
 
-`semantic: false` is local-only. Explicit `semantic: true` may filter admitted bounded candidate snippets through the selected provider when the packet exceeds 4,096 bytes; it retains required, uncertain, contradictory, failed and deferred candidates. `coverage: "exhaustive"` disables semantic filtering. No automatic provider fallback, repository upload or history deletion occurs.
+`semantic: false` is local-only. When omitted, `semantic` is true only under `evidence.automatic: "semantic"`; otherwise it is false. `semantic: true` may filter admitted bounded candidate snippets through the selected provider when the packet exceeds 4,096 bytes; it retains required, uncertain, contradictory, failed and deferred candidates. `coverage: "exhaustive"` disables semantic filtering. No automatic provider fallback, repository upload or history deletion occurs.
 
-Read result `status`, `coverage`, source refs and byte/count stats together. Bounded scans, exclusions and omitted spans do not establish exhaustive audit coverage. Recovery uses `read_evidence` with `refs: [{path, hash, startLine, endLine}]` from the result (including omitted refs), plus optional `budget` and `snapshot`; a changed source hash requires fresh collection. Gitignored files, symlinks, nested repositories, credentials and denied directories such as `docs`, `private`, `models` and `.pointsman-local` stay excluded, so this is not a complete Markdown/documentation search. Metrics report bytes and counts; synthetic checks cannot establish subscription-quota savings or live provider readiness.
+Read result `status`, `coverage`, source refs and byte/count stats together. Bounded scans, exclusions and omitted spans do not establish exhaustive audit coverage. Use `read_evidence` only for necessary recovery or further inspection, with `refs: [{path, hash, startLine, endLine}]` from the result (including omitted refs), plus optional `budget` and `snapshot`; a changed source hash requires fresh collection. Gitignored files, symlinks, nested repositories, credentials and denied directories such as `docs`, `private`, `models` and `.pointsman-local` stay excluded, so this is not a complete Markdown/documentation search. Metrics report bytes and counts; synthetic checks cannot establish subscription-quota savings or live provider readiness.
 
 ## Bounded workflows
 

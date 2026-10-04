@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { MAX_FRAME_BYTES, VERSION, errorCode, fail, isObject } from './constants.mjs';
 import { traceSchema } from './training/schema.mjs';
 import { decisionSchema } from './contracts.mjs';
@@ -6,12 +7,12 @@ import { routeSchema } from './routing.mjs';
 import { filterSchema } from './filtering.mjs';
 import { createWorkflowRunner, workflowSchema } from './workflows.mjs';
 import { evidenceSchema, evidenceReadSchema, evidenceRequest } from './evidence.mjs';
-import { workflowPolicy, evidencePolicy } from './feature-policy.mjs';
+import { workflowPolicy, evidencePolicy, loadFeaturePolicy } from './feature-policy.mjs';
 
 const withTrace = schema => ({ ...schema, properties: { ...schema.properties, trace: traceSchema } });
 const protocolVersions = ['2024-11-05', '2025-03-26', '2025-06-18'];
 export const TOOLS = [
-  { name: 'collect_evidence', description: 'Search literal terms in this server root, merge and deduplicate exact source excerpts, optionally preselect relevance before text enters host context. semantic defaults false; true may use the configured paid provider. Preserve required, uncertain and contrary evidence. Check coverage and omitted references; exhaustive mode never filters. Evidence feature OFF by default.',
+  { name: 'collect_evidence', description: 'For multi-file debugging, investigation or refactoring, follow the server automatic evidence policy without requiring the user to name tools. Derive query, literal terms and relative paths from the task. Search in this server root, merge and deduplicate exact source excerpts, optionally preselect relevance before text enters host context. Omitted semantic follows evidence automatic policy (true only in semantic mode); explicit false stays local. True may use the configured paid provider. Preserve required, uncertain and contrary evidence. Check coverage and omitted references; exhaustive mode never filters. Evidence feature OFF by default.',
     inputSchema: evidenceSchema, annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: true } },
   { name: 'read_evidence', description: 'Recover exact source lines using path, full-file hash, startLine and endLine from evidence or omitted references. Refuse changed files and paths outside the permitted root inventory. No provider call. Evidence feature OFF by default.',
     inputSchema: evidenceReadSchema, annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: false, openWorldHint: false } },
@@ -54,6 +55,18 @@ export function startMcp(engine, { input = process.stdin, output = process.stdou
   }) } = {}) {
   let buffer = Buffer.alloc(0), initialized = false, ready = false, closed = false;
   const pending = new Map();
+  const serverRoot = path.resolve(root);
+  function instructions() {
+    let automatic = 'off';
+    try {
+      const status = layer.status();
+      if (status.features?.evidence?.mode === 'on') automatic = status.features.evidence.automatic;
+    } catch { /* invalid policy retains manual host behavior */ }
+    const behavior = automatic === 'local' || automatic === 'semantic'
+      ? `For ordinary multi-file debugging, investigation and refactoring, use collect_evidence before repeated search/read rounds; derive query, terms and scoped paths yourself. Do not ask the user to name tools or parameters. Omitted semantic defaults to ${automatic === 'semantic'}; explicit false stays local.`
+      : 'Automatic evidence selection is off; keep the normal host workflow unless the user explicitly requests these tools.';
+    return `Evidence automatic mode: ${automatic}. ${behavior} Server root: ${JSON.stringify(serverRoot)}. Use only for tasks within that root. Use direct tools for one cheap lookup; do not repeat collection after reading the same evidence. Recover needed spans with read_evidence; retain required and contrary evidence and check coverage. OFF results delegate to the host. Respect existing approvals; never send credentials.`;
+  }
   const write = object => { if (!closed && !output.destroyed) output.write(JSON.stringify(object) + '\n'); };
   const error = (id, code, message) => write({ jsonrpc: '2.0', id, error: { code, message } });
   const result = (id, value) => write({ jsonrpc: '2.0', id, result: value });
@@ -77,7 +90,7 @@ export function startMcp(engine, { input = process.stdin, output = process.stdou
       initialized = true;
       result(id, { protocolVersion: protocolVersions.includes(message.params.protocolVersion) ? message.params.protocolVersion : protocolVersions.at(-1),
         capabilities: { tools: { listChanged: false } }, serverInfo: { name: 'pointsman', version: VERSION },
-        instructions: 'Optional advisory decision layer. Respect apply=false and existing host approvals. Use the local CLI for mode changes; do not send credentials to any tool.' });
+        instructions: instructions() });
       return;
     }
     if (message.method === 'ping') { result(id, {}); return; }
@@ -91,8 +104,13 @@ export function startMcp(engine, { input = process.stdin, output = process.stdou
     try {
       const args = message.params.arguments ?? {};
       let value;
-      if (['collect_evidence', 'read_evidence'].includes(message.params.name)) value = await evidenceRunner.run(
-        evidenceRequest(args, message.params.name === 'collect_evidence' ? 'collect-evidence' : 'read-evidence'), { signal: controller.signal });
+      if (['collect_evidence', 'read_evidence'].includes(message.params.name)) {
+        if (!isObject(args)) fail('INVALID_EVIDENCE_INPUT');
+        const collecting = message.params.name === 'collect_evidence';
+        const request = collecting && args.semantic === undefined
+          ? { ...args, semantic: loadFeaturePolicy(engine.status().home).evidence.automatic === 'semantic' } : args;
+        value = await evidenceRunner.run(evidenceRequest(request, collecting ? 'collect-evidence' : 'read-evidence'), { signal: controller.signal });
+      }
       else if (message.params.name === 'run') value = await workflowRunner.run(args, { signal: controller.signal });
       else if (message.params.name === 'decide') value = await engine.decide(args, { signal: controller.signal });
       else if (message.params.name === 'route') { if (!isObject(args)) fail('INVALID_REQUEST'); const { trace, ...request } = args; value = await layer.route(request, { signal: controller.signal, trace }); }
@@ -106,7 +124,7 @@ export function startMcp(engine, { input = process.stdin, output = process.stdou
       else if (message.params.name === 'observe') value = layer.observe(args);
       else if (message.params.name === 'status') {
         if (!isObject(args) || Object.keys(args).length) fail('INVALID_REQUEST');
-        value = layer.status();
+        value = { ...layer.status(), server: { root: serverRoot } };
       } else value = engine.feedback(args);
       result(id, { content: [{ type: 'text', text: JSON.stringify(value) }], isError: false });
     } catch (e) { result(id, { content: [{ type: 'text', text: JSON.stringify({ error: errorCode(e) }) }], isError: true }); }

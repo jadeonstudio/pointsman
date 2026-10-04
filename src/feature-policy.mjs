@@ -53,7 +53,7 @@ export const FEATURE_DEFAULTS = Object.freeze({
     // cache penalty; 'on' allows applying it (only meaningful once `mode` is 'on' -- SHADOW always
     // records regardless of this setting; never changes a subagent's model or role).
     subagents: 'off' },
-  evidence: { mode: 'off' },
+  evidence: { mode: 'off', automatic: 'off' },
   workflow: { mode: 'off', nativeMode: 'off', maxActions: 128, maxMs: 10000,
     maxDecisionCalls: 2, maxOutputBytes: 24000 },
 });
@@ -138,7 +138,7 @@ export function validateFeaturePolicy(raw) {
     effort: { ...FEATURE_DEFAULTS.effort, ...raw.effort },
     workflow: { ...FEATURE_DEFAULTS.workflow, ...raw.workflow },
     evidence: { ...FEATURE_DEFAULTS.evidence, ...raw.evidence } };
-  if (!MODES.includes(policy.evidence.mode)) fail('INVALID_FEATURE_POLICY');
+  if (!MODES.includes(policy.evidence.mode) || !['off', 'local', 'semantic'].includes(policy.evidence.automatic)) fail('INVALID_FEATURE_POLICY');
   for (const feature of [policy.router, policy.bulk]) {
     if (!MODES.includes(feature.mode) || !/^jev-\d+\.\d+\.\d+$/.test(feature.expectedModel)) fail('INVALID_FEATURE_POLICY');
   }
@@ -203,6 +203,16 @@ export function setWorkflowNativeMode(home, mode) {
   const policy = loadFeaturePolicy(home);
   policy.workflow.nativeMode = mode;
   atomicWrite(file, JSON.stringify(validateFeaturePolicy(policy), null, 2) + '\n', { expected: previous });
+  return policy;
+}
+export function setEvidenceAutomatic(home, automatic) {
+  if (!['off', 'local', 'semantic'].includes(automatic)) fail('INVALID_EVIDENCE_AUTOMATIC');
+  ensureDir(home, true);
+  const file = path.join(home, 'features.json');
+  const previous = readText(file, { optional: true, privateFile: true });
+  const policy = loadFeaturePolicy(home);
+  policy.evidence.automatic = automatic;
+  atomicWrite(file, JSON.stringify(policy, null, 2) + '\n', { expected: previous });
   return policy;
 }
 export function evidencePolicy(home, globalMode) {

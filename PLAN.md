@@ -1,6 +1,6 @@
 # Pointsman integrated architecture, learning and delivery plan
 
-Updated: 2026-10-04. Status: **OWNER-RESUMED EXECUTION — 104/157 verified; full objective unchanged**.
+Updated: 2026-10-05. Status: **OWNER-RESUMED EXECUTION — 104/157 verified; full objective unchanged**.
 Runtime source baseline: `39bf5a4`; original design bundle: `e18cd21`; first
 consolidation: `b950227`. The revision below replaces routing-first priorities
 with execution that removes repeated parent-model requests.
@@ -8,6 +8,34 @@ This is the single canonical public plan replacing `ARCHITECTURE.md`,
 `TRAINING_PLAN.md` and `EVALUATION.md`. Their technical requirements, sources and
 evidence limitations are consolidated below; the work packages turn them into
 executable checklists. It remains one file at the owner's explicit request.
+
+## 2026-10-05 automatic evidence installation
+
+Owner authorized installation, activation and tests, then explicitly allowed Jev
+API calls with the existing key. This supersedes the zero-API-spend constraint
+for ordinary evidence selection and its connection tests only; no competitive
+training/comparison, model restoration or unrelated router activation is included.
+
+Graph AUTO-EVIDENCE r1 (baseline `a0d8221`): read-only installation preflight ->
+root policy/MCP integration + docs + focused tests in parallel -> one offline
+repository gate -> stable checkout/owned installation -> real MCP and fresh-host
+ordinary-prompt probes. Root owns integration, deployment and acceptance;
+GPT-6.1 Sol workers own only their named docs/tests. Retry budget: three attempts
+per failed boundary, new evidence required. No nested workers or extra judge call.
+
+- [x] Confirm installation identity, preserved key metadata and existing modes.
+- [x] Add OFF-default automatic local/semantic policy and natural-task guidance.
+- [x] Verify policy defaults, semantic overrides, mode changes and bound-root visibility.
+- [x] Run required offline checks once on the integrated source.
+- [ ] Update stable runtime and owned Codex/Claude integrations without changing trust.
+- [ ] Enable evidence only; keep unrelated router/effort/capture disabled.
+- [ ] Verify live Jev selection and exact local recovery through real MCP.
+- [ ] Verify fresh native clients select evidence for an ordinary multi-file request.
+- [ ] Record actual results and limits; commit/push accepted implementation.
+
+Offline acceptance: 272 modules syntax-checked; full suite 662/662 passed
+with local fixture sockets allowed; offline smoke and all three demos passed.
+The focused automatic-policy/MCP suite passed 18 cases. No live calls yet.
 
 ## 2026-10-04 evidence MCP delivery
 

@@ -13,7 +13,7 @@ const pathsSchema = { type: 'array', maxItems: 32, items: { type: 'string', minL
 export const evidenceSchema = { type: 'object', additionalProperties: false, required: ['query', 'terms'], properties: {
   query: { type: 'string', minLength: 1, maxLength: 2048 }, terms: { type: 'array', minItems: 1, maxItems: 16, items: { type: 'string', minLength: 1, maxLength: 128 } },
   ...Object.fromEntries(['paths', 'requiredPaths', 'uncertainPaths', 'counterevidencePaths'].map(k => [k, pathsSchema])),
-  semantic: { type: 'boolean', default: false }, risk: { type: 'string', enum: ['routine', 'sensitive'], default: 'routine' },
+  semantic: { type: 'boolean', description: 'Omit to follow automatic evidence policy; false forces local collection.' }, risk: { type: 'string', enum: ['routine', 'sensitive'], default: 'routine' },
   coverage: { type: 'string', enum: ['selective', 'exhaustive'], default: 'selective' },
   maxFiles: { type: 'integer', minimum: 1, maximum: 96, default: 48 }, maxSnippets: { type: 'integer', minimum: 1, maximum: 64, default: 32 }, contextLines: { type: 'integer', minimum: 0, maximum: 12, default: 3 }, ...inherited,
 } };
